@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE, hashPasscode } from "@/lib/auth";
 
-export async function proxy(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const passcode = process.env.APP_PASSCODE;
 
   // Kein Passcode gesetzt -> App bleibt offen (z.B. für lokale Entwicklung).
