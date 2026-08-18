@@ -30,8 +30,12 @@ export type HabitConfig = {
   isCustom?: boolean;
 };
 
-export const HABITS: Record<string, HabitConfig> = {
-  steps: {
+// Ursprüngliche Standard-Habits — leben inzwischen als echte (bearbeitbare/löschbare)
+// Zeilen in custom_habits (siehe migrations/0003_seed_default_habits.sql). Diese Liste
+// dient nur noch als "Vorschlag erneut hinzufügen"-Quelle im Neues-Ziel-Dialog, falls
+// jemand einen Standard gelöscht hat.
+export const DEFAULT_HABIT_SUGGESTIONS: HabitConfig[] = [
+  {
     type: "steps",
     label: "Schritte",
     unit: "Schritte",
@@ -40,7 +44,7 @@ export const HABITS: Record<string, HabitConfig> = {
     quickAdd: [1000, 2500, 5000],
     step: 500,
   },
-  water: {
+  {
     type: "water",
     label: "Wasser",
     unit: "ml",
@@ -49,7 +53,7 @@ export const HABITS: Record<string, HabitConfig> = {
     quickAdd: [250, 500, 750],
     step: 50,
   },
-  coffee: {
+  {
     type: "coffee",
     label: "Kaffee",
     unit: "Tassen",
@@ -58,7 +62,7 @@ export const HABITS: Record<string, HabitConfig> = {
     quickAdd: [1],
     step: 1,
   },
-  training: {
+  {
     type: "training",
     label: "Training",
     unit: "Minuten",
@@ -67,7 +71,7 @@ export const HABITS: Record<string, HabitConfig> = {
     quickAdd: [15, 30, 45],
     step: 5,
   },
-  reading: {
+  {
     type: "reading",
     label: "Lesen",
     unit: "Minuten",
@@ -76,7 +80,7 @@ export const HABITS: Record<string, HabitConfig> = {
     quickAdd: [5, 10, 15],
     step: 5,
   },
-  writing: {
+  {
     type: "writing",
     label: "Schreiben",
     unit: "Minuten",
@@ -85,15 +89,6 @@ export const HABITS: Record<string, HabitConfig> = {
     quickAdd: [5, 10, 15],
     step: 5,
   },
-};
-
-export const HABIT_ORDER: string[] = [
-  "steps",
-  "water",
-  "coffee",
-  "training",
-  "reading",
-  "writing",
 ];
 
 // Auswahl an Icons für selbst erstellte Mini-Habits
@@ -117,6 +112,11 @@ export const ICON_OPTIONS: Record<string, LucideIcon> = {
 
 export function iconForName(name: string): LucideIcon {
   return ICON_OPTIONS[name] ?? Target;
+}
+
+export function nameForIcon(icon: LucideIcon): string {
+  const found = Object.entries(ICON_OPTIONS).find(([, v]) => v === icon);
+  return found?.[0] ?? "Target";
 }
 
 export function todayISO(): string {

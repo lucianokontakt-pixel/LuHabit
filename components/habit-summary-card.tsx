@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { PointerEventHandler } from "react";
-import { Flame, Plus, Minus, GripVertical } from "lucide-react";
+import { Flame, Plus, Minus, RotateCcw, GripVertical, Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -19,11 +19,14 @@ export function HabitSummaryCard({
   todayValue,
   onQuickAdd,
   onUndo,
+  onReset,
   editMode = false,
   isDragging = false,
   onDragPointerDown,
   onDragPointerMove,
   onDragPointerUp,
+  onEdit,
+  onDelete,
 }: {
   habit: string;
   config: HabitConfig;
@@ -32,11 +35,14 @@ export function HabitSummaryCard({
   todayValue: number;
   onQuickAdd: () => void;
   onUndo: () => void;
+  onReset: () => void;
   editMode?: boolean;
   isDragging?: boolean;
   onDragPointerDown?: PointerEventHandler<HTMLButtonElement>;
   onDragPointerMove?: PointerEventHandler<HTMLButtonElement>;
   onDragPointerUp?: PointerEventHandler<HTMLButtonElement>;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }) {
   const Icon = config.icon;
   const streak = computeStreaks(entries, goal, 60).current;
@@ -91,7 +97,28 @@ export function HabitSummaryCard({
             </span>
           </div>
         </div>
-        {!editMode && (
+        {editMode ? (
+          <div className="flex shrink-0 gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-9 text-muted-foreground hover:text-foreground"
+              onClick={onEdit}
+              aria-label="Ziel bearbeiten"
+            >
+              <Pencil className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-9 text-muted-foreground hover:text-destructive"
+              onClick={onDelete}
+              aria-label="Ziel löschen"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+        ) : (
           <div className="flex shrink-0 gap-1.5">
             <Button
               variant="secondary"
@@ -110,6 +137,16 @@ export function HabitSummaryCard({
                 aria-label="Verklickt? Rückgängig"
               >
                 <Minus className="size-4" />
+              </Button>
+            )}
+            {todayValue > 0 && (
+              <Button
+                variant="outline"
+                className="h-11 w-11"
+                onClick={onReset}
+                aria-label="Heutigen Wert zurücksetzen"
+              >
+                <RotateCcw className="size-4" />
               </Button>
             )}
           </div>

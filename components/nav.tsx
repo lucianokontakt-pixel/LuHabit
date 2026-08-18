@@ -4,21 +4,25 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { HABITS, HABIT_ORDER } from "@/lib/habits";
+import { useHabitRegistry } from "@/lib/habit-registry";
 import { LayoutGrid, Weight } from "lucide-react";
-
-const links = [
-  { href: "/", label: "Übersicht", icon: LayoutGrid },
-  ...HABIT_ORDER.map((type) => ({
-    href: `/${type}`,
-    label: HABITS[type].label,
-    icon: HABITS[type].icon,
-  })),
-  { href: "/stats", label: "Personal Stats", icon: Weight },
-];
 
 export function Nav() {
   const pathname = usePathname();
+  const { habits, order } = useHabitRegistry();
+
+  const links = [
+    { href: "/", label: "Übersicht", icon: LayoutGrid },
+    ...order
+      .map((id) => habits[id])
+      .filter(Boolean)
+      .map((config) => ({
+        href: config.isCustom ? `/habit/${config.type}` : `/${config.type}`,
+        label: config.label,
+        icon: config.icon,
+      })),
+    { href: "/stats", label: "Personal Stats", icon: Weight },
+  ];
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">

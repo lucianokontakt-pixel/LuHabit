@@ -67,5 +67,24 @@ export function useAllHabitsData() {
     [today, todayValueFor, load]
   );
 
-  return { entries, goals, loading, entriesFor, todayValueFor, addDelta, reload: load };
+  const setValue = useCallback(
+    async (habit: HabitType, value: number) => {
+      setEntries((prev) => {
+        const others = prev.filter((e) => !(e.habit === habit && e.date === today));
+        return [...others, { habit, date: today, value }];
+      });
+      try {
+        const entry = await addEntry({ habit, date: today, value });
+        setEntries((prev) => {
+          const others = prev.filter((e) => !(e.habit === habit && e.date === today));
+          return [...others, entry];
+        });
+      } catch {
+        load();
+      }
+    },
+    [today, load]
+  );
+
+  return { entries, goals, loading, entriesFor, todayValueFor, addDelta, setValue, reload: load };
 }

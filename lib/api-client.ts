@@ -86,6 +86,27 @@ export async function createCustomHabit(params: {
   return data.habit as CustomHabit;
 }
 
+export async function updateCustomHabit(
+  id: string,
+  params: {
+    label: string;
+    unit: string;
+    icon: string;
+    defaultGoal: number;
+    quickAdd: number[];
+    step: number;
+  }
+): Promise<CustomHabit> {
+  const res = await fetch("/api/habits", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, ...params }),
+  });
+  if (!res.ok) throw new Error("Konnte Habit nicht aktualisieren");
+  const data = await res.json();
+  return data.habit as CustomHabit;
+}
+
 export async function deleteCustomHabit(id: string): Promise<void> {
   const res = await fetch(`/api/habits?id=${encodeURIComponent(id)}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Konnte Habit nicht löschen");

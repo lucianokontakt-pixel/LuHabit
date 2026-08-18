@@ -85,6 +85,42 @@ export async function POST(req: NextRequest) {
   });
 }
 
+export async function PUT(req: NextRequest) {
+  const body = await req.json();
+  const { id, label, unit, icon, defaultGoal, quickAdd, step } = body as {
+    id: string;
+    label: string;
+    unit: string;
+    icon: string;
+    defaultGoal: number;
+    quickAdd: number[];
+    step: number;
+  };
+
+  if (!id || !label?.trim() || !unit?.trim() || !defaultGoal || defaultGoal <= 0) {
+    return NextResponse.json(
+      { error: "id, label, unit und defaultGoal (> 0) sind erforderlich" },
+      { status: 400 }
+    );
+  }
+
+  const cleanQuickAdd = Array.isArray(quickAdd) && quickAdd.length ? quickAdd : [1];
+  const cleanStep = step && step > 0 ? step : cleanQuickAdd[0] ?? 1;
+
+  await d1Query(
+    `UPDATE custom_habits SET label = ?, unit = ?, icon = ?, default_goal = ?, quick_add = ?, step = ? WHERE id = ?`,
+    [label.trim(), unit.trim(), icon || "Target", defaultGoal, JSON.stringify(cleanQuickAdd), cleanStep, id]
+  );
+  await d1Query(
+    `INSERT INTO goals (habit, target) VALUES (?, ?) ON CONFLICT(habit) DO UPDATE SET target = excluded.target`,
+    [id, defaultGoal]
+  );
+
+  return NextResponse.json({
+    habit: { id, label: label.trim(), unit: unit.trim(), icon: icon || "Target", defaultGoal, quickAdd: cleanQuickAdd, step: cleanStep },
+  });
+}
+
 export async function DELETE(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");

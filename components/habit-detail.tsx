@@ -8,14 +8,32 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Flame, Trophy, Pencil, Check } from "lucide-react";
-import { HABITS, HabitConfig, HabitType, isoDateDaysAgo } from "@/lib/habits";
+import { HabitConfig, HabitType, isoDateDaysAgo } from "@/lib/habits";
+import { useHabitRegistry } from "@/lib/habit-registry";
 import { useHabitData } from "@/lib/use-habit-data";
 import { computeStreaks, sum } from "@/lib/stats";
 import { Heatmap } from "@/components/heatmap";
 import { WeeklyChart } from "@/components/weekly-chart";
 
 export function HabitDetail({ habit, config }: { habit: HabitType; config?: HabitConfig }) {
-  const resolvedConfig = config ?? HABITS[habit];
+  const { habits, loading: registryLoading } = useHabitRegistry();
+  const resolvedConfig = config ?? habits[habit];
+
+  if (!resolvedConfig) {
+    if (registryLoading) return <div className="h-40 animate-pulse rounded-xl bg-muted" />;
+    return <p className="text-sm text-muted-foreground">Dieses Ziel wurde nicht gefunden.</p>;
+  }
+
+  return <HabitDetailContent habit={habit} resolvedConfig={resolvedConfig} />;
+}
+
+function HabitDetailContent({
+  habit,
+  resolvedConfig,
+}: {
+  habit: HabitType;
+  resolvedConfig: HabitConfig;
+}) {
   const Icon = resolvedConfig.icon;
   const { entries, goal, todayValue, loading, addDelta, updateGoal } = useHabitData(
     habit,

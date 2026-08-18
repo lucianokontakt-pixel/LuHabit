@@ -1,27 +1,31 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { HABITS, HABIT_ORDER, HabitConfig, iconForName } from "@/lib/habits";
+import { DEFAULT_HABIT_SUGGESTIONS, HabitConfig, iconForName } from "@/lib/habits";
 import {
   fetchCustomHabits,
   createCustomHabit,
+  updateCustomHabit,
   deleteCustomHabit,
   type CustomHabit,
 } from "@/lib/api-client";
 
+type HabitFormInput = {
+  label: string;
+  unit: string;
+  icon: string;
+  defaultGoal: number;
+  quickAdd: number[];
+  step: number;
+};
+
 type RegistryContextValue = {
   habits: Record<string, HabitConfig>;
   order: string[];
-  customOrder: string[];
   loading: boolean;
-  addCustomHabit: (params: {
-    label: string;
-    unit: string;
-    icon: string;
-    defaultGoal: number;
-    quickAdd: number[];
-    step: number;
-  }) => Promise<string>;
+  suggestions: HabitConfig[];
+  addCustomHabit: (params: HabitFormInput) => Promise<string>;
+  editCustomHabit: (id: string, params: HabitFormInput) => Promise<void>;
   removeCustomHabit: (id: string) => Promise<void>;
 };
 
@@ -50,7 +54,7 @@ export function HabitRegistryProvider({ children }: { children: React.ReactNode 
       const data = await fetchCustomHabits();
       setCustoms(data);
     } catch {
-      // eigene Habits sind optional — Fehler beim Laden blockiert die App nicht
+      // Habits sind für die Kernfunktion nötig, Fehler beim Laden zeigt sich als leere Liste
     } finally {
       setLoading(false);
     }
@@ -61,16 +65,21 @@ export function HabitRegistryProvider({ children }: { children: React.ReactNode 
     load();
   }, [load]);
 
-  const habits: Record<string, HabitConfig> = { ...HABITS };
+  const habits: Record<string, HabitConfig> = {};
   for (const c of customs) habits[c.id] = toConfig(c);
-  const customOrder = customs.map((c) => c.id);
-  const order = [...HABIT_ORDER, ...customOrder];
+  const order = customs.map((c) => c.id);
+  const suggestions = DEFAULT_HABIT_SUGGESTIONS.filter((s) => !habits[s.type]);
 
-  const addCustomHabit: RegistryContextValue["addCustomHabit"] = useCallback(
-    async (params) => {
-      const created = await createCustomHabit(params);
-      setCustoms((prev) => [...prev, created]);
-      return created.id;
+  const addCustomHabit: RegistryContextValue["addCustomHabit"] = useCallback(async (params) => {
+    const created = await createCustomHabit(params);
+    setCustoms((prev) => [...prev, created]);
+    return created.id;
+  }, []);
+
+  const editCustomHabit: RegistryContextValue["editCustomHabit"] = useCallback(
+    async (id, params) => {
+      const updated = await updateCustomHabit(id, params);
+      setCustoms((prev) => prev.map((c) => (c.id === id ? updated : c)));
     },
     []
   );
@@ -82,7 +91,7 @@ export function HabitRegistryProvider({ children }: { children: React.ReactNode 
 
   return (
     <RegistryContext.Provider
-      value={{ habits, order, customOrder, loading, addCustomHabit, removeCustomHabit }}
+      value={{ habits, order, loading, suggestions, addCustomHabit, editCustomHabit, removeCustomHabit }}
     >
       {children}
     </RegistryContext.Provider>
