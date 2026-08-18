@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
-import { HABITS, HabitType } from "@/lib/habits";
+import { HabitType } from "@/lib/habits";
 
 type GoalRow = { habit: HabitType; target: number };
 
@@ -13,7 +13,7 @@ export async function PUT(req: NextRequest) {
   const body = await req.json();
   const { habit, target } = body as { habit: HabitType; target: number };
 
-  if (!habit || !HABITS[habit] || typeof target !== "number") {
+  if (!habit || typeof target !== "number") {
     return NextResponse.json({ error: "habit und target erforderlich" }, { status: 400 });
   }
 

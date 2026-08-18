@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
-import { HABITS, HabitType } from "@/lib/habits";
+import { HabitType } from "@/lib/habits";
 
 type EntryRow = { habit: HabitType; date: string; value: number };
 
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     value?: number;
   };
 
-  if (!habit || !HABITS[habit] || !date) {
+  if (!habit || !date) {
     return NextResponse.json({ error: "habit und date sind erforderlich" }, { status: 400 });
   }
 

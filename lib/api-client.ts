@@ -50,3 +50,43 @@ export async function setGoal(habit: HabitType, target: number): Promise<void> {
   });
   if (!res.ok) throw new Error("Konnte Ziel nicht speichern");
 }
+
+export type CustomHabit = {
+  id: string;
+  label: string;
+  unit: string;
+  icon: string;
+  defaultGoal: number;
+  quickAdd: number[];
+  step: number;
+};
+
+export async function fetchCustomHabits(): Promise<CustomHabit[]> {
+  const res = await fetch("/api/habits");
+  if (!res.ok) throw new Error("Konnte eigene Habits nicht laden");
+  const data = await res.json();
+  return data.habits as CustomHabit[];
+}
+
+export async function createCustomHabit(params: {
+  label: string;
+  unit: string;
+  icon: string;
+  defaultGoal: number;
+  quickAdd: number[];
+  step: number;
+}): Promise<CustomHabit> {
+  const res = await fetch("/api/habits", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error("Konnte Habit nicht erstellen");
+  const data = await res.json();
+  return data.habit as CustomHabit;
+}
+
+export async function deleteCustomHabit(id: string): Promise<void> {
+  const res = await fetch(`/api/habits?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Konnte Habit nicht löschen");
+}

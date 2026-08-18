@@ -1,6 +1,23 @@
-import { Droplets, Coffee, Dumbbell, Footprints, type LucideIcon } from "lucide-react";
+import {
+  Droplets,
+  Coffee,
+  Dumbbell,
+  Footprints,
+  BookOpen,
+  PenLine,
+  Brain,
+  Moon,
+  Heart,
+  Star,
+  Flame,
+  Music,
+  Code,
+  Wallet,
+  Target,
+  type LucideIcon,
+} from "lucide-react";
 
-export type HabitType = "steps" | "water" | "coffee" | "training";
+export type HabitType = string;
 
 export type HabitConfig = {
   type: HabitType;
@@ -10,9 +27,10 @@ export type HabitConfig = {
   defaultGoal: number;
   quickAdd: number[];
   step: number;
+  isCustom?: boolean;
 };
 
-export const HABITS: Record<HabitType, HabitConfig> = {
+export const HABITS: Record<string, HabitConfig> = {
   steps: {
     type: "steps",
     label: "Schritte",
@@ -49,9 +67,57 @@ export const HABITS: Record<HabitType, HabitConfig> = {
     quickAdd: [15, 30, 45],
     step: 5,
   },
+  reading: {
+    type: "reading",
+    label: "Lesen",
+    unit: "Minuten",
+    icon: BookOpen,
+    defaultGoal: 20,
+    quickAdd: [5, 10, 15],
+    step: 5,
+  },
+  writing: {
+    type: "writing",
+    label: "Schreiben",
+    unit: "Minuten",
+    icon: PenLine,
+    defaultGoal: 15,
+    quickAdd: [5, 10, 15],
+    step: 5,
+  },
 };
 
-export const HABIT_ORDER: HabitType[] = ["steps", "water", "coffee", "training"];
+export const HABIT_ORDER: string[] = [
+  "steps",
+  "water",
+  "coffee",
+  "training",
+  "reading",
+  "writing",
+];
+
+// Auswahl an Icons für selbst erstellte Mini-Habits
+export const ICON_OPTIONS: Record<string, LucideIcon> = {
+  Target,
+  BookOpen,
+  PenLine,
+  Brain,
+  Moon,
+  Heart,
+  Star,
+  Flame,
+  Music,
+  Code,
+  Wallet,
+  Dumbbell,
+  Droplets,
+  Coffee,
+  Footprints,
+};
+
+export function iconForName(name: string): LucideIcon {
+  return ICON_OPTIONS[name] ?? Target;
+}
 
 export function todayISO(): string {
   return new Date().toLocaleDateString("sv-SE");

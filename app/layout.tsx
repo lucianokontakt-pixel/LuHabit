@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Nav } from "@/components/nav";
 import { Toaster } from "@/components/ui/sonner";
+import { HabitRegistryProvider } from "@/lib/habit-registry";
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -29,9 +30,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <Nav />
-          <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
-          <Toaster />
+          <HabitRegistryProvider>
+            <Nav />
+            <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
+            <Toaster />
+          </HabitRegistryProvider>
         </ThemeProvider>
       </body>
     </html>

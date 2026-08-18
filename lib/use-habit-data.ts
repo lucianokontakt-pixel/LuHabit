@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { HabitType, HABITS, todayISO, isoDateDaysAgo } from "@/lib/habits";
+import { HabitType, todayISO, isoDateDaysAgo } from "@/lib/habits";
 import { addEntry, fetchEntries, fetchGoals, setGoal, type Entry } from "@/lib/api-client";
 
 const HISTORY_DAYS = 180;
 
-export function useHabitData(habit: HabitType) {
+export function useHabitData(habit: HabitType, defaultGoal: number) {
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [goal, setGoalState] = useState<number>(HABITS[habit].defaultGoal);
+  const [goal, setGoalState] = useState<number>(defaultGoal);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,13 +22,13 @@ export function useHabitData(habit: HabitType) {
       ]);
       setEntries(entriesData);
       const g = goalsData.find((x) => x.habit === habit);
-      setGoalState(g?.target ?? HABITS[habit].defaultGoal);
+      setGoalState(g?.target ?? defaultGoal);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Fehler beim Laden");
     } finally {
       setLoading(false);
     }
-  }, [habit]);
+  }, [habit, defaultGoal]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initialer Datenabruf beim Mount

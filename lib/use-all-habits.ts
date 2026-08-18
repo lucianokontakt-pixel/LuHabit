@@ -1,18 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { HABIT_ORDER, HABITS, HabitType, todayISO, isoDateDaysAgo } from "@/lib/habits";
+import { HabitType, todayISO, isoDateDaysAgo } from "@/lib/habits";
 import { addEntry, fetchEntries, fetchGoals, type Entry } from "@/lib/api-client";
 
 const HISTORY_DAYS = 180;
 
 export function useAllHabitsData() {
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [goals, setGoals] = useState<Record<HabitType, number>>(() => {
-    const initial = {} as Record<HabitType, number>;
-    for (const h of HABIT_ORDER) initial[h] = HABITS[h].defaultGoal;
-    return initial;
-  });
+  const [goals, setGoals] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -23,8 +19,8 @@ export function useAllHabitsData() {
         fetchGoals(),
       ]);
       setEntries(entriesData);
-      setGoals((prev) => {
-        const next = { ...prev };
+      setGoals(() => {
+        const next: Record<string, number> = {};
         for (const g of goalsData) next[g.habit] = g.target;
         return next;
       });

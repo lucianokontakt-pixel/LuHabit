@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HABIT_ORDER, HABITS, HabitType } from "@/lib/habits";
 import { useAllHabitsData } from "@/lib/use-all-habits";
+import { useHabitRegistry } from "@/lib/habit-registry";
 import { HabitSummaryCard } from "@/components/habit-summary-card";
+import { AddHabitDialog } from "@/components/add-habit-dialog";
 import { WeeklyChart } from "@/components/weekly-chart";
 import { Heatmap } from "@/components/heatmap";
 import { computeStreaks } from "@/lib/stats";
@@ -13,7 +14,8 @@ import { Flame } from "lucide-react";
 
 export default function DashboardPage() {
   const { goals, loading, entriesFor, todayValueFor, addDelta } = useAllHabitsData();
-  const [selected, setSelected] = useState<HabitType>("steps");
+  const { habits, order, loading: habitsLoading } = useHabitRegistry();
+  const [selected, setSelected] = useState<string>("steps");
 
   const today = new Date().toLocaleDateString("de-DE", {
     weekday: "long",
@@ -21,32 +23,41 @@ export default function DashboardPage() {
     month: "long",
   });
 
-  const selectedConfig = HABITS[selected];
+  const isLoading = loading || habitsLoading;
+  const selectedConfig = habits[selected] ?? habits["steps"];
   const selectedEntries = entriesFor(selected);
-  const selectedGoal = goals[selected];
+  const selectedGoal = goals[selected] ?? selectedConfig?.defaultGoal ?? 0;
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <p className="text-sm text-muted-foreground capitalize">{today}</p>
-        <h1 className="text-2xl font-semibold tracking-tight">Übersicht</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm text-muted-foreground capitalize">{today}</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Übersicht</h1>
+        </div>
+        <AddHabitDialog />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {loading
-          ? HABIT_ORDER.map((h) => (
-              <div key={h} className="h-[168px] animate-pulse rounded-xl bg-muted" />
-            ))
-          : HABIT_ORDER.map((habit) => (
-              <HabitSummaryCard
-                key={habit}
-                habit={habit}
-                entries={entriesFor(habit)}
-                goal={goals[habit]}
-                todayValue={todayValueFor(habit)}
-                onQuickAdd={() => addDelta(habit, HABITS[habit].quickAdd[0])}
-              />
-            ))}
+        {isLoading
+          ? order.map((h) => <div key={h} className="h-[168px] animate-pulse rounded-xl bg-muted" />)
+          : order.map((habit) => {
+              const config = habits[habit];
+              if (!config) return null;
+              const goal = goals[habit] ?? config.defaultGoal;
+              return (
+                <HabitSummaryCard
+                  key={habit}
+                  habit={habit}
+                  config={config}
+                  entries={entriesFor(habit)}
+                  goal={goal}
+                  todayValue={todayValueFor(habit)}
+                  onQuickAdd={() => addDelta(habit, config.quickAdd[0])}
+                  onUndo={() => addDelta(habit, -config.step)}
+                />
+              );
+            })}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -56,18 +67,18 @@ export default function DashboardPage() {
               <CardTitle className="text-base">Verlauf</CardTitle>
               <CardDescription>Letzte 7 Tage</CardDescription>
             </div>
-            <Tabs value={selected} onValueChange={(v) => setSelected(v as HabitType)}>
+            <Tabs value={selected} onValueChange={setSelected}>
               <TabsList>
-                {HABIT_ORDER.map((h) => (
+                {order.map((h) => (
                   <TabsTrigger key={h} value={h}>
-                    {HABITS[h].label}
+                    {habits[h]?.label ?? h}
                   </TabsTrigger>
                 ))}
               </TabsList>
             </Tabs>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {isLoading ? (
               <div className="h-[180px] animate-pulse rounded-md bg-muted" />
             ) : (
               <WeeklyChart entries={selectedEntries} goal={selectedGoal} />
@@ -81,10 +92,12 @@ export default function DashboardPage() {
             <CardDescription>Aktuelle Serie je Habit</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
-            {HABIT_ORDER.map((habit) => {
-              const config = HABITS[habit];
+            {order.map((habit) => {
+              const config = habits[habit];
+              if (!config) return null;
               const Icon = config.icon;
-              const streak = computeStreaks(entriesFor(habit), goals[habit], 60).current;
+              const goal = goals[habit] ?? config.defaultGoal;
+              const streak = computeStreaks(entriesFor(habit), goal, 60).current;
               return (
                 <div key={habit} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
@@ -104,14 +117,21 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Contribution History — {selectedConfig.label}</CardTitle>
+          <CardTitle className="text-base">
+            Contribution History — {selectedConfig?.label}
+          </CardTitle>
           <CardDescription>Letzte 26 Wochen</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <div className="h-24 animate-pulse rounded-md bg-muted" />
           ) : (
-            <Heatmap entries={selectedEntries} goal={selectedGoal} weeks={26} unit={selectedConfig.unit} />
+            <Heatmap
+              entries={selectedEntries}
+              goal={selectedGoal}
+              weeks={26}
+              unit={selectedConfig?.unit ?? ""}
+            />
           )}
         </CardContent>
       </Card>

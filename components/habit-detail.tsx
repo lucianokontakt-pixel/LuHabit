@@ -8,17 +8,19 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Flame, Trophy, Pencil, Check } from "lucide-react";
-import { HABITS, HabitType } from "@/lib/habits";
+import { HABITS, HabitConfig, HabitType, isoDateDaysAgo } from "@/lib/habits";
 import { useHabitData } from "@/lib/use-habit-data";
 import { computeStreaks, sum } from "@/lib/stats";
 import { Heatmap } from "@/components/heatmap";
 import { WeeklyChart } from "@/components/weekly-chart";
-import { isoDateDaysAgo } from "@/lib/habits";
 
-export function HabitDetail({ habit }: { habit: HabitType }) {
-  const config = HABITS[habit];
-  const Icon = config.icon;
-  const { entries, goal, todayValue, loading, addDelta, updateGoal } = useHabitData(habit);
+export function HabitDetail({ habit, config }: { habit: HabitType; config?: HabitConfig }) {
+  const resolvedConfig = config ?? HABITS[habit];
+  const Icon = resolvedConfig.icon;
+  const { entries, goal, todayValue, loading, addDelta, updateGoal } = useHabitData(
+    habit,
+    resolvedConfig.defaultGoal
+  );
   const [manualValue, setManualValue] = useState("");
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState(String(goal));
@@ -35,7 +37,7 @@ export function HabitDetail({ habit }: { habit: HabitType }) {
           <Icon className="size-5" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">{config.label}</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{resolvedConfig.label}</h1>
           <p className="text-sm text-muted-foreground">Dein Verlauf & heutiger Stand</p>
         </div>
       </div>
@@ -47,7 +49,7 @@ export function HabitDetail({ habit }: { habit: HabitType }) {
             <CardTitle className="text-2xl">
               {todayValue}
               <span className="ml-1 text-sm font-normal text-muted-foreground">
-                / {goal} {config.unit}
+                / {goal} {resolvedConfig.unit}
               </span>
             </CardTitle>
           </CardHeader>
@@ -76,11 +78,11 @@ export function HabitDetail({ habit }: { habit: HabitType }) {
             <CardDescription>Letzte 7 Tage</CardDescription>
             <CardTitle className="text-2xl">
               {weekTotal}
-              <span className="ml-1 text-sm font-normal text-muted-foreground">{config.unit}</span>
+              <span className="ml-1 text-sm font-normal text-muted-foreground">{resolvedConfig.unit}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Ø {(weekTotal / 7).toFixed(1)} {config.unit} / Tag
+            Ø {(weekTotal / 7).toFixed(1)} {resolvedConfig.unit} / Tag
           </CardContent>
         </Card>
       </div>
@@ -91,14 +93,14 @@ export function HabitDetail({ habit }: { habit: HabitType }) {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-2">
-            {config.quickAdd.map((amount) => (
+            {resolvedConfig.quickAdd.map((amount) => (
               <Button key={amount} variant="secondary" onClick={() => addDelta(amount)}>
-                +{amount} {config.unit}
+                +{amount} {resolvedConfig.unit}
               </Button>
             ))}
             {todayValue > 0 && (
-              <Button variant="outline" onClick={() => addDelta(-config.step)}>
-                -{config.step}
+              <Button variant="outline" onClick={() => addDelta(-resolvedConfig.step)}>
+                -{resolvedConfig.step}
               </Button>
             )}
           </div>
@@ -117,7 +119,7 @@ export function HabitDetail({ habit }: { habit: HabitType }) {
             <Input
               type="number"
               min={0}
-              placeholder={`Genauen Wert für heute setzen (${config.unit})`}
+              placeholder={`Genauen Wert für heute setzen (${resolvedConfig.unit})`}
               value={manualValue}
               onChange={(e) => setManualValue(e.target.value)}
               className="max-w-xs"
@@ -157,7 +159,7 @@ export function HabitDetail({ habit }: { habit: HabitType }) {
               }}
             >
               <Pencil className="size-3.5" />
-              Ziel: {goal} {config.unit}
+              Ziel: {goal} {resolvedConfig.unit}
             </Button>
           ) : (
             <form
@@ -189,7 +191,7 @@ export function HabitDetail({ habit }: { habit: HabitType }) {
           {loading ? (
             <div className="h-24 animate-pulse rounded-md bg-muted" />
           ) : (
-            <Heatmap entries={entries} goal={goal} weeks={26} unit={config.unit} />
+            <Heatmap entries={entries} goal={goal} weeks={26} unit={resolvedConfig.unit} />
           )}
           <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
             <span>Weniger</span>
@@ -203,7 +205,7 @@ export function HabitDetail({ habit }: { habit: HabitType }) {
         </CardContent>
       </Card>
 
-      {config.type === "steps" && (
+      {resolvedConfig.type === "steps" && (
         <Badge variant="secondary" className="w-fit">
           Tipp: Automatischer Sync per iOS Shortcut möglich — siehe README
         </Badge>
