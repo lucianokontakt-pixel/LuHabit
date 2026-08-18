@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useHabitRegistry } from "@/lib/habit-registry";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, Weight } from "lucide-react";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -20,6 +20,7 @@ export function BottomNav() {
         label: config.label,
         icon: config.icon,
       })),
+    { href: "/stats", label: "Stats", icon: Weight },
   ];
 
   return (

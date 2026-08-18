@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { HABITS, HABIT_ORDER } from "@/lib/habits";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, Weight } from "lucide-react";
 
 const links = [
   { href: "/", label: "Übersicht", icon: LayoutGrid },
@@ -14,6 +14,7 @@ const links = [
     label: HABITS[type].label,
     icon: HABITS[type].icon,
   })),
+  { href: "/stats", label: "Personal Stats", icon: Weight },
 ];
 
 export function Nav() {
