@@ -26,7 +26,7 @@ export function Nav() {
           <Link href="/" className="text-sm font-semibold tracking-tight">
             LuHabit
           </Link>
-          <nav className="flex items-center gap-1">
+          <nav className="hidden items-center gap-1 sm:flex">
             {links.map((link) => {
               const active = pathname === link.href;
               const Icon = link.icon;
@@ -42,7 +42,7 @@ export function Nav() {
                   )}
                 >
                   <Icon className="size-3.5" />
-                  <span className="hidden sm:inline">{link.label}</span>
+                  <span>{link.label}</span>
                 </Link>
               );
             })}

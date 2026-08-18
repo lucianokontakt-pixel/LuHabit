@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Flame, Plus, Minus } from "lucide-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Flame, Plus, Minus, ChevronUp, ChevronDown } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { HabitConfig } from "@/lib/habits";
@@ -17,6 +17,11 @@ export function HabitSummaryCard({
   todayValue,
   onQuickAdd,
   onUndo,
+  editMode = false,
+  canMoveUp = false,
+  canMoveDown = false,
+  onMoveUp,
+  onMoveDown,
 }: {
   habit: string;
   config: HabitConfig;
@@ -25,6 +30,11 @@ export function HabitSummaryCard({
   todayValue: number;
   onQuickAdd: () => void;
   onUndo: () => void;
+  editMode?: boolean;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }) {
   const Icon = config.icon;
   const streak = computeStreaks(entries, goal, 60).current;
@@ -33,42 +43,79 @@ export function HabitSummaryCard({
   const href = config.isCustom ? `/habit/${habit}` : `/${habit}`;
 
   return (
-    <Card className="gap-3">
-      <CardHeader className="flex flex-row items-center justify-between pb-0">
-        <Link href={href} className="flex items-center gap-2 group">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-secondary">
-            <Icon className="size-4" />
+    <Card className="gap-0 p-3">
+      <div className="flex items-center gap-3">
+        {editMode && (
+          <div className="flex shrink-0 flex-col">
+            <button
+              type="button"
+              disabled={!canMoveUp}
+              onClick={onMoveUp}
+              aria-label="Nach oben verschieben"
+              className="text-muted-foreground disabled:opacity-20 hover:text-foreground"
+            >
+              <ChevronUp className="size-4" />
+            </button>
+            <button
+              type="button"
+              disabled={!canMoveDown}
+              onClick={onMoveDown}
+              aria-label="Nach unten verschieben"
+              className="text-muted-foreground disabled:opacity-20 hover:text-foreground"
+            >
+              <ChevronDown className="size-4" />
+            </button>
           </div>
-          <span className="text-sm font-medium group-hover:underline">{config.label}</span>
-        </Link>
-        {streak > 0 && (
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Flame className="size-3.5" />
-            {streak}
-          </span>
         )}
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-semibold tabular-nums">{todayValue}</span>
-            <span className="text-sm text-muted-foreground">
-              / {goal} {config.unit}
+        <Link
+          href={href}
+          className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary"
+        >
+          <Icon className="size-5" />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <Link href={href} className="truncate text-sm font-medium hover:underline">
+              {config.label}
+            </Link>
+            {streak > 0 && (
+              <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+                <Flame className="size-3.5" />
+                {streak}
+              </span>
+            )}
+          </div>
+          <div className="mt-1.5 flex items-center gap-2">
+            <Progress value={progress} className="h-1.5 flex-1" />
+            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+              {todayValue}/{goal}
             </span>
           </div>
-          <Progress value={progress} className="mt-2 h-1.5" />
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="secondary" className="flex-1" onClick={onQuickAdd}>
-            <Plus className="size-3.5" />+{quickAmount} {config.unit}
-          </Button>
-          {todayValue > 0 && (
-            <Button size="sm" variant="outline" onClick={onUndo} aria-label="Verklickt? Rückgängig">
-              <Minus className="size-3.5" />
+        {!editMode && (
+          <div className="flex shrink-0 gap-1.5">
+            <Button
+              variant="secondary"
+              className="h-11 min-w-11 flex-col gap-0 px-2"
+              onClick={onQuickAdd}
+              aria-label={`+${quickAmount} ${config.unit}`}
+            >
+              <Plus className="size-3.5" />
+              <span className="text-[10px] font-normal leading-none">{quickAmount}</span>
             </Button>
-          )}
-        </div>
-      </CardContent>
+            {todayValue > 0 && (
+              <Button
+                variant="outline"
+                className="h-11 w-11"
+                onClick={onUndo}
+                aria-label="Verklickt? Rückgängig"
+              >
+                <Minus className="size-4" />
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
     </Card>
   );
 }

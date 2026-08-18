@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Nav } from "@/components/nav";
+import { BottomNav } from "@/components/bottom-nav";
 import { Toaster } from "@/components/ui/sonner";
 import { HabitRegistryProvider } from "@/lib/habit-registry";
 
@@ -32,7 +33,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <HabitRegistryProvider>
             <Nav />
-            <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
+            <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 pb-24 sm:py-8 sm:pb-8">
+              {children}
+            </main>
+            <BottomNav />
             <Toaster />
           </HabitRegistryProvider>
         </ThemeProvider>
