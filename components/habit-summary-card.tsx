@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Flame, Plus, Minus, ChevronUp, ChevronDown } from "lucide-react";
+import type { PointerEventHandler } from "react";
+import { Flame, Plus, Minus, GripVertical } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { HabitConfig } from "@/lib/habits";
 import { computeStreaks } from "@/lib/stats";
+import { cn } from "@/lib/utils";
 import type { Entry } from "@/lib/api-client";
 
 export function HabitSummaryCard({
@@ -18,10 +20,10 @@ export function HabitSummaryCard({
   onQuickAdd,
   onUndo,
   editMode = false,
-  canMoveUp = false,
-  canMoveDown = false,
-  onMoveUp,
-  onMoveDown,
+  isDragging = false,
+  onDragPointerDown,
+  onDragPointerMove,
+  onDragPointerUp,
 }: {
   habit: string;
   config: HabitConfig;
@@ -31,10 +33,10 @@ export function HabitSummaryCard({
   onQuickAdd: () => void;
   onUndo: () => void;
   editMode?: boolean;
-  canMoveUp?: boolean;
-  canMoveDown?: boolean;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
+  isDragging?: boolean;
+  onDragPointerDown?: PointerEventHandler<HTMLButtonElement>;
+  onDragPointerMove?: PointerEventHandler<HTMLButtonElement>;
+  onDragPointerUp?: PointerEventHandler<HTMLButtonElement>;
 }) {
   const Icon = config.icon;
   const streak = computeStreaks(entries, goal, 60).current;
@@ -43,29 +45,26 @@ export function HabitSummaryCard({
   const href = config.isCustom ? `/habit/${habit}` : `/${habit}`;
 
   return (
-    <Card className="gap-0 p-3">
+    <Card
+      className={cn(
+        "gap-0 p-3 transition-shadow",
+        isDragging && "relative z-10 scale-[1.02] shadow-lg"
+      )}
+    >
       <div className="flex items-center gap-3">
         {editMode && (
-          <div className="flex shrink-0 flex-col">
-            <button
-              type="button"
-              disabled={!canMoveUp}
-              onClick={onMoveUp}
-              aria-label="Nach oben verschieben"
-              className="text-muted-foreground disabled:opacity-20 hover:text-foreground"
-            >
-              <ChevronUp className="size-4" />
-            </button>
-            <button
-              type="button"
-              disabled={!canMoveDown}
-              onClick={onMoveDown}
-              aria-label="Nach unten verschieben"
-              className="text-muted-foreground disabled:opacity-20 hover:text-foreground"
-            >
-              <ChevronDown className="size-4" />
-            </button>
-          </div>
+          <button
+            type="button"
+            aria-label="Ziehen zum Sortieren"
+            className="touch-none text-muted-foreground/60 hover:text-foreground active:cursor-grabbing"
+            style={{ cursor: "grab" }}
+            onPointerDown={onDragPointerDown}
+            onPointerMove={onDragPointerMove}
+            onPointerUp={onDragPointerUp}
+            onPointerCancel={onDragPointerUp}
+          >
+            <GripVertical className="size-5" />
+          </button>
         )}
         <Link
           href={href}

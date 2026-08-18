@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -19,9 +20,11 @@ import { Flame } from "lucide-react";
 export default function DashboardPage() {
   const { goals, loading, entries, entriesFor, todayValueFor, addDelta } = useAllHabitsData();
   const { habits, order: registryOrder, loading: habitsLoading } = useHabitRegistry();
-  const { order, moveUp, moveDown } = useCardOrder(registryOrder);
+  const { order, reorder } = useCardOrder(registryOrder);
   const [selected, setSelected] = useState<string>("steps");
   const [editMode, setEditMode] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const today = new Date().toLocaleDateString("de-DE", {
     weekday: "long",
@@ -35,6 +38,37 @@ export default function DashboardPage() {
   const selectedGoal = goals[selected] ?? selectedConfig?.defaultGoal ?? 0;
 
   const validOrder = order.filter((id) => habits[id]);
+
+  function handleDragPointerDown(id: string, e: ReactPointerEvent<HTMLButtonElement>) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDraggingId(id);
+  }
+
+  function handleDragPointerMove(id: string, e: ReactPointerEvent<HTMLButtonElement>) {
+    if (draggingId !== id) return;
+    const clientY = e.clientY;
+    const fromIndex = validOrder.indexOf(id);
+    let toIndex = fromIndex;
+    for (let i = 0; i < validOrder.length; i++) {
+      if (i === fromIndex) continue;
+      const rect = itemRefs.current.get(validOrder[i])?.getBoundingClientRect();
+      if (!rect) continue;
+      const midY = rect.top + rect.height / 2;
+      if (clientY < midY && i < fromIndex) toIndex = i;
+      if (clientY > midY && i > fromIndex) toIndex = i;
+    }
+    if (toIndex !== fromIndex) {
+      const next = [...validOrder];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      reorder(next);
+    }
+  }
+
+  function handleDragPointerUp() {
+    setDraggingId(null);
+  }
+
   const goalsReached = validOrder.filter((id) => {
     const config = habits[id];
     const goal = goals[id] ?? config.defaultGoal;
@@ -89,25 +123,32 @@ export default function DashboardPage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {isLoading
           ? order.map((h) => <div key={h} className="h-[76px] animate-pulse rounded-xl bg-muted" />)
-          : validOrder.map((habit, idx) => {
+          : validOrder.map((habit) => {
               const config = habits[habit];
               const goal = goals[habit] ?? config.defaultGoal;
               return (
-                <HabitSummaryCard
+                <div
                   key={habit}
-                  habit={habit}
-                  config={config}
-                  entries={entriesFor(habit)}
-                  goal={goal}
-                  todayValue={todayValueFor(habit)}
-                  onQuickAdd={() => addDelta(habit, config.quickAdd[0])}
-                  onUndo={() => addDelta(habit, -config.step)}
-                  editMode={editMode}
-                  canMoveUp={idx > 0}
-                  canMoveDown={idx < validOrder.length - 1}
-                  onMoveUp={() => moveUp(habit)}
-                  onMoveDown={() => moveDown(habit)}
-                />
+                  ref={(el) => {
+                    if (el) itemRefs.current.set(habit, el);
+                    else itemRefs.current.delete(habit);
+                  }}
+                >
+                  <HabitSummaryCard
+                    habit={habit}
+                    config={config}
+                    entries={entriesFor(habit)}
+                    goal={goal}
+                    todayValue={todayValueFor(habit)}
+                    onQuickAdd={() => addDelta(habit, config.quickAdd[0])}
+                    onUndo={() => addDelta(habit, -config.step)}
+                    editMode={editMode}
+                    isDragging={draggingId === habit}
+                    onDragPointerDown={(e) => handleDragPointerDown(habit, e)}
+                    onDragPointerMove={(e) => handleDragPointerMove(habit, e)}
+                    onDragPointerUp={handleDragPointerUp}
+                  />
+                </div>
               );
             })}
       </div>

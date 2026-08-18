@@ -59,5 +59,5 @@ export function useCardOrder(defaultOrder: string[]) {
     [order, persist]
   );
 
-  return { order, moveUp, moveDown };
+  return { order, moveUp, moveDown, reorder: persist };
 }
