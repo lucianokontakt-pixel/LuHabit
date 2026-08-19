@@ -14,13 +14,31 @@ export function entriesToMap(entries: Entry[]): Map<string, number> {
   return new Map(entries.map((e) => [e.date, e.value]));
 }
 
+/** Tage vom ältesten Eintrag bis heute — mehr Verlauf gibt es nicht herzugeben. */
+function daysCovered(entries: Entry[]): number {
+  if (entries.length === 0) return 0;
+  const earliest = entries.reduce((min, e) => (e.date < min ? e.date : min), entries[0].date);
+  const today = new Date().toLocaleDateString("sv-SE");
+  const ms =
+    new Date(`${today}T00:00:00`).getTime() - new Date(`${earliest}T00:00:00`).getTime();
+  // Runden statt Abschneiden: die Zeitumstellung verschiebt den Abstand um eine Stunde.
+  return Math.round(ms / 86_400_000) + 1;
+}
+
+/**
+ * rangeDays ist die Obergrenze, nicht das tatsächliche Fenster: gerechnet wird
+ * höchstens so weit zurück, wie Einträge vorliegen. Sonst meldet "Rekord" eine
+ * Zahl, die in Wahrheit vom Ladefenster des Aufrufers gedeckelt ist — ohne das
+ * irgendwo zu sagen.
+ */
 export function computeStreaks(
   entries: Entry[],
   goal: number,
   rangeDays = 365
 ): { current: number; longest: number } {
   const map = entriesToMap(entries);
-  const days = dateRange(rangeDays - 1, 0);
+  const span = Math.min(rangeDays, daysCovered(entries));
+  const days = dateRange(span - 1, 0);
   const met = days.map((d) => (map.get(d) ?? 0) >= goal);
 
   let longest = 0;

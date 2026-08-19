@@ -37,6 +37,26 @@ describe("computeStreaks", () => {
     expect(result.current).toBe(1);
   });
 
+  it("blickt nie weiter zurück als Einträge vorliegen", () => {
+    // Eine ununterbrochene Serie über 200 Tage. Früher rechnete die Funktion
+    // stur über 365 Tage; die 165 leeren Tage davor zählten als verfehlt, was
+    // in Ordnung war — der Fehler lag darin, dass "Rekord" dadurch am
+    // Ladefenster des Aufrufers hing, ohne das kenntlich zu machen.
+    const entries = Array.from({ length: 200 }, (_, i) => entry(199 - i, 10));
+    const result = computeStreaks(entries, 5);
+    expect(result.current).toBe(200);
+    expect(result.longest).toBe(200);
+  });
+
+  it("liefert 0 ohne jeden Eintrag", () => {
+    expect(computeStreaks([], 5)).toEqual({ current: 0, longest: 0 });
+  });
+
+  it("nimmt rangeDays weiterhin als Obergrenze", () => {
+    const entries = Array.from({ length: 50 }, (_, i) => entry(49 - i, 10));
+    expect(computeStreaks(entries, 5, 10).longest).toBe(10);
+  });
+
   it("zählt nur Tage, die das Ziel erreichen", () => {
     const entries = [entry(2, 3), entry(1, 10), entry(0, 10)];
     // Tag "vor 2" verfehlt das Ziel von 5 -> Streak startet erst danach.

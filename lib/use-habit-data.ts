@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { HabitType, todayISO, isoDateDaysAgo } from "@/lib/habits";
 import { addEntry, fetchEntries, fetchGoals, setGoal, type Entry } from "@/lib/api-client";
 
-const HISTORY_DAYS = 180;
+// Ein Jahr — deckt sich mit dem Standardfenster von computeStreaks, damit der
+// angezeigte Rekord nicht stillschweigend am Ladefenster hängen bleibt.
+const HISTORY_DAYS = 365;
 
 export function useHabitData(habit: HabitType, defaultGoal: number) {
   const [entries, setEntries] = useState<Entry[]>([]);
