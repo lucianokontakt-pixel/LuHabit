@@ -30,6 +30,11 @@ const mono = Geist_Mono({
 export const metadata: Metadata = {
   title: "LuHabit",
   description: "Deine Habits, dein Training, deine Werte — an einem Ort.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "LuHabit",
+  },
 };
 
 export const viewport: Viewport = {
