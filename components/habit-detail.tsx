@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useHabitRegistry } from "@/lib/habit-registry";
 import { useHabitData } from "@/lib/use-habit-data";
 import { computeStreaks, sum } from "@/lib/stats";
+import { formatNumber } from "@/lib/format";
 import { Heatmap } from "@/components/heatmap";
 import { WeeklyChart } from "@/components/weekly-chart";
 
@@ -68,10 +69,10 @@ function HabitDetailContent({
           <CardHeader className="pb-2">
             <CardDescription>Heute</CardDescription>
             <CardTitle className="text-2xl">
-              {isToggle ? (todayValue > 0 ? "Erledigt" : "Offen") : todayValue}
+              {isToggle ? (todayValue > 0 ? "Erledigt" : "Offen") : formatNumber(todayValue)}
               {!isToggle && (
                 <span className="ml-1 text-sm font-normal text-muted-foreground">
-                  / {goal} {resolvedConfig.unit}
+                  / {formatNumber(goal)} {resolvedConfig.unit}
                 </span>
               )}
             </CardTitle>
@@ -100,12 +101,12 @@ function HabitDetailContent({
           <CardHeader className="pb-2">
             <CardDescription>Letzte 7 Tage</CardDescription>
             <CardTitle className="text-2xl">
-              {weekTotal}
+              {formatNumber(weekTotal)}
               <span className="ml-1 text-sm font-normal text-muted-foreground">{resolvedConfig.unit}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Ø {(weekTotal / 7).toFixed(1)} {resolvedConfig.unit} / Tag
+            Ø {formatNumber(Math.round((weekTotal / 7) * 10) / 10)} {resolvedConfig.unit} / Tag
           </CardContent>
         </Card>
 
@@ -124,7 +125,7 @@ function HabitDetailContent({
             <CardContent>
               <Progress value={weeklyProgress} />
               <p className="mt-2 text-xs text-muted-foreground">
-                {weekTotal} / {weeklyGoal} {resolvedConfig.unit}
+                {formatNumber(weekTotal)} / {formatNumber(weeklyGoal ?? 0)} {resolvedConfig.unit}
               </p>
             </CardContent>
           </Card>
@@ -217,8 +218,8 @@ function HabitDetailContent({
               }}
             >
               <Pencil className="size-3.5" />
-              Ziel: {goal}
-              {weeklyGoal ? ` · Woche: ${weeklyGoal}` : ""} {resolvedConfig.unit}
+              Ziel: {formatNumber(goal)}
+              {weeklyGoal ? ` · Woche: ${formatNumber(weeklyGoal)}` : ""} {resolvedConfig.unit}
             </Button>
           ) : (
             <form

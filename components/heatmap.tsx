@@ -4,12 +4,13 @@ import { cn } from "@/lib/utils";
 import { dateRange, entriesToMap } from "@/lib/stats";
 import type { Entry } from "@/lib/api-client";
 
+// Dieselbe warme Rampe wie im Trainingskalender.
 const LEVEL_CLASSES = [
-  "bg-muted",
-  "bg-primary/20",
-  "bg-primary/45",
-  "bg-primary/70",
-  "bg-primary",
+  "bg-elevated",
+  "bg-blush/40",
+  "bg-blush/60",
+  "bg-blush/80",
+  "bg-blush",
 ];
 
 function levelFor(value: number, goal: number): number {
@@ -57,7 +58,7 @@ export function Heatmap({
               <div
                 key={date}
                 title={`${date}: ${value}${unit ? " " + unit : ""}`}
-                className={cn("size-3 rounded-[2px]", LEVEL_CLASSES[level])}
+                className={cn("size-3 rounded-[3px]", LEVEL_CLASSES[level])}
               />
             );
           })}

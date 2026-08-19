@@ -13,7 +13,7 @@ import type { Entry } from "@/lib/api-client";
 const chartConfig = {
   value: {
     label: "Wert",
-    color: "var(--chart-5)",
+    color: "var(--chart-1)",
   },
 } satisfies ChartConfig;
 
@@ -50,19 +50,25 @@ export function WeeklyChart({
   return (
     <ChartContainer config={chartConfig} className="h-[180px] w-full">
       <BarChart data={data} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+        <CartesianGrid
+          vertical={false}
+          strokeDasharray="2 4"
+          stroke="var(--border)"
+          strokeOpacity={1}
+        />
         <XAxis
           dataKey="label"
           tickLine={false}
           axisLine={false}
-          tickMargin={8}
-          fontSize={12}
+          tickMargin={10}
+          fontSize={11}
+          stroke="var(--muted-foreground)"
         />
         <ChartTooltip content={<ChartTooltipContent hideLabel={false} />} />
         {goal > 0 && !monthly && (
           <ReferenceLine y={goal} stroke="var(--muted-foreground)" strokeDasharray="4 4" />
         )}
-        <Bar dataKey="value" fill="var(--color-value)" radius={4} />
+        <Bar dataKey="value" fill="var(--color-value)" radius={[6, 6, 2, 2]} maxBarSize={28} />
       </BarChart>
     </ChartContainer>
   );

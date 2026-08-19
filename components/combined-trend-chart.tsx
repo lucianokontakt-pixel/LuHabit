@@ -80,15 +80,28 @@ export function CombinedTrendChart({
   return (
     <ChartContainer config={config} className="h-[260px] w-full">
       <LineChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
+        <CartesianGrid
+          vertical={false}
+          strokeDasharray="2 4"
+          stroke="var(--border)"
+          strokeOpacity={1}
+        />
+        <XAxis
+          dataKey="label"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={10}
+          fontSize={11}
+          stroke="var(--muted-foreground)"
+        />
         <YAxis
           tickLine={false}
           axisLine={false}
           tickMargin={8}
-          fontSize={12}
+          fontSize={11}
           unit="%"
-          width={48}
+          width={44}
+          stroke="var(--muted-foreground)"
         />
         <ChartTooltip content={<ChartTooltipContent />} />
         {order.map((id) => (
@@ -98,8 +111,8 @@ export function CombinedTrendChart({
             dataKey={id}
             stroke={`var(--color-${id})`}
             strokeWidth={2}
-            dot={{ r: 3 }}
-            activeDot={{ r: 5 }}
+            dot={{ r: 2.5, fill: "var(--background)", strokeWidth: 1.5 }}
+            activeDot={{ r: 4 }}
           />
         ))}
         <ChartLegend content={<ChartLegendContent />} />
