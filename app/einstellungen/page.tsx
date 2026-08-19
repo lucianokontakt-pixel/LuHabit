@@ -132,26 +132,6 @@ export default function EinstellungenPage() {
           </div>
         </Card>
       )}
-
-      <Card className="gap-3">
-        <div className="px-(--card-spacing)">
-          <h2 className="text-sm font-medium">Gewicht von der Waage automatisch eintragen</h2>
-        </div>
-        <ol className="list-decimal space-y-2 px-(--card-spacing) pl-8 text-[13px] text-muted-foreground marker:text-foreground/40">
-          <li>In der Renpho-App: Health-Sync für Gewicht (und optional Körperfett) aktivieren.</li>
-          <li>Oben ein Secret generieren und die Webhook-URLs kopieren.</li>
-          <li>
-            In der Shortcuts-App einen neuen Shortcut anlegen: Aktion „Gesundheitsprobe abrufen“
-            (Gewicht, neuester Wert) → Aktion „URL-Inhalt abrufen“ (POST an die Gewicht-URL,
-            JSON-Body <code>{`{ "value": [Wert] }`}</code>). Für Körperfett analog mit der
-            zweiten URL.
-          </li>
-          <li>
-            Unter „Automation“ einen Trigger „App“ → Renpho → „wird geschlossen“ anlegen, der den
-            Shortcut lautlos ausführt (Nachfrage vor Ausführung: aus).
-          </li>
-        </ol>
-      </Card>
     </div>
   );
 }
