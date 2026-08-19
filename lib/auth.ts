@@ -67,7 +67,26 @@ function secretOrThrow(): string {
 
 /** Ist überhaupt ein Login eingerichtet? Ohne Konfiguration bleibt die App offen. */
 export function authConfigured(): boolean {
-  return Boolean(process.env.GOOGLE_CLIENT_ID || process.env.APP_PASSCODE);
+  return Boolean(process.env.GOOGLE_CLIENT_ID);
+}
+
+/**
+ * Pfade, die ohne Sitzung erreichbar sein müssen. Webhooks prüfen ihr eigenes
+ * Secret in der Route (userIdForWebhookSecret) — die Middleware darf sie nicht
+ * vorher abfangen.
+ *
+ * Bewusst eine Funktion und keine Ausnahme im Matcher: Next.js verlangt den
+ * Matcher statisch im Quelltext, eine importierte Konstante ist dort nicht
+ * erlaubt. Als Regex wäre diese Liste also nicht testbar — und genau das hat
+ * gekostet: /api/entries/webhook fehlte darin und war deshalb tot.
+ */
+export function isPublicPath(pathname: string): boolean {
+  if (pathname === "/login") return true;
+  if (pathname.startsWith("/api/auth/")) return true;
+  // Jeder Endpunkt auf /webhook bringt seine eigene Prüfung mit. Über das
+  // Namensmuster ist ein neuer Webhook automatisch ausgenommen.
+  if (pathname.startsWith("/api/") && pathname.endsWith("/webhook")) return true;
+  return false;
 }
 
 export async function signValue(value: string): Promise<string> {
@@ -138,14 +157,6 @@ export const sessionCookieOptions = {
   path: "/",
   maxAge: SESSION_MAX_AGE,
 };
-
-/** Bleibt für den Notfall-Zugang per Passcode erhalten. */
-export async function hashPasscode(passcode: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(passcode));
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
 
 /** Zufälliger URL-sicherer Wert für state und PKCE-Verifier. */
 export function randomToken(bytes = 32): string {

@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE, authConfigured, readSessionCookie } from "@/lib/auth";
+import { AUTH_COOKIE, authConfigured, isPublicPath, readSessionCookie } from "@/lib/auth";
 
 export async function middleware(req: NextRequest) {
   // Ohne eingerichteten Login bleibt die App offen — so wie in der lokalen
   // Entwicklung ohne Konfiguration.
   if (!authConfigured()) {
+    return NextResponse.next();
+  }
+
+  // Die Login-Seite, der OAuth-Fluss und die Webhooks brauchen keine Sitzung.
+  // Die Liste steht in lib/auth.ts, weil sie dort testbar ist — im Matcher
+  // unten wäre sie es nicht, siehe Kommentar bei isPublicPath.
+  if (isPublicPath(req.nextUrl.pathname)) {
     return NextResponse.next();
   }
 
@@ -26,8 +33,10 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // Icons müssen ohne Anmeldung erreichbar sein — die Login-Seite selbst
-    // braucht sie, und ein Redirect auf HTML ergibt für ein Bild keinen Sinn.
-    "/((?!login|api/auth|api/steps/webhook|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png).*)",
+    // Nur noch die statischen Dateien. Wer angemeldet sein muss, entscheidet
+    // isPublicPath — Icons bleiben ohne Anmeldung erreichbar, die Login-Seite
+    // selbst braucht sie, und ein Redirect auf HTML ergibt für ein Bild
+    // keinen Sinn.
+    "/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png).*)",
   ],
 };
