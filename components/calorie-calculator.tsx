@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,17 +9,22 @@ import { formatNumber } from "@/lib/format";
 import { ACTIVITY_LEVELS, basalMetabolicRate, useBodyProfile } from "@/lib/body-profile";
 
 export function CalorieCalculator({ latestWeight }: { latestWeight?: number }) {
-  const { profile, update, hydrated } = useBodyProfile();
+  const { profile, update } = useBodyProfile();
+  // Gewicht kommt vom echten Verlauf auf /koerper und wird nicht separat
+  // gespeichert — nur als Startwert übernommen, überschreibbar für den Fall,
+  // dass noch kein Wert eingetragen ist.
+  const [weightInput, setWeightInput] = useState("");
 
   useEffect(() => {
-    if (hydrated && !profile.weight && latestWeight) {
-      update({ weight: String(latestWeight) });
+    if (!weightInput && latestWeight) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- übernimmt den geladenen Gewichtswert als Startwert
+      setWeightInput(String(latestWeight));
     }
-  }, [hydrated, latestWeight, profile.weight, update]);
+  }, [latestWeight, weightInput]);
 
   const age = Number(profile.age);
   const height = Number(profile.height);
-  const weight = Number(profile.weight);
+  const weight = Number(weightInput);
   const activity = Number(profile.activity);
 
   const bmr = basalMetabolicRate({ gender: profile.gender, weight, height, age });
@@ -100,8 +105,8 @@ export function CalorieCalculator({ latestWeight }: { latestWeight?: number }) {
               type="number"
               min={0}
               inputMode="decimal"
-              value={profile.weight}
-              onChange={(e) => update({ weight: e.target.value })}
+              value={weightInput}
+              onChange={(e) => setWeightInput(e.target.value)}
             />
           </div>
         </div>

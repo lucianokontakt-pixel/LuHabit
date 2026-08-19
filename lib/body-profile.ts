@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type Gender = "male" | "female";
 
@@ -8,7 +8,6 @@ export type BodyProfile = {
   age: string;
   gender: Gender;
   height: string;
-  weight: string;
   activity: string;
 };
 
@@ -20,49 +19,84 @@ export const ACTIVITY_LEVELS = [
   { value: "1.9", label: "Extrem aktiv", hint: "körperliche Arbeit + Sport" },
 ];
 
-// Schlüssel bleibt wie gehabt, damit bereits eingegebene Werte erhalten bleiben.
-const STORAGE_KEY = "luhabit-calorie-inputs";
-
 export const DEFAULT_PROFILE: BodyProfile = {
   age: "",
   gender: "male",
   height: "",
-  weight: "",
   activity: "1.375",
 };
 
-export function readBodyProfile(): BodyProfile {
-  if (typeof window === "undefined") return DEFAULT_PROFILE;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_PROFILE;
-    return { ...DEFAULT_PROFILE, ...(JSON.parse(raw) as Partial<BodyProfile>) };
-  } catch {
-    return DEFAULT_PROFILE;
-  }
+type ProfileResponse = {
+  age: number | null;
+  gender: Gender;
+  height: number | null;
+  activity: string;
+} | null;
+
+function fromResponse(p: ProfileResponse): BodyProfile {
+  if (!p) return DEFAULT_PROFILE;
+  return {
+    age: p.age !== null ? String(p.age) : "",
+    gender: p.gender,
+    height: p.height !== null ? String(p.height) : "",
+    activity: p.activity,
+  };
 }
 
+/**
+ * Liegt in D1 statt im localStorage: sonst kennen Handy und Laptop
+ * unterschiedliche Werte, und beim Cache-Leeren wären sie weg.
+ * Schreibt entprellt, damit nicht jeder Tastenanschlag einen Request auslöst.
+ */
 export function useBodyProfile() {
   const [profile, setProfile] = useState<BodyProfile>(DEFAULT_PROFILE);
   const [hydrated, setHydrated] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- liest gespeicherte Werte einmalig beim Mount
-    setProfile(readBodyProfile());
-    setHydrated(true);
+    let active = true;
+    fetch("/api/body-profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { profile: ProfileResponse } | null) => {
+        if (!active) return;
+        setProfile(fromResponse(data?.profile ?? null));
+      })
+      .finally(() => {
+        if (active) setHydrated(true);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const update = useCallback((patch: Partial<BodyProfile>) => {
-    setProfile((prev) => {
-      const next = { ...prev, ...patch };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // Speichern ist ein Komfort-Feature, Fehler dürfen die Eingabe nicht blockieren
-      }
-      return next;
-    });
+  const save = useCallback((next: BodyProfile) => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      fetch("/api/body-profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          age: next.age === "" ? null : Number(next.age),
+          gender: next.gender,
+          height: next.height === "" ? null : Number(next.height),
+          activity: next.activity,
+        }),
+      }).catch(() => {
+        // Speichern ist ein Komfort-Feature, ein verpasster Request darf die Eingabe nicht blockieren.
+      });
+    }, 500);
   }, []);
+
+  const update = useCallback(
+    (patch: Partial<BodyProfile>) => {
+      setProfile((prev) => {
+        const next = { ...prev, ...patch };
+        save(next);
+        return next;
+      });
+    },
+    [save]
+  );
 
   return { profile, update, hydrated };
 }
