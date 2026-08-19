@@ -7,6 +7,7 @@ import { globSync } from "node:fs";
 const TABLES = [
   "entries", "goals", "custom_habits", "exercises", "workout_plans",
   "plan_days", "plan_exercises", "workout_sessions", "workout_sets",
+  "body_profile",
 ];
 
 const files = globSync("app/api/**/route.ts");

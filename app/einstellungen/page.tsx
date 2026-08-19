@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { Moon, Sun, Laptop, User, Copy, RefreshCw } from "lucide-react";
+import { Moon, Sun, Laptop, User, Copy, RefreshCw, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ACTIVITY_LEVELS, useBodyProfile } from "@/lib/body-profile";
 
@@ -270,6 +270,42 @@ export default function EinstellungenPage() {
               Secret generieren
             </Button>
           )}
+        </div>
+      </Card>
+
+      <Card className="gap-4">
+        <div className="px-(--card-spacing)">
+          <h2 className="text-sm font-medium">Daten exportieren</h2>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Alles, was zu deinem Konto gehört — zum Mitnehmen oder Aufheben. Die JSON-Datei
+            enthält den vollständigen Bestand, die CSV-Dateien öffnen sich direkt in einer
+            Tabelle. Das Webhook-Secret bleibt draußen.
+          </p>
+        </div>
+
+        {/* Echte Links statt fetch: der Server schickt die Datei mit
+            Content-Disposition, das funktioniert auch in iOS Safari. */}
+        <div className="flex flex-wrap gap-2 px-(--card-spacing)">
+          <a href="/api/export" download className={buttonVariants({ variant: "default" })}>
+            <Download className="size-3.5" />
+            Alles als JSON
+          </a>
+          <a
+            href="/api/export?format=habits"
+            download
+            className={buttonVariants({ variant: "outline" })}
+          >
+            <Download className="size-3.5" />
+            Habits als CSV
+          </a>
+          <a
+            href="/api/export?format=training"
+            download
+            className={buttonVariants({ variant: "outline" })}
+          >
+            <Download className="size-3.5" />
+            Training als CSV
+          </a>
         </div>
       </Card>
     </div>
