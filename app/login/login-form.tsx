@@ -1,9 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 
 const ERRORS: Record<string, string> = {
@@ -52,39 +49,11 @@ function GoogleMark() {
   );
 }
 
-export function LoginForm({ googleEnabled, passcodeEnabled }: {
-  googleEnabled: boolean;
-  passcodeEnabled: boolean;
-}) {
-  const router = useRouter();
+export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "/";
   const oauthError = searchParams.get("error");
   const errorDetail = searchParams.get("detail");
-
-  const [showPasscode, setShowPasscode] = useState(!googleEnabled);
-  const [passcode, setPasscode] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    startTransition(async () => {
-      const res = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passcode }),
-      });
-      if (res.ok) {
-        router.replace(from);
-        router.refresh();
-      } else {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(data?.error ?? "Anmeldung fehlgeschlagen");
-      }
-    });
-  }
 
   return (
     <Card className="w-full max-w-sm gap-6">
@@ -109,7 +78,7 @@ export function LoginForm({ googleEnabled, passcodeEnabled }: {
         </div>
       )}
 
-      {googleEnabled && (
+      {googleEnabled ? (
         <div className="px-(--card-spacing)">
           {/* Bewusst ein Link, kein fetch: der OAuth-Start ist eine echte
               Navigation zu Google und darf nicht im Hintergrund passieren. */}
@@ -121,43 +90,7 @@ export function LoginForm({ googleEnabled, passcodeEnabled }: {
             Mit Google anmelden
           </a>
         </div>
-      )}
-
-      {passcodeEnabled && (
-        <div className="flex flex-col gap-3 px-(--card-spacing)">
-          {googleEnabled && !showPasscode && (
-            <button
-              type="button"
-              onClick={() => setShowPasscode(true)}
-              className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-            >
-              Stattdessen Passcode benutzen
-            </button>
-          )}
-
-          {showPasscode && (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-              {googleEnabled && (
-                <p className="text-xs text-muted-foreground">Notfall-Zugang</p>
-              )}
-              <Input
-                type="password"
-                inputMode="numeric"
-                autoFocus={!googleEnabled}
-                placeholder="Passcode"
-                value={passcode}
-                onChange={(e) => setPasscode(e.target.value)}
-              />
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button type="submit" size="lg" disabled={isPending || !passcode}>
-                {isPending ? "Prüfe…" : "Einloggen"}
-              </Button>
-            </form>
-          )}
-        </div>
-      )}
-
-      {!googleEnabled && !passcodeEnabled && (
+      ) : (
         <p className="px-(--card-spacing) text-sm text-muted-foreground">
           Es ist keine Anmeldung eingerichtet — die App ist offen zugänglich.
         </p>

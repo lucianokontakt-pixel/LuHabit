@@ -38,10 +38,9 @@ Die App spricht D1 über Cloudflares HTTP-Query-API an (`lib/d1.ts`), nicht übe
 ## 2. Anmeldung
 
 LuHabit ist mehrbenutzerfähig: jedes Konto sieht nur seine eigenen Habits,
-Pläne und Trainingseinheiten. Ohne gesetzte `GOOGLE_CLIENT_ID` **und** ohne
-`APP_PASSCODE` bleibt die App offen und alle Zugriffe laufen auf das
-Owner-Konto — praktisch lokal, in Produktion sollte mindestens eines gesetzt
-sein.
+Pläne und Trainingseinheiten. Ohne gesetzte `GOOGLE_CLIENT_ID` bleibt die App
+offen und alle Zugriffe laufen auf das Owner-Konto — praktisch lokal, in
+Produktion muss sie gesetzt sein.
 
 ### Google-Login einrichten
 
@@ -67,7 +66,6 @@ sein.
 | `APP_URL` | Öffentliche Adresse, bestimmt die Redirect-URI. Lokal leer lassen. |
 | `OWNER_EMAIL` | Diese Adresse übernimmt beim ersten Login den Datenbestand von vor dem Mehrbenutzer-Umbau. |
 | `ALLOWED_EMAILS` | Optional, kommagetrennt. Gesetzt = nur diese Adressen dürfen sich anmelden. Leer = offene Registrierung. |
-| `APP_PASSCODE` | Notfall-Zugang ohne Google, meldet immer als Owner an. |
 
 Sitzungen liegen als signiertes Cookie (HMAC-SHA256), nicht in der Datenbank —
 die Middleware kommt so ohne Datenbankzugriff pro Request aus. Der Preis: eine
@@ -158,7 +156,7 @@ Braucht lokal dieselben `CLOUDFLARE_*`-Variablen wie oben (aus `.env.local` oder
 
 `APP_URL`, `OWNER_EMAIL` und `GOOGLE_CLIENT_ID` stehen als `vars` direkt in
 `wrangler.jsonc` (unkritisch, sichtbar im Client). Alles andere — `AUTH_SECRET`,
-`GOOGLE_CLIENT_SECRET`, `CLOUDFLARE_*`, `APP_PASSCODE`, `STEPS_WEBHOOK_SECRET` —
+`GOOGLE_CLIENT_SECRET`, `CLOUDFLARE_*`, `STEPS_WEBHOOK_SECRET` —
 sind Worker-Secrets, einmalig gesetzt mit:
 
 ```bash
