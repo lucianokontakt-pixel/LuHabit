@@ -7,13 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Flame, Trophy, Pencil, Check, CalendarRange } from "lucide-react";
-import { HabitConfig, HabitType, isoDateDaysAgo } from "@/lib/habits";
+import { Flame, Trophy, Pencil, Check, CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
+import { HabitConfig, HabitType, addDaysISO, isoDateDaysAgo } from "@/lib/habits";
 import { cn } from "@/lib/utils";
 import { useHabitRegistry } from "@/lib/habit-registry";
 import { useHabitData } from "@/lib/use-habit-data";
 import { computeStreaks, sum } from "@/lib/stats";
-import { formatNumber } from "@/lib/format";
+import { formatDayLabel, formatNumber } from "@/lib/format";
 import { Heatmap } from "@/components/heatmap";
 import { WeeklyChart } from "@/components/weekly-chart";
 
@@ -38,8 +38,23 @@ function HabitDetailContent({
 }) {
   const Icon = resolvedConfig.icon;
   const isToggle = resolvedConfig.kind === "toggle";
-  const { entries, goal, weeklyGoal, todayValue, loading, addDelta, updateGoal, updateWeeklyGoal } =
-    useHabitData(habit, resolvedConfig.defaultGoal);
+  const {
+    entries,
+    goal,
+    weeklyGoal,
+    todayValue,
+    valueFor,
+    today,
+    earliestDate,
+    loading,
+    addDelta,
+    setValueFor,
+    updateGoal,
+    updateWeeklyGoal,
+  } = useHabitData(habit, resolvedConfig.defaultGoal);
+  const [selectedDate, setSelectedDate] = useState(today);
+  const isToday = selectedDate === today;
+  const selectedValue = valueFor(selectedDate);
   const [manualValue, setManualValue] = useState("");
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState(String(goal));
@@ -133,33 +148,87 @@ function HabitDetailContent({
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle className="text-base">Eintragen</CardTitle>
+          {/* Tagesauswahl: vergessene Tage lassen sich nachtragen, statt als
+              Loch in Heatmap und Streak stehen zu bleiben. */}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Einen Tag zurück"
+              disabled={selectedDate <= earliestDate}
+              onClick={() => setSelectedDate((d) => addDaysISO(d, -1))}
+            >
+              <ChevronLeft />
+            </Button>
+            <span
+              className={cn(
+                "min-w-[7.5rem] text-center text-sm tabular-nums",
+                !isToday && "font-medium"
+              )}
+            >
+              {formatDayLabel(selectedDate, today)}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Einen Tag vor"
+              disabled={isToday}
+              onClick={() => setSelectedDate((d) => addDaysISO(d, 1))}
+            >
+              <ChevronRight />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
+          {!isToday && (
+            <p className="text-xs text-muted-foreground">
+              Du trägst für {formatDayLabel(selectedDate, today).toLowerCase()} nach.{" "}
+              <button
+                type="button"
+                className="underline underline-offset-4"
+                onClick={() => setSelectedDate(today)}
+              >
+                Zurück zu heute
+              </button>
+            </p>
+          )}
+
           {isToggle ? (
             <Button
-              variant={todayValue > 0 ? "secondary" : "outline"}
+              variant={selectedValue > 0 ? "secondary" : "outline"}
               className="h-11 w-full max-w-xs gap-1.5"
-              onClick={() => addDelta(todayValue > 0 ? -todayValue : 1)}
+              onClick={() => addDelta(selectedValue > 0 ? -selectedValue : 1, selectedDate)}
             >
-              <Check className={cn("size-4", todayValue <= 0 && "opacity-40")} />
-              {todayValue > 0 ? "Geschafft" : "Als erledigt markieren"}
+              <Check className={cn("size-4", selectedValue <= 0 && "opacity-40")} />
+              {selectedValue > 0 ? "Geschafft" : "Als erledigt markieren"}
             </Button>
           ) : (
             <>
               <div className="flex flex-wrap gap-2">
                 {resolvedConfig.quickAdd.map((amount) => (
-                  <Button key={amount} variant="secondary" onClick={() => addDelta(amount)}>
+                  <Button
+                    key={amount}
+                    variant="secondary"
+                    onClick={() => addDelta(amount, selectedDate)}
+                  >
                     +{amount} {resolvedConfig.unit}
                   </Button>
                 ))}
-                {todayValue > 0 && (
-                  <Button variant="outline" onClick={() => addDelta(-resolvedConfig.step)}>
+                {selectedValue > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => addDelta(-resolvedConfig.step, selectedDate)}
+                  >
                     -{resolvedConfig.step}
                   </Button>
                 )}
               </div>
+              <p className="text-xs text-muted-foreground">
+                Stand: {formatNumber(selectedValue)} / {formatNumber(goal)}{" "}
+                {resolvedConfig.unit}
+              </p>
               <Separator />
               <form
                 className="flex items-center gap-2"
@@ -167,7 +236,7 @@ function HabitDetailContent({
                   e.preventDefault();
                   const val = Number(manualValue);
                   if (Number.isFinite(val) && val >= 0) {
-                    addDelta(val - todayValue);
+                    setValueFor(val, selectedDate);
                     setManualValue("");
                   }
                 }}
@@ -175,7 +244,7 @@ function HabitDetailContent({
                 <Input
                   type="number"
                   min={0}
-                  placeholder={`Genauen Wert für heute setzen (${resolvedConfig.unit})`}
+                  placeholder={`Genauen Wert setzen (${resolvedConfig.unit})`}
                   value={manualValue}
                   onChange={(e) => setManualValue(e.target.value)}
                   className="max-w-xs"

@@ -38,27 +38,60 @@ export function useHabitData(habit: HabitType, defaultGoal: number) {
   }, [load]);
 
   const today = todayISO();
-  const todayValue = entries.find((e) => e.date === today)?.value ?? 0;
+  /**
+   * Frühester nachtragbarer Tag. Weiter zurück liegen keine Einträge im
+   * Speicher — ein Wert dort würde von 0 aus gerechnet und könnte einen
+   * echten Eintrag überschreiben.
+   */
+  const earliestDate = isoDateDaysAgo(HISTORY_DAYS - 1);
 
-  const addDelta = useCallback(
-    async (delta: number) => {
-      const optimisticValue = Math.max(0, todayValue + delta);
+  const valueFor = (date: string) => entries.find((e) => e.date === date)?.value ?? 0;
+  const todayValue = valueFor(today);
+
+  /**
+   * Schreibt den Eintrag eines Tages und hält die Liste optimistisch aktuell.
+   * Der Vorschauwert wird aus der vorigen Liste berechnet statt aus dem
+   * Closure — sonst rechnen mehrere schnelle Taps alle vom selben Stand aus.
+   */
+  const write = useCallback(
+    async (
+      date: string,
+      optimistic: (current: number) => number,
+      params: { delta?: number; value?: number }
+    ) => {
+      const replace = (list: Entry[], entry: Entry) => [
+        ...list.filter((e) => e.date !== date),
+        entry,
+      ];
       setEntries((prev) => {
-        const others = prev.filter((e) => e.date !== today);
-        return [...others, { habit, date: today, value: optimisticValue }];
+        const current = prev.find((e) => e.date === date)?.value ?? 0;
+        return replace(prev, { habit, date, value: Math.max(0, optimistic(current)) });
       });
       try {
-        const entry = await addEntry({ habit, date: today, delta });
-        setEntries((prev) => {
-          const others = prev.filter((e) => e.date !== today);
-          return [...others, entry];
-        });
+        const entry = await addEntry({ habit, date, ...params });
+        setEntries((prev) => replace(prev, entry));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Fehler beim Speichern");
         load();
       }
     },
-    [habit, today, todayValue, load]
+    [habit, load]
+  );
+
+  const addDelta = useCallback(
+    async (delta: number, date: string = today) => {
+      await write(date, (current) => current + delta, { delta });
+    },
+    [today, write]
+  );
+
+  /** Genauen Wert setzen — geht direkt über value, nicht über die Differenz. */
+  const setValueFor = useCallback(
+    async (value: number, date: string = today) => {
+      const safe = Math.max(0, value);
+      await write(date, () => safe, { value: safe });
+    },
+    [today, write]
   );
 
   const updateGoal = useCallback(
@@ -90,9 +123,13 @@ export function useHabitData(habit: HabitType, defaultGoal: number) {
     goal,
     weeklyGoal,
     todayValue,
+    valueFor,
+    today,
+    earliestDate,
     loading,
     error,
     addDelta,
+    setValueFor,
     updateGoal,
     updateWeeklyGoal,
     reload: load,

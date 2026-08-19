@@ -137,3 +137,14 @@ export function isoDateDaysAgo(days: number): string {
   d.setDate(d.getDate() - days);
   return d.toLocaleDateString("sv-SE");
 }
+
+/**
+ * Verschiebt ein ISO-Datum um n Tage — für die Tagesauswahl beim Nachtragen.
+ * Rechnet bewusst über Date statt auf dem String, damit Monats-, Jahres- und
+ * Sommerzeitwechsel richtig fallen.
+ */
+export function addDaysISO(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return d.toLocaleDateString("sv-SE");
+}

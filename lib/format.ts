@@ -56,3 +56,23 @@ export function formatDateLong(iso: string): string {
     month: "long",
   });
 }
+
+/**
+ * Beschriftung für die Tagesauswahl: "Heute", "Gestern", sonst "Mo, 12. Aug".
+ * Der heutige Tag kommt als Parameter, damit die Funktion rein bleibt.
+ */
+export function formatDayLabel(iso: string, todayIso: string): string {
+  if (iso === todayIso) return "Heute";
+
+  const yesterday = new Date(`${todayIso}T00:00:00`);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (iso === yesterday.toLocaleDateString("sv-SE")) return "Gestern";
+
+  const d = new Date(`${iso}T00:00:00`);
+  // Intl hängt an den Kurzmonat einen Punkt ("17. Aug."). Der Rest der App
+  // schreibt Monate ohne — siehe MONTH_LABELS in lib/stats.ts.
+  const date = d
+    .toLocaleDateString("de-DE", { day: "numeric", month: "short" })
+    .replace(/\.$/, "");
+  return `${weekdayShort(iso)}, ${date}`;
+}
