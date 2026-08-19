@@ -2,14 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { Moon, Sun, Laptop, User } from "lucide-react";
+import { Moon, Sun, Laptop, User, Copy, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ACTIVITY_LEVELS, useBodyProfile } from "@/lib/body-profile";
 
 type Me = { email: string; name: string | null; picture: string | null };
+
+function webhookUrl(habit: string, secret: string): string {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return `${origin}/api/entries/webhook?habit=${habit}&secret=${secret}`;
+}
+
+function copy(text: string) {
+  navigator.clipboard
+    .writeText(text)
+    .then(() => toast.success("In die Zwischenablage kopiert"))
+    .catch(() => toast.error("Kopieren fehlgeschlagen"));
+}
 
 const THEME_OPTIONS = [
   { value: "light", label: "Hell", icon: Sun },
@@ -22,6 +36,9 @@ export default function EinstellungenPage() {
   const { profile, update } = useBodyProfile();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [secret, setSecret] = useState<string | null>(null);
+  const [secretLoading, setSecretLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Standardmuster für next-themes Hydration-Fix
@@ -32,7 +49,26 @@ export default function EinstellungenPage() {
         if (data?.user) setMe(data.user);
       })
       .catch(() => {});
+    fetch("/api/webhook-secret")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { secret: string | null } | null) => setSecret(data?.secret ?? null))
+      .finally(() => setSecretLoading(false));
   }, []);
+
+  async function generateSecret() {
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/webhook-secret", { method: "POST" });
+      if (!res.ok) throw new Error();
+      const data: { secret: string } = await res.json();
+      setSecret(data.secret);
+      toast.success("Neues Secret erzeugt");
+    } catch {
+      toast.error("Konnte Secret nicht erzeugen");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-7">
@@ -176,6 +212,63 @@ export default function EinstellungenPage() {
               ))}
             </div>
           </div>
+        </div>
+      </Card>
+
+      <Card className="gap-4">
+        <div className="px-(--card-spacing)">
+          <h2 className="text-sm font-medium">Automatischer Sync</h2>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Secret für externe Automationen (z. B. einen iOS-Shortcut, der Gewicht aus Apple
+            Health schickt). Nicht weitergeben — wer es kennt, kann Werte auf dein Konto
+            schreiben.
+          </p>
+        </div>
+
+        <div className="px-(--card-spacing)">
+          {secretLoading ? (
+            <p className="text-sm text-muted-foreground">Lädt …</p>
+          ) : secret ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <code className="rounded-lg bg-elevated px-3 py-1.5 text-xs break-all">
+                  {secret}
+                </code>
+                <Button variant="outline" size="sm" onClick={generateSecret} disabled={generating}>
+                  <RefreshCw className="size-3.5" />
+                  Neu generieren
+                </Button>
+              </div>
+              <div className="flex flex-col gap-2">
+                {[
+                  { habit: "weight", label: "Gewicht" },
+                  { habit: "bodyfat", label: "Körperfett" },
+                ].map(({ habit, label }) => {
+                  const url = webhookUrl(habit, secret);
+                  return (
+                    <div key={habit} className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1 rounded-lg bg-elevated px-3 py-1.5">
+                        <p className="text-[11px] text-muted-foreground">{label}</p>
+                        <p className="truncate text-xs">{url}</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        aria-label={`${label}-URL kopieren`}
+                        onClick={() => copy(url)}
+                      >
+                        <Copy className="size-3.5" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <Button onClick={generateSecret} disabled={generating}>
+              Secret generieren
+            </Button>
+          )}
         </div>
       </Card>
     </div>
