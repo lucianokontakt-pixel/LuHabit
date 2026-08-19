@@ -12,7 +12,10 @@
   },
   "vars": {
     "APP_URL": "https://luhabit.luhabit.workers.dev",
-    "OWNER_EMAIL": "luciano.kontakt@gmail.com"
+    "OWNER_EMAIL": "luciano.kontakt@gmail.com",
+    // Die Client-ID ist öffentlich — sie steht beim Login in der Adresszeile.
+    // Nur das Client-Secret gehört in die Secret-Verwaltung.
+    "GOOGLE_CLIENT_ID": "919163979741-bfr5ppe4ido3023gnh7caodskt88b0fh.apps.googleusercontent.com"
   },
   "observability": {
     "enabled": true
