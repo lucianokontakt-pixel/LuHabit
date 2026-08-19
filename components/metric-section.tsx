@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import type { LucideIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Minus, Plus, type LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -41,11 +41,20 @@ export function MetricSection({
 }) {
   const { entries, loading, addValue } = useMetricData(metric);
   const [input, setInput] = useState("");
+  const [edited, setEdited] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const latest = entries[entries.length - 1];
   const reference = valueDaysAgo(entries, days);
   const delta = latest && reference !== null ? latest.value - reference : null;
+
+  // Der zuletzt gemessene Wert steht schon im Feld: eine neue Messung weicht
+  // meist nur in der letzten Stelle ab, das spart Tipparbeit am Handy.
+  useEffect(() => {
+    if (edited || latest === undefined) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- übernimmt den geladenen Wert, solange niemand tippt
+    setInput(String(latest.value));
+  }, [edited, latest]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,7 +65,19 @@ export function MetricSection({
     }
     setError(null);
     addValue(value);
-    setInput("");
+    // Zurück auf „unberührt“: das Feld zeigt danach den frisch gespeicherten Wert.
+    setEdited(false);
+  }
+
+  /** Feinjustierung in Schrittweiten — am Handy schneller als Tippen. */
+  function nudge(direction: 1 | -1) {
+    const current = Number(input.replace(",", "."));
+    const base = Number.isFinite(current) ? current : (latest?.value ?? 0);
+    // toFixed fängt Rundungsfehler wie 65,1 − 0,1 = 65,00000000000001 ab.
+    const next = Math.max(0, Number((base + direction * step).toFixed(2)));
+    setEdited(true);
+    setInput(String(next));
+    setError(null);
   }
 
   return (
@@ -91,16 +112,40 @@ export function MetricSection({
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-1.5 px-(--card-spacing)">
         <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            inputMode="decimal"
-            step={step}
-            min={0}
-            placeholder={`Neuer Wert in ${unit}`}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            aria-label={`${label} eintragen`}
-          />
+          {/* Minus und Plus rahmen das Feld ein, damit ein Wert ohne Tastatur
+              nachjustiert werden kann — die native Spinner-Pfeile entfallen. */}
+          <div className="flex min-w-0 flex-1 items-center rounded-pill bg-elevated ring-1 ring-foreground/8 focus-within:ring-2 focus-within:ring-ring/40">
+            <button
+              type="button"
+              onClick={() => nudge(-1)}
+              aria-label={`${label} verringern`}
+              className="flex size-11 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Minus className="size-4" />
+            </button>
+            <Input
+              type="number"
+              inputMode="decimal"
+              step={step}
+              min={0}
+              placeholder={`Neuer Wert in ${unit}`}
+              value={input}
+              onChange={(e) => {
+                setEdited(true);
+                setInput(e.target.value);
+              }}
+              aria-label={`${label} eintragen`}
+              className="border-transparent bg-transparent px-1 text-center focus-visible:border-transparent focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+            <button
+              type="button"
+              onClick={() => nudge(1)}
+              aria-label={`${label} erhöhen`}
+              className="flex size-11 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Plus className="size-4" />
+            </button>
+          </div>
           <Button type="submit" size="lg" className="h-11 shrink-0">
             Eintragen
           </Button>
