@@ -104,8 +104,16 @@ export function MetricSection({
           <TrendChart entries={entries} unit={unit} />
         ) : (
           <div className="flex h-[180px] items-center justify-center rounded-panel bg-elevated/60 text-center text-sm text-muted-foreground">
-            Noch nicht genug Daten für einen Verlauf —<br />
-            trag zwei Werte ein.
+            {/* Pro Tag zählt nur ein Wert — ein zweiter Eintrag von heute
+                ersetzt den ersten und ergibt noch keinen Verlauf. */}
+            {entries.length === 0 ? (
+              <>Noch kein Wert eingetragen.</>
+            ) : (
+              <>
+                Ein Messtag reicht noch nicht —<br />
+                ab dem nächsten Tag siehst du hier den Verlauf.
+              </>
+            )}
           </div>
         )}
       </div>
