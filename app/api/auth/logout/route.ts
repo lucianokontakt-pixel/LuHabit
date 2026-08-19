@@ -8,10 +8,9 @@ function clear(req: NextRequest) {
   return res;
 }
 
+// Nur POST: components/user-menu.tsx schickt ein Formular ab. Ein zusätzlicher
+// GET-Handler liesse sich von einer fremden Seite per <img src="…"> auslösen
+// und würde die Sitzung ungefragt beenden.
 export async function POST(req: NextRequest) {
-  return clear(req);
-}
-
-export async function GET(req: NextRequest) {
   return clear(req);
 }
