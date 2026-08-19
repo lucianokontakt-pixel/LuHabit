@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
 import { todayISO } from "@/lib/habits";
+import { userIdForWebhookSecret } from "@/lib/server-user";
 
 // Für externe Quellen (z.B. iOS Shortcuts) gedacht, die keine Session haben.
 // Aufruf z.B.:
@@ -15,15 +16,8 @@ export async function POST(req: NextRequest) {
   if (!habit) {
     return NextResponse.json({ error: "habit (Query-Param) erforderlich" }, { status: 400 });
   }
-  if (!providedSecret) {
-    return NextResponse.json({ error: "secret erforderlich" }, { status: 401 });
-  }
 
-  const users = await d1Query<{ id: string }>(
-    `SELECT id FROM users WHERE webhook_secret = ?`,
-    [providedSecret]
-  );
-  const userId = users[0]?.id;
+  const userId = await userIdForWebhookSecret(providedSecret);
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

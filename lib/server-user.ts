@@ -125,3 +125,15 @@ export async function findUserById(id: string): Promise<DbUser | null> {
   );
   return rows[0] ?? null;
 }
+
+/**
+ * Löst ein Webhook-Secret (aus /einstellungen, users.webhook_secret) auf ein
+ * Konto auf — für externe Quellen wie iOS Shortcuts, die keine Session haben.
+ */
+export async function userIdForWebhookSecret(secret: string | null): Promise<string | null> {
+  if (!secret) return null;
+  const rows = await d1Query<{ id: string }>(`SELECT id FROM users WHERE webhook_secret = ?`, [
+    secret,
+  ]);
+  return rows[0]?.id ?? null;
+}
