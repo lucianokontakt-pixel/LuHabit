@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { d1Query, d1InsertMany } from "@/lib/d1";
 import type { PlanDay, WorkoutPlan } from "@/lib/training";
 
-type PlanRow = { id: string; name: string; is_active: number; position: number };
+type PlanRow = {
+  id: string;
+  name: string;
+  is_active: number;
+  position: number;
+  weekly_target: number | null;
+};
 type DayRow = {
   id: string;
   plan_id: string;
@@ -43,7 +49,8 @@ function newId(prefix: string): string {
 
 async function loadPlans(): Promise<WorkoutPlan[]> {
   const plans = await d1Query<PlanRow>(
-    `SELECT id, name, is_active, position FROM workout_plans ORDER BY position ASC, created_at ASC`
+    `SELECT id, name, is_active, position, weekly_target
+       FROM workout_plans ORDER BY position ASC, created_at ASC`
   );
   if (plans.length === 0) return [];
 
@@ -90,6 +97,7 @@ async function loadPlans(): Promise<WorkoutPlan[]> {
     name: p.name,
     isActive: p.is_active === 1,
     position: p.position,
+    weeklyTarget: p.weekly_target,
     days: daysByPlan.get(p.id) ?? [],
   }));
 }
@@ -159,6 +167,7 @@ export async function POST(req: NextRequest) {
     name?: string;
     days?: DayInput[];
     duplicateOf?: string;
+    weeklyTarget?: number | null;
   };
 
   const countRow = await d1Query<{ count: number }>(`SELECT COUNT(*) AS count FROM workout_plans`);
@@ -167,6 +176,7 @@ export async function POST(req: NextRequest) {
   // Duplizieren: Name und Struktur der Vorlage übernehmen.
   let name = body.name?.trim();
   let days: DayInput[] = body.days ?? [];
+  let weeklyTarget = body.weeklyTarget ?? null;
 
   if (body.duplicateOf) {
     const plans = await loadPlans();
@@ -175,6 +185,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Vorlage nicht gefunden" }, { status: 404 });
     }
     name = name || `${source.name} (Kopie)`;
+    weeklyTarget = body.weeklyTarget ?? source.weeklyTarget;
     days = source.days.map((d) => ({
       name: d.name,
       weekday: d.weekday,
@@ -194,8 +205,9 @@ export async function POST(req: NextRequest) {
 
   const id = newId("plan");
   await d1Query(
-    `INSERT INTO workout_plans (id, name, is_active, position) VALUES (?, ?, ?, ?)`,
-    [id, name, position === 0 ? 1 : 0, position]
+    `INSERT INTO workout_plans (id, name, is_active, position, weekly_target)
+     VALUES (?, ?, ?, ?, ?)`,
+    [id, name, position === 0 ? 1 : 0, position, weeklyTarget]
   );
   await writeDays(id, days);
 
@@ -209,12 +221,13 @@ export async function PUT(req: NextRequest) {
     name?: string;
     isActive?: boolean;
     days?: DayInput[];
+    weeklyTarget?: number | null;
   };
 
   if (!body.id) return NextResponse.json({ error: "id ist erforderlich" }, { status: 400 });
 
   const current = await d1Query<PlanRow>(
-    `SELECT id, name, is_active, position FROM workout_plans WHERE id = ?`,
+    `SELECT id, name, is_active, position, weekly_target FROM workout_plans WHERE id = ?`,
     [body.id]
   );
   if (current.length === 0) {
@@ -226,11 +239,15 @@ export async function PUT(req: NextRequest) {
     await d1Query(`UPDATE workout_plans SET is_active = 0 WHERE id != ?`, [body.id]);
   }
 
-  await d1Query(`UPDATE workout_plans SET name = ?, is_active = ? WHERE id = ?`, [
-    body.name?.trim() || current[0].name,
-    body.isActive === undefined ? current[0].is_active : body.isActive ? 1 : 0,
-    body.id,
-  ]);
+  await d1Query(
+    `UPDATE workout_plans SET name = ?, is_active = ?, weekly_target = ? WHERE id = ?`,
+    [
+      body.name?.trim() || current[0].name,
+      body.isActive === undefined ? current[0].is_active : body.isActive ? 1 : 0,
+      body.weeklyTarget === undefined ? current[0].weekly_target : body.weeklyTarget,
+      body.id,
+    ]
+  );
 
   if (body.days) await writeDays(body.id, body.days);
 

@@ -92,7 +92,7 @@ export default function ExercisesPage() {
 
       <div className="flex flex-col gap-3">
         <div className="flex gap-2">
-          <div className="relative flex-1">
+          <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
@@ -101,9 +101,9 @@ export default function ExercisesPage() {
               className="pl-10"
             />
           </div>
-          <Button size="lg" className="h-11 shrink-0" onClick={() => setCreating(true)}>
+          <Button size="lg" className="h-11 shrink-0 px-4" onClick={() => setCreating(true)}>
             <Plus />
-            <span className="hidden sm:inline">Eigene Übung</span>
+            Eigene Übung
           </Button>
         </div>
 

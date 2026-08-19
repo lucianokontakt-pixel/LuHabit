@@ -9,6 +9,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { DayEditor, type EditDay } from "@/components/training/day-editor";
+import { NumberField } from "@/components/training/number-field";
 import { useTraining } from "@/lib/training-store";
 import { updatePlan } from "@/lib/api-training";
 import type { WorkoutPlan } from "@/lib/training";
@@ -43,6 +44,7 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
   const plan = plans.find((p) => p.id === id);
 
   const [name, setName] = useState("");
+  const [weeklyTarget, setWeeklyTarget] = useState<number | null>(null);
   const [days, setDays] = useState<EditDay[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -51,6 +53,7 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
     if (!plan || hydrated) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- übernimmt den geladenen Plan einmalig in den Editor-State
     setName(plan.name);
+    setWeeklyTarget(plan.weeklyTarget);
     setDays(toEditDays(plan));
     setHydrated(true);
   }, [plan, hydrated]);
@@ -58,9 +61,11 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
   const dirty = useMemo(() => {
     if (!plan || !hydrated) return false;
     return (
-      name !== plan.name || JSON.stringify(days) !== JSON.stringify(toEditDays(plan))
+      name !== plan.name ||
+      weeklyTarget !== plan.weeklyTarget ||
+      JSON.stringify(days) !== JSON.stringify(toEditDays(plan))
     );
-  }, [plan, hydrated, name, days]);
+  }, [plan, hydrated, name, weeklyTarget, days]);
 
   async function handleSave() {
     if (!plan) return;
@@ -73,6 +78,7 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
       const { plans: next } = await updatePlan({
         id: plan.id,
         name: name.trim(),
+        weeklyTarget,
         days: days.map((d) => ({
           name: d.name,
           weekday: d.weekday,
@@ -145,6 +151,24 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
           {days.length} {days.length === 1 ? "Tag" : "Tage"} ·{" "}
           {days.reduce((sum, d) => sum + d.exercises.length, 0)} Übungen
         </p>
+
+        <div className="flex items-end gap-3">
+          <NumberField
+            id="plan-weekly-target"
+            label="Wochenziel"
+            suffix="Einheiten"
+            value={weeklyTarget}
+            min={1}
+            max={14}
+            placeholder="kein Ziel"
+            onChange={setWeeklyTarget}
+            className="w-40"
+          />
+          <p className="pb-2.5 text-xs text-muted-foreground">
+            Wie oft du pro Woche trainieren willst. Die Tage rotieren frei — das Ziel misst nur,
+            wie oft du wirklich da warst.
+          </p>
+        </div>
       </div>
 
       <div className="flex flex-col gap-4">

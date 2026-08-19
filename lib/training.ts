@@ -85,6 +85,8 @@ export type WorkoutPlan = {
   name: string;
   isActive: boolean;
   position: number;
+  /** Angestrebte Einheiten pro Woche (null = kein Ziel gesetzt). */
+  weeklyTarget: number | null;
   days: PlanDay[];
 };
 
@@ -136,6 +138,11 @@ export type ProgressionResult = {
   targets: SetTarget[];
   /** true, wenn die letzte Einheit die Obergrenze in allen Sätzen erreicht hat. */
   progressed: boolean;
+  /**
+   * Womit gesteigert wurde: mit Gewicht, oder — bei Eigengewichtsübungen ohne
+   * Zusatzgewicht — mit einer weiteren Wiederholung.
+   */
+  progressionKind: "weight" | "reps" | null;
   /** Kein Verlauf vorhanden — Vorschlag stammt aus dem Körpergewicht. */
   isFirstTime: boolean;
 };
@@ -167,6 +174,7 @@ export function computeTargets({
     return {
       targets: Array.from({ length: sets }, () => ({ weight: start, reps: repMin })),
       progressed: false,
+      progressionKind: null,
       isFirstTime: true,
     };
   }
@@ -182,10 +190,27 @@ export function computeTargets({
     workingAtTop.length >= sets && workingAtTop.every((s) => s.reps >= repMax);
 
   if (allAtCeiling) {
+    // Ohne Zusatzgewicht (Klimmzüge, Dips, Liegestütze) wäre ein Sprung auf
+    // 2,5 kg ein Vorschlag, den man im Gym erst mal nicht umsetzen kann.
+    // Dort wächst stattdessen das Wiederholungsziel — Calisthenics-Logik.
+    if (topWeight === 0) {
+      // Vom tatsächlich Geschafften aus weiterzählen, nicht von repMax —
+      // sonst bliebe das Ziel für immer bei repMax + 1 stehen.
+      const achieved = Math.min(...workingAtTop.map((s) => s.reps));
+      const nextReps = achieved + 1;
+      return {
+        targets: Array.from({ length: sets }, () => ({ weight: 0, reps: nextReps })),
+        progressed: true,
+        progressionKind: "reps",
+        isFirstTime: false,
+      };
+    }
+
     const next = roundToIncrement(topWeight + increment, increment);
     return {
       targets: Array.from({ length: sets }, () => ({ weight: next, reps: repMin })),
       progressed: true,
+      progressionKind: "weight",
       isFirstTime: false,
     };
   }
@@ -193,10 +218,13 @@ export function computeTargets({
   return {
     targets: Array.from({ length: sets }, (_, i) => {
       const previous = workingAtTop[i] ?? workingAtTop[workingAtTop.length - 1];
-      const reps = previous ? Math.min(repMax, Math.max(repMin, previous.reps)) : repMin;
+      // Bei Eigengewicht darf das Ziel über repMax hinausgewachsen sein.
+      const ceiling = topWeight === 0 ? Math.max(repMax, previous?.reps ?? repMax) : repMax;
+      const reps = previous ? Math.min(ceiling, Math.max(repMin, previous.reps)) : repMin;
       return { weight: topWeight, reps };
     }),
     progressed: false,
+    progressionKind: null,
     isFirstTime: false,
   };
 }

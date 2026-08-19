@@ -75,6 +75,7 @@ export async function createPlan(params: {
   name?: string;
   days?: DayInput[];
   duplicateOf?: string;
+  weeklyTarget?: number | null;
 }): Promise<{ plan: WorkoutPlan; plans: WorkoutPlan[] }> {
   const res = await fetch("/api/training/plans", {
     method: "POST",
@@ -89,6 +90,7 @@ export async function updatePlan(params: {
   name?: string;
   isActive?: boolean;
   days?: DayInput[];
+  weeklyTarget?: number | null;
 }): Promise<{ plan: WorkoutPlan; plans: WorkoutPlan[] }> {
   const res = await fetch("/api/training/plans", {
     method: "PUT",

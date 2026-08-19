@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Check, ChevronRight, Flame, TrendingUp } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, Flame, TrendingUp, TrendingDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -32,6 +32,7 @@ import {
   type PlanDay,
   type WorkoutPlan,
 } from "@/lib/training";
+import { deloadWeight, summarizeProgress } from "@/lib/progression";
 import { cn } from "@/lib/utils";
 
 const DRAFT_KEY = "luhabit-active-session";
@@ -87,7 +88,17 @@ export function SessionClient() {
     if (!day) return {};
     const map: Record<
       string,
-      { weight: number; reps: number; progressed: boolean; isFirstTime: boolean; step: number }
+      {
+        weight: number;
+        reps: number;
+        progressed: boolean;
+        progressionKind: "weight" | "reps" | null;
+        isFirstTime: boolean;
+        step: number;
+        stagnating: boolean;
+        sessionsSinceGain: number;
+        deload: number | null;
+      }
     > = {};
     for (const pe of day.exercises) {
       const exercise = exerciseById[pe.exerciseId];
@@ -98,16 +109,25 @@ export function SessionClient() {
         lastSets: lastSetsFor(pe.exerciseId),
         bodyweight,
       });
+      const summary = summarizeProgress(exercise, sessions);
       map[pe.id] = {
         weight: result.targets[0]?.weight ?? 0,
         reps: result.targets[0]?.reps ?? pe.repMin,
         progressed: result.progressed,
+        progressionKind: result.progressionKind,
         isFirstTime: result.isFirstTime,
         step: incrementFor(exercise, pe),
+        stagnating: summary.stagnating,
+        sessionsSinceGain: summary.sessionsSinceGain,
+        // Ein Deload ergibt nur Sinn, wo es überhaupt Gewicht gibt.
+        deload:
+          summary.stagnating && !summary.repsBased && summary.current > 0
+            ? deloadWeight(summary.current, exercise, pe)
+            : null,
       };
     }
     return map;
-  }, [day, exerciseById, lastSetsFor, bodyweight]);
+  }, [day, exerciseById, lastSetsFor, bodyweight, sessions]);
 
   // Startzustand: entweder ein unterbrochener Entwurf oder frische Zielwerte.
   useEffect(() => {
@@ -166,6 +186,19 @@ export function SessionClient() {
           [planExerciseId]: list.map((s, i) => (i === index ? { ...s, ...patch } : s)),
         };
       });
+    },
+    []
+  );
+
+  /** Alle Sätze der Übung auf das reduzierte Gewicht und die Untergrenze setzen. */
+  const applyDeload = useCallback(
+    (planExerciseId: string, weight: number, reps: number) => {
+      setSetsByExercise((prev) => ({
+        ...prev,
+        [planExerciseId]: (prev[planExerciseId] ?? []).map((s) =>
+          s.done ? s : { ...s, weight, reps }
+        ),
+      }));
     },
     []
   );
@@ -396,12 +429,38 @@ export function SessionClient() {
 
               {isActive && (
                 <>
-                  {target?.progressed && (
+                  {target?.progressed && target.progressionKind === "weight" && (
                     <p className="mx-(--card-spacing) flex items-center gap-2 rounded-field bg-blush px-3 py-2 text-xs text-blush-foreground">
                       <TrendingUp className="size-3.5 shrink-0" />
                       Letztes Mal alle Sätze auf {pe.repMax} — Gewicht auf{" "}
                       {formatNumber(target.weight)} kg erhöht, zurück auf {pe.repMin} Wdh.
                     </p>
+                  )}
+                  {target?.progressed && target.progressionKind === "reps" && (
+                    <p className="mx-(--card-spacing) flex items-center gap-2 rounded-field bg-blush px-3 py-2 text-xs text-blush-foreground">
+                      <TrendingUp className="size-3.5 shrink-0" />
+                      Letztes Mal alles geschafft — neues Ziel: {target.reps} Wiederholungen.
+                    </p>
+                  )}
+                  {target?.stagnating && !target.progressed && (
+                    <div className="mx-(--card-spacing) flex flex-wrap items-center gap-2 rounded-field bg-card px-3 py-2 text-xs">
+                      <TrendingDown className="size-3.5 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1 text-muted-foreground">
+                        Seit {target.sessionsSinceGain} Einheiten kein Fortschritt.
+                        {target.deload !== null
+                          ? ` Einmal auf ${formatNumber(target.deload)} kg zurückgehen?`
+                          : ""}
+                      </span>
+                      {target.deload !== null && (
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          onClick={() => applyDeload(pe.id, target.deload!, pe.repMin)}
+                        >
+                          Deload
+                        </Button>
+                      )}
+                    </div>
                   )}
                   {target?.isFirstTime && (
                     <p className="mx-(--card-spacing) flex items-center gap-2 rounded-field bg-card px-3 py-2 text-xs text-muted-foreground">

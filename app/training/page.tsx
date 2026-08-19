@@ -10,6 +10,7 @@ import { TrainingTabs } from "@/components/training/training-tabs";
 import { useTraining } from "@/lib/training-store";
 import { nextDayFor, sessionVolume, MUSCLE_LABELS } from "@/lib/training";
 import { formatCompact, formatDateLong, formatNumber } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { isoDateDaysAgo, todayISO } from "@/lib/habits";
 
 export default function TrainingOverviewPage() {
@@ -23,6 +24,17 @@ export default function TrainingOverviewPage() {
 
   const weekStart = isoDateDaysAgo(6);
   const weekSessions = sessions.filter((s) => s.date >= weekStart);
+
+  // Kalenderwoche (Montag–Sonntag) für das Wochenziel — nicht die letzten 7 Tage.
+  const mondayISO = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d.toLocaleDateString("sv-SE");
+  })();
+  const thisWeekCount = new Set(
+    sessions.filter((s) => s.date >= mondayISO).map((s) => s.date)
+  ).size;
+  const weeklyTarget = activePlan?.weeklyTarget ?? null;
   const weekVolume = weekSessions.reduce((sum, s) => sum + sessionVolume(s), 0);
   const weekMinutes = weekSessions.reduce(
     (sum, s) => sum + Math.round((s.durationSeconds ?? 0) / 60),
@@ -125,6 +137,40 @@ export default function TrainingOverviewPage() {
           </div>
         </Card>
       </div>
+
+      {weeklyTarget !== null && (
+        <Card className="gap-3">
+          <div className="flex items-baseline justify-between gap-3 px-(--card-spacing)">
+            <div>
+              <p className="text-xs text-muted-foreground">Diese Woche</p>
+              <p className="nums mt-1 text-heading-sm leading-none">
+                {thisWeekCount}
+                <span className="text-muted-foreground"> / {weeklyTarget}</span>
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {thisWeekCount >= weeklyTarget
+                ? "Wochenziel erreicht."
+                : `Noch ${weeklyTarget - thisWeekCount} ${
+                    weeklyTarget - thisWeekCount === 1 ? "Einheit" : "Einheiten"
+                  }`}
+            </p>
+          </div>
+          <div className="px-(--card-spacing)">
+            <div className="flex gap-1.5">
+              {Array.from({ length: weeklyTarget }, (_, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "h-1.5 flex-1 rounded-pill transition-colors",
+                    i < thisWeekCount ? "bg-chart-1" : "bg-elevated"
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+        </Card>
+      )}
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">

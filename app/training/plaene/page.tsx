@@ -20,7 +20,7 @@ import {
 import { TrainingTabs } from "@/components/training/training-tabs";
 import { useTraining } from "@/lib/training-store";
 import { createPlan, deletePlan, updatePlan } from "@/lib/api-training";
-import { STARTER_PLAN } from "@/lib/exercise-seed";
+import { SPLIT_TEMPLATES, type SplitTemplate } from "@/lib/exercise-seed";
 import { WEEKDAY_NAMES } from "@/lib/training";
 
 export default function PlansPage() {
@@ -52,11 +52,12 @@ export default function PlansPage() {
       toast.success(`„${name}“ angelegt`);
     }, "Konnte Plan nicht anlegen");
 
-  const handleStarter = () =>
+  const handleTemplate = (template: SplitTemplate) =>
     run(async () => {
       const { plans: next } = await createPlan({
-        name: STARTER_PLAN.name,
-        days: STARTER_PLAN.days.map((d) => ({
+        name: template.name,
+        weeklyTarget: template.weeklyTarget,
+        days: template.days.map((d) => ({
           name: d.name,
           weekday: null,
           exercises: d.exercises.map((e) => ({
@@ -69,8 +70,9 @@ export default function PlansPage() {
         })),
       });
       setPlans(next);
-      toast.success("Push / Pull / Legs angelegt");
-    }, "Konnte Startplan nicht anlegen");
+      setCreating(false);
+      toast.success(`${template.name} angelegt`);
+    }, "Konnte Vorlage nicht anlegen");
 
   const handleDuplicate = (id: string) =>
     run(async () => {
@@ -109,21 +111,12 @@ export default function PlansPage() {
       {loading ? (
         <div className="h-32 animate-pulse rounded-card bg-card" />
       ) : plans.length === 0 ? (
-        <Card className="gap-4">
+        <Card className="gap-2">
           <div className="px-(--card-spacing)">
             <p className="text-subheading font-display">Noch kein Plan</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Starte mit einem fertigen Push/Pull/Legs-Plan oder leg dir einen eigenen an.
+              Nimm eine fertige Vorlage oder fang leer an.
             </p>
-          </div>
-          <div className="flex flex-col gap-2 px-(--card-spacing) sm:flex-row">
-            <Button size="lg" onClick={handleStarter} disabled={busy}>
-              Push / Pull / Legs anlegen
-            </Button>
-            <Button size="lg" variant="outline" onClick={() => setCreating(true)} disabled={busy}>
-              <Plus />
-              Leeren Plan anlegen
-            </Button>
           </div>
         </Card>
       ) : (
@@ -143,6 +136,7 @@ export default function PlansPage() {
                   <p className="mt-0.5 text-sm text-muted-foreground">
                     {plan.days.length} {plan.days.length === 1 ? "Tag" : "Tage"} ·{" "}
                     {plan.days.reduce((sum, d) => sum + d.exercises.length, 0)} Übungen
+                    {plan.weeklyTarget ? ` · ${plan.weeklyTarget}× pro Woche` : ""}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1">
@@ -207,38 +201,64 @@ export default function PlansPage() {
         </div>
       )}
 
-      {plans.length > 0 && (
-        <div>
-          {creating ? (
-            <Card className="gap-3">
-              <div className="flex flex-col gap-2 px-(--card-spacing) sm:flex-row">
-                <Input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Name des Plans"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleCreate();
-                    if (e.key === "Escape") setCreating(false);
-                  }}
-                />
-                <div className="flex gap-2">
-                  <Button onClick={handleCreate} disabled={busy || !newName.trim()}>
-                    Anlegen
-                  </Button>
-                  <Button variant="ghost" onClick={() => setCreating(false)}>
-                    Abbrechen
-                  </Button>
-                </div>
+      {creating ? (
+        <Card className="gap-4">
+          <div className="px-(--card-spacing)">
+            <h2 className="text-subheading font-display">Vorlage wählen</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Die Übungen und Wiederholungsbereiche kannst du danach frei anpassen.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2 px-(--card-spacing)">
+            {SPLIT_TEMPLATES.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                disabled={busy}
+                onClick={() => handleTemplate(template)}
+                className="flex flex-col gap-1 rounded-panel bg-elevated p-4 text-left ring-1 ring-foreground/8 transition-colors hover:ring-foreground/25 disabled:opacity-50"
+              >
+                <span className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-sm font-medium">{template.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {template.days.length} {template.days.length === 1 ? "Tag" : "Tage"} ·{" "}
+                    empfohlen {template.weeklyTarget}× pro Woche
+                  </span>
+                </span>
+                <span className="text-xs text-muted-foreground">{template.description}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-2 px-(--card-spacing)">
+            <p className="text-[11px] text-muted-foreground">Oder leer starten</p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Name des Plans"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCreate();
+                  if (e.key === "Escape") setCreating(false);
+                }}
+              />
+              <div className="flex gap-2">
+                <Button onClick={handleCreate} disabled={busy || !newName.trim()}>
+                  Anlegen
+                </Button>
+                <Button variant="ghost" onClick={() => setCreating(false)}>
+                  Abbrechen
+                </Button>
               </div>
-            </Card>
-          ) : (
-            <Button variant="outline" size="lg" onClick={() => setCreating(true)}>
-              <Plus />
-              Neuer Plan
-            </Button>
-          )}
-        </div>
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <Button variant="outline" size="lg" className="w-fit" onClick={() => setCreating(true)}>
+          <Plus />
+          Neuer Plan
+        </Button>
       )}
 
       <AlertDialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
