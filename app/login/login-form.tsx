@@ -19,6 +19,15 @@ const ERRORS: Record<string, string> = {
   nicht_freigegeben: "Diese Mailadresse ist für LuHabit nicht freigegeben.",
 };
 
+/** Googles eigene Fehlercodes in Klartext — spart beim Einrichten viel Raten. */
+const DETAIL_HINTS: Record<string, string> = {
+  invalid_client: "Client-ID oder Client-Schlüssel stimmen nicht.",
+  redirect_uri_mismatch:
+    "Diese Weiterleitungs-URI ist bei Google nicht eingetragen.",
+  invalid_grant: "Der Anmelde-Code war abgelaufen oder schon benutzt.",
+  unauthorized_client: "Der Client darf diesen Anmeldeweg nicht benutzen.",
+};
+
 /** Googles Wortmarke — das offizielle „G" in seinen vier Farben. */
 function GoogleMark() {
   return (
@@ -51,6 +60,7 @@ export function LoginForm({ googleEnabled, passcodeEnabled }: {
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "/";
   const oauthError = searchParams.get("error");
+  const errorDetail = searchParams.get("detail");
 
   const [showPasscode, setShowPasscode] = useState(!googleEnabled);
   const [passcode, setPasscode] = useState("");
@@ -86,9 +96,17 @@ export function LoginForm({ googleEnabled, passcodeEnabled }: {
       </div>
 
       {oauthError && (
-        <p className="mx-(--card-spacing) rounded-field bg-elevated px-3 py-2 text-sm text-destructive">
-          {ERRORS[oauthError] ?? "Die Anmeldung ist fehlgeschlagen."}
-        </p>
+        <div className="mx-(--card-spacing) rounded-field bg-elevated px-3 py-2">
+          <p className="text-sm text-destructive">
+            {ERRORS[oauthError] ?? "Die Anmeldung ist fehlgeschlagen."}
+          </p>
+          {errorDetail && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Meldung von Google: <span className="font-mono">{errorDetail}</span>
+              {DETAIL_HINTS[errorDetail] ? ` — ${DETAIL_HINTS[errorDetail]}` : ""}
+            </p>
+          )}
+        </div>
       )}
 
       {googleEnabled && (

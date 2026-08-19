@@ -11,9 +11,12 @@ import { upsertGoogleUser } from "@/lib/server-user";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
-function loginError(req: NextRequest, code: string) {
+function loginError(req: NextRequest, code: string, detail?: string) {
   const url = new URL("/login", req.url);
   url.searchParams.set("error", code);
+  // Googles eigener Fehlercode (z.B. invalid_client, redirect_uri_mismatch)
+  // hilft beim Einrichten enorm und enthält keine Geheimnisse.
+  if (detail) url.searchParams.set("detail", detail);
   const res = NextResponse.redirect(url);
   res.cookies.delete(OAUTH_COOKIE);
   return res;
@@ -57,7 +60,13 @@ export async function GET(req: NextRequest) {
     }),
   });
 
-  if (!tokenRes.ok) return loginError(req, "token_fehlgeschlagen");
+  if (!tokenRes.ok) {
+    const body = (await tokenRes.json().catch(() => null)) as
+      | { error?: string; error_description?: string }
+      | null;
+    console.error("Google token exchange failed", tokenRes.status, body);
+    return loginError(req, "token_fehlgeschlagen", body?.error ?? String(tokenRes.status));
+  }
 
   const tokens = (await tokenRes.json()) as { id_token?: string };
   if (!tokens.id_token) return loginError(req, "kein_id_token");
