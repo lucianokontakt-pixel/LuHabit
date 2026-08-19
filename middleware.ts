@@ -26,6 +26,8 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!login|api/auth|api/steps/webhook|_next/static|_next/image|favicon.ico).*)",
+    // Icons müssen ohne Anmeldung erreichbar sein — die Login-Seite selbst
+    // braucht sie, und ein Redirect auf HTML ergibt für ein Bild keinen Sinn.
+    "/((?!login|api/auth|api/steps/webhook|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png).*)",
   ],
 };

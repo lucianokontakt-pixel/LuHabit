@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>LuHabit</title>
+  <!-- Dunkle Kachel mit dem Peach-Akzent: die einzige Farbe des
+       Design-Systems, damit das Icon zur App gehört und in hellen wie
+       dunklen Browser-Leisten gleich gut steht. Das L ist bewusst kräftig,
+       damit es auch als 16px-Favicon noch als Buchstabe lesbar bleibt. -->
+  <rect width="32" height="32" rx="7" fill="#17191c"/>
+  <g fill="#fbe1d1">
+    <rect x="9.5" y="8" width="6" height="16" rx="1.4"/>
+    <rect x="9.5" y="18" width="13" height="6" rx="1.4"/>
+  </g>
+</svg>
