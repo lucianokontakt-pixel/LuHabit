@@ -51,6 +51,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${sans.variable} ${display.variable} ${mono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Cloudflare-Worker-Build bundelt den Server-Code mit esbuilds
+            keepNames-Option. next-themes serialisiert sein Anti-Flacker-Skript
+            per Function.toString() ins HTML — dabei landet ein __name-Aufruf
+            im Text, der nur im Worker-Scope existiert, nicht im Browser. Ohne
+            diesen Polyfill bricht das Skript vor dem eigentlichen Theme-Setzen
+            ab (ReferenceError), das Skript unten steht immer vor next-themes'
+            eigenem Skript, weil <head> vor <body> ausgeführt wird. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "window.__name=window.__name||function(f){return f};",
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-background">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <HabitRegistryProvider>
