@@ -219,9 +219,9 @@ export default function EinstellungenPage() {
         <div className="px-(--card-spacing)">
           <h2 className="text-sm font-medium">Automatischer Sync</h2>
           <p className="mt-1 text-[13px] text-muted-foreground">
-            Secret für externe Automationen (z. B. einen iOS-Shortcut, der Gewicht aus Apple
-            Health schickt). Nicht weitergeben — wer es kennt, kann Werte auf dein Konto
-            schreiben.
+            Secret für externe Automationen (z. B. einen iOS-Shortcut, der Gewicht oder
+            Schritte aus Apple Health schickt). Nicht weitergeben — wer es kennt, kann Werte
+            auf dein Konto schreiben.
           </p>
         </div>
 
@@ -243,6 +243,7 @@ export default function EinstellungenPage() {
                 {[
                   { habit: "weight", label: "Gewicht" },
                   { habit: "bodyfat", label: "Körperfett" },
+                  { habit: "steps", label: "Schritte" },
                 ].map(({ habit, label }) => {
                   const url = webhookUrl(habit, secret);
                   return (
