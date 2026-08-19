@@ -10,6 +10,10 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "vars": {
+    "APP_URL": "https://luhabit.luhabit.workers.dev",
+    "OWNER_EMAIL": "luciano.kontakt@gmail.com"
+  },
   "observability": {
     "enabled": true
   }
