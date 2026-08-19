@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { LogOut, RefreshCw, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,10 +60,6 @@ export function UserMenu() {
         </div>
         {/* Echtes Formular statt window.location: das Abmelden setzt
             serverseitig Cookies und braucht eine vollständige Navigation. */}
-        <DropdownMenuItem render={<Link href="/einstellungen" />}>
-          <RefreshCw className="size-4" />
-          Automatischer Sync
-        </DropdownMenuItem>
         <form ref={logoutForm} action="/api/auth/logout" method="post" className="hidden" />
         <DropdownMenuItem onClick={() => logoutForm.current?.submit()}>
           <LogOut className="size-4" />
