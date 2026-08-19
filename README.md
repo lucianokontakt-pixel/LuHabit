@@ -98,7 +98,32 @@ Browser können Health-Daten nicht direkt lesen. Lösung: ein iOS-Shortcut, das 
 
 Bis dahin einfach die Schritte manuell auf der `/steps`-Seite eintragen.
 
-## 4. Deploy auf Vercel
+## 4. Gewicht automatisch von der Renpho-Waage
+
+Browser können weder Bluetooth zur Waage noch Health-Daten direkt lesen (vor allem in iOS Safari
+nicht). Lösung wie bei den Schritten: die Renpho-App synct Gewicht (und Körperfett) automatisch
+nach Apple Health, ein iOS-Shortcut liest den Wert aus Health und schickt ihn an LuHabit.
+
+Anders als beim Schritte-Webhook ist das hier **pro Nutzer**: jedes Konto hat sein eigenes
+Secret, das gleichzeitig festlegt, auf welches Konto der Wert geschrieben wird.
+
+1. In der Renpho-App: Health-Sync für Gewicht (und optional Körperfett) aktivieren.
+2. In LuHabit einloggen, über das Konto-Menü **„Automatischer Sync“** öffnen (`/einstellungen`),
+   Secret generieren und die Webhook-URLs kopieren.
+3. Shortcuts-App → neuer Shortcut:
+   - Aktion **„Gesundheitsprobe abrufen“** → Gewicht, neuester Wert
+   - Aktion **„URL-Inhalt abrufen“**:
+     - URL: die kopierte Gewicht-URL (`.../api/entries/webhook?habit=weight&secret=...`)
+     - Methode: POST
+     - Anfragetext (JSON): `{ "value": [Wert aus Schritt 1] }`
+   - Optional: dieselben zwei Aktionen für Körperfett, mit der Bodyfat-URL
+4. Unter **Automation** einen Trigger **„App“** → Renpho → „wird geschlossen“ anlegen, der den
+   Shortcut lautlos ausführt (Nachfrage vor Ausführung: aus) — läuft dann automatisch nach jedem
+   Wiegen.
+
+Bis dahin bzw. alternativ einfach manuell auf der `/koerper`-Seite eintragen.
+
+## 5. Deploy auf Vercel
 
 ```bash
 npx vercel
