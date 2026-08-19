@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LogOut, User } from "lucide-react";
+import Link from "next/link";
+import { LogOut, Settings, User } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,6 +59,10 @@ export function UserMenu() {
           {me.name && <p className="truncate text-sm font-medium">{me.name}</p>}
           <p className="truncate text-xs text-muted-foreground">{me.email}</p>
         </div>
+        <DropdownMenuItem render={<Link href="/einstellungen" />}>
+          <Settings className="size-4" />
+          Einstellungen
+        </DropdownMenuItem>
         {/* Echtes Formular statt window.location: das Abmelden setzt
             serverseitig Cookies und braucht eine vollständige Navigation. */}
         <form ref={logoutForm} action="/api/auth/logout" method="post" className="hidden" />
