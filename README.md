@@ -2,7 +2,7 @@
 
 Habit-Tracker für Schritte, Wasser, Kaffee und Training — mit Streaks, Wochen-Charts und einer Contribution-Heatmap.
 
-**Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Cloudflare D1 (Datenbank) · Vercel (Hosting)
+**Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Cloudflare D1 (Datenbank) · Cloudflare Workers via OpenNext (Hosting)
 
 ## Lokal starten
 
@@ -27,13 +27,13 @@ Der Befehl gibt dir eine `database_id` aus. Schema anwenden:
 npx wrangler d1 execute luhabit --remote --file=./schema.sql
 ```
 
-Danach in `.env.local` (und später in den Vercel-Projekteinstellungen) eintragen:
+Danach in `.env.local` (und später als GitHub-Actions-Secret bzw. Worker-Variable, siehe Abschnitt 5) eintragen:
 
 - `CLOUDFLARE_ACCOUNT_ID` — im Cloudflare-Dashboard rechts auf der Übersichtsseite
 - `CLOUDFLARE_D1_DATABASE_ID` — Ausgabe von `d1 create`, oder `npx wrangler d1 list`
-- `CLOUDFLARE_API_TOKEN` — unter **My Profile → API Tokens → Create Token**, Berechtigung „D1 Edit“ für den Account geben
+- `CLOUDFLARE_API_TOKEN` — unter **My Profile → API Tokens → Create Token**, Berechtigungen „D1 Edit“ und „Workers Scripts Edit“ für den Account geben (Letzteres nur fürs Deployen nötig)
 
-Die App spricht D1 über Cloudflares HTTP-Query-API an (`lib/d1.ts`), nicht über einen Worker — sie läuft komplett auf Vercel.
+Die App spricht D1 über Cloudflares HTTP-Query-API an (`lib/d1.ts`), nicht über eine D1-Bindung im Worker — das funktioniert unabhängig davon, wo die App selbst läuft.
 
 ## 2. Anmeldung
 
@@ -87,11 +87,14 @@ node scripts/audit-user-scope.mjs
 
 Browser können Health-Daten nicht direkt lesen. Lösung: ein iOS-Shortcut, das die Schritte automatisch täglich an die App schickt.
 
-1. `STEPS_WEBHOOK_SECRET` in `.env.local` / Vercel setzen (ein beliebiges langes Zufalls-Secret)
+Der ursprüngliche Weg, inzwischen serverweit statt pro Konto (siehe Abschnitt 4 für
+den neueren, kontobezogenen Webhook — funktioniert für `steps` genauso):
+
+1. `STEPS_WEBHOOK_SECRET` als Worker-Secret setzen (`npx wrangler secret put STEPS_WEBHOOK_SECRET`), ein beliebiges langes Zufalls-Secret
 2. Shortcuts-App → neuer Shortcut:
    - Aktion **„Gesundheitsprobe abrufen“** → Schritte, heute
    - Aktion **„URL-Inhalt abrufen“**:
-     - URL: `https://DEINE-DOMAIN.vercel.app/api/steps/webhook?secret=DEIN_SECRET`
+     - URL: `https://luhabit.luhabit.workers.dev/api/steps/webhook?secret=DEIN_SECRET`
      - Methode: POST
      - Anfragetext (JSON): `{ "steps": [Schritte-Wert aus Schritt 1] }`
 3. Unter **Automation** eine tägliche Automation anlegen (z. B. 22:00 Uhr, oder „App geöffnet“), die diesen Shortcut lautlos ausführt
@@ -108,8 +111,8 @@ Anders als beim Schritte-Webhook ist das hier **pro Nutzer**: jedes Konto hat se
 Secret, das gleichzeitig festlegt, auf welches Konto der Wert geschrieben wird.
 
 1. In der Renpho-App: Health-Sync für Gewicht (und optional Körperfett) aktivieren.
-2. In LuHabit einloggen, über das Konto-Menü **„Automatischer Sync“** öffnen (`/einstellungen`),
-   Secret generieren und die Webhook-URLs kopieren.
+2. In LuHabit einloggen, über das Konto-Menü **„Einstellungen“** öffnen (`/einstellungen`),
+   unter „Automatischer Sync“ ein Secret generieren und die Webhook-URLs kopieren.
 3. Shortcuts-App → neuer Shortcut:
    - Aktion **„Gesundheitsprobe abrufen“** → Gewicht, neuester Wert
    - Aktion **„URL-Inhalt abrufen“**:
@@ -123,10 +126,55 @@ Secret, das gleichzeitig festlegt, auf welches Konto der Wert geschrieben wird.
 
 Bis dahin bzw. alternativ einfach manuell auf der `/koerper`-Seite eintragen.
 
-## 5. Deploy auf Vercel
+## 5. Deploy auf Cloudflare Workers
+
+Die App läuft selbst als Cloudflare Worker (via [OpenNext](https://opennext.js.org/cloudflare)),
+nicht nur die Datenbank. Konfiguration liegt in `wrangler.jsonc`.
+
+### Automatisch (empfohlen)
+
+`.github/workflows/deploy.yml` deployt bei jedem Push auf `main` automatisch
+(`npm run cf:deploy`, also `opennextjs-cloudflare build && opennextjs-cloudflare deploy`).
+Einmalig einrichten:
+
+1. Cloudflare-Dashboard → **My Profile → API Tokens → Create Token** → Vorlage
+   „Edit Cloudflare Workers“ (oder ein bestehender Token mit zusätzlich
+   „Workers Scripts: Edit“, siehe Abschnitt 1).
+2. GitHub-Repo → **Settings → Secrets and variables → Actions → New repository
+   secret** → Name `CLOUDFLARE_API_TOKEN`, Wert der Token aus Schritt 1.
+
+Der Workflow lässt sich zusätzlich manuell auslösen (**Actions → Deploy → Run workflow**),
+z. B. für einen anderen Branch als `main`.
+
+### Manuell
 
 ```bash
-npx vercel
+npm run cf:deploy
 ```
 
-Anschließend im Vercel-Dashboard unter **Settings → Environment Variables** dieselben Variablen wie in `.env.local` eintragen (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID`, `CLOUDFLARE_API_TOKEN`, optional `APP_PASSCODE`, `STEPS_WEBHOOK_SECRET`) und neu deployen.
+Braucht lokal dieselben `CLOUDFLARE_*`-Variablen wie oben (aus `.env.local` oder der Shell-Umgebung).
+
+### Laufzeit-Variablen des Workers
+
+`APP_URL`, `OWNER_EMAIL` und `GOOGLE_CLIENT_ID` stehen als `vars` direkt in
+`wrangler.jsonc` (unkritisch, sichtbar im Client). Alles andere — `AUTH_SECRET`,
+`GOOGLE_CLIENT_SECRET`, `CLOUDFLARE_*`, `APP_PASSCODE`, `STEPS_WEBHOOK_SECRET` —
+sind Worker-Secrets, einmalig gesetzt mit:
+
+```bash
+npx wrangler secret put AUTH_SECRET
+```
+
+(entsprechend für die anderen). Die bleiben über Redeploys hinweg erhalten,
+müssen also nicht bei jedem Deploy neu gesetzt werden.
+
+## 6. Als App installieren
+
+LuHabit hat ein Web-App-Manifest (`app/manifest.ts`) und ist damit installierbar:
+
+- **iOS Safari:** Teilen-Icon → „Zum Home-Bildschirm“
+- **Android Chrome:** Menü → „App installieren“ (oder ein automatischer Install-Banner)
+
+Läuft danach im eigenen Fenster ohne Browser-Adressleiste. Kein Service Worker,
+also kein Offline-Zugriff — das ist bewusst so, die App braucht ohnehin eine
+Verbindung zu D1.
