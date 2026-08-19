@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
 import { HabitType } from "@/lib/habits";
+import { currentUserId } from "@/lib/server-user";
 
 type GoalRow = { habit: HabitType; target: number; weekly_target: number | null };
 
-export async function GET() {
-  const rows = await d1Query<GoalRow>(`SELECT habit, target, weekly_target FROM goals`);
+const UNAUTHORIZED = { error: "Nicht angemeldet" };
+
+export async function GET(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
+  const rows = await d1Query<GoalRow>(
+    `SELECT habit, target, weekly_target FROM goals WHERE user_id = ?`,
+    [userId]
+  );
   const goals = rows.map((r) => ({
     habit: r.habit,
     target: r.target,
@@ -15,6 +24,9 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const body = await req.json();
   const { habit, target, weeklyTarget } = body as {
     habit: HabitType;
@@ -30,15 +42,16 @@ export async function PUT(req: NextRequest) {
   // bereits gesetztes Wochenziel beim reinen Tagesziel-Update erhalten.
   if ("weeklyTarget" in body) {
     await d1Query(
-      `INSERT INTO goals (habit, target, weekly_target) VALUES (?, ?, ?)
-       ON CONFLICT(habit) DO UPDATE SET target = excluded.target, weekly_target = excluded.weekly_target`,
-      [habit, target, weeklyTarget ?? null]
+      `INSERT INTO goals (user_id, habit, target, weekly_target) VALUES (?, ?, ?, ?)
+       ON CONFLICT(user_id, habit)
+       DO UPDATE SET target = excluded.target, weekly_target = excluded.weekly_target`,
+      [userId, habit, target, weeklyTarget ?? null]
     );
   } else {
     await d1Query(
-      `INSERT INTO goals (habit, target) VALUES (?, ?)
-       ON CONFLICT(habit) DO UPDATE SET target = excluded.target`,
-      [habit, target]
+      `INSERT INTO goals (user_id, habit, target) VALUES (?, ?, ?)
+       ON CONFLICT(user_id, habit) DO UPDATE SET target = excluded.target`,
+      [userId, habit, target]
     );
   }
 

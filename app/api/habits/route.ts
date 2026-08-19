@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
+import { currentUserId } from "@/lib/server-user";
 
 type CustomHabitRow = {
   id: string;
@@ -12,6 +13,8 @@ type CustomHabitRow = {
   kind: string;
 };
 
+const UNAUTHORIZED = { error: "Nicht angemeldet" };
+
 function slugify(label: string): string {
   return (
     label
@@ -23,9 +26,14 @@ function slugify(label: string): string {
   );
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const rows = await d1Query<CustomHabitRow>(
-    `SELECT id, label, unit, icon, default_goal, quick_add, step, kind FROM custom_habits ORDER BY created_at ASC`
+    `SELECT id, label, unit, icon, default_goal, quick_add, step, kind
+       FROM custom_habits WHERE user_id = ? ORDER BY created_at ASC`,
+    [userId]
   );
   const habits = rows.map((r) => ({
     id: r.id,
@@ -41,6 +49,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const body = await req.json();
   const { label, unit, icon, defaultGoal, quickAdd, step, kind, weeklyGoal } = body as {
     label: string;
@@ -63,8 +74,8 @@ export async function POST(req: NextRequest) {
   const baseId = slugify(label);
   let id = baseId;
   const existing = await d1Query<{ id: string }>(
-    `SELECT id FROM custom_habits WHERE id LIKE ?`,
-    [`${baseId}%`]
+    `SELECT id FROM custom_habits WHERE user_id = ? AND id LIKE ?`,
+    [userId, `${baseId}%`]
   );
   if (existing.some((e) => e.id === id)) {
     let n = 2;
@@ -77,13 +88,15 @@ export async function POST(req: NextRequest) {
   const cleanKind = kind === "toggle" ? "toggle" : "counter";
 
   await d1Query(
-    `INSERT INTO custom_habits (id, label, unit, icon, default_goal, quick_add, step, kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, label.trim(), unit.trim(), icon || "Target", defaultGoal, JSON.stringify(cleanQuickAdd), cleanStep, cleanKind]
+    `INSERT INTO custom_habits (user_id, id, label, unit, icon, default_goal, quick_add, step, kind)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [userId, id, label.trim(), unit.trim(), icon || "Target", defaultGoal, JSON.stringify(cleanQuickAdd), cleanStep, cleanKind]
   );
   await d1Query(
-    `INSERT INTO goals (habit, target, weekly_target) VALUES (?, ?, ?)
-     ON CONFLICT(habit) DO UPDATE SET target = excluded.target, weekly_target = excluded.weekly_target`,
-    [id, defaultGoal, weeklyGoal ?? null]
+    `INSERT INTO goals (user_id, habit, target, weekly_target) VALUES (?, ?, ?, ?)
+     ON CONFLICT(user_id, habit)
+     DO UPDATE SET target = excluded.target, weekly_target = excluded.weekly_target`,
+    [userId, id, defaultGoal, weeklyGoal ?? null]
   );
 
   return NextResponse.json({
@@ -101,6 +114,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const body = await req.json();
   const { id, label, unit, icon, defaultGoal, quickAdd, step, kind, weeklyGoal } = body as {
     id: string;
@@ -126,13 +142,16 @@ export async function PUT(req: NextRequest) {
   const cleanKind = kind === "toggle" ? "toggle" : "counter";
 
   await d1Query(
-    `UPDATE custom_habits SET label = ?, unit = ?, icon = ?, default_goal = ?, quick_add = ?, step = ?, kind = ? WHERE id = ?`,
-    [label.trim(), unit.trim(), icon || "Target", defaultGoal, JSON.stringify(cleanQuickAdd), cleanStep, cleanKind, id]
+    `UPDATE custom_habits
+        SET label = ?, unit = ?, icon = ?, default_goal = ?, quick_add = ?, step = ?, kind = ?
+      WHERE user_id = ? AND id = ?`,
+    [label.trim(), unit.trim(), icon || "Target", defaultGoal, JSON.stringify(cleanQuickAdd), cleanStep, cleanKind, userId, id]
   );
   await d1Query(
-    `INSERT INTO goals (habit, target, weekly_target) VALUES (?, ?, ?)
-     ON CONFLICT(habit) DO UPDATE SET target = excluded.target, weekly_target = excluded.weekly_target`,
-    [id, defaultGoal, weeklyGoal ?? null]
+    `INSERT INTO goals (user_id, habit, target, weekly_target) VALUES (?, ?, ?, ?)
+     ON CONFLICT(user_id, habit)
+     DO UPDATE SET target = excluded.target, weekly_target = excluded.weekly_target`,
+    [userId, id, defaultGoal, weeklyGoal ?? null]
   );
 
   return NextResponse.json({
@@ -150,13 +169,16 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id erforderlich" }, { status: 400 });
 
-  await d1Query(`DELETE FROM custom_habits WHERE id = ?`, [id]);
-  await d1Query(`DELETE FROM entries WHERE habit = ?`, [id]);
-  await d1Query(`DELETE FROM goals WHERE habit = ?`, [id]);
+  await d1Query(`DELETE FROM custom_habits WHERE user_id = ? AND id = ?`, [userId, id]);
+  await d1Query(`DELETE FROM entries WHERE user_id = ? AND habit = ?`, [userId, id]);
+  await d1Query(`DELETE FROM goals WHERE user_id = ? AND habit = ?`, [userId, id]);
 
   return NextResponse.json({ ok: true });
 }

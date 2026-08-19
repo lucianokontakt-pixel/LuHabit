@@ -8,6 +8,8 @@ import { NAV_LINKS, isActiveLink } from "@/lib/nav-links";
 export function BottomNav() {
   const pathname = usePathname();
 
+  if (pathname === "/login") return null;
+
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur-xl sm:hidden"

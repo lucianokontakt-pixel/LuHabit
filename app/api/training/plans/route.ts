@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query, d1InsertMany } from "@/lib/d1";
+import { currentUserId } from "@/lib/server-user";
 import type { PlanDay, WorkoutPlan } from "@/lib/training";
 
 type PlanRow = {
@@ -43,23 +44,29 @@ type DayInput = {
   }[];
 };
 
+const UNAUTHORIZED = { error: "Nicht angemeldet" };
+
 function newId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-async function loadPlans(): Promise<WorkoutPlan[]> {
+async function loadPlans(userId: string): Promise<WorkoutPlan[]> {
   const plans = await d1Query<PlanRow>(
     `SELECT id, name, is_active, position, weekly_target
-       FROM workout_plans ORDER BY position ASC, created_at ASC`
+       FROM workout_plans WHERE user_id = ? ORDER BY position ASC, created_at ASC`,
+    [userId]
   );
   if (plans.length === 0) return [];
 
   const days = await d1Query<DayRow>(
-    `SELECT id, plan_id, name, position, weekday FROM plan_days ORDER BY position ASC`
+    `SELECT id, plan_id, name, position, weekday
+       FROM plan_days WHERE user_id = ? ORDER BY position ASC`,
+    [userId]
   );
   const planExercises = await d1Query<PlanExerciseRow>(
     `SELECT id, day_id, exercise_id, position, sets, rep_min, rep_max, rest_seconds, increment, start_weight
-       FROM plan_exercises ORDER BY position ASC`
+       FROM plan_exercises WHERE user_id = ? ORDER BY position ASC`,
+    [userId]
   );
 
   const byDay = new Map<string, PlanExerciseRow[]>();
@@ -103,26 +110,35 @@ async function loadPlans(): Promise<WorkoutPlan[]> {
 }
 
 /** Tage und Übungen eines Plans komplett neu schreiben. */
-async function writeDays(planId: string, days: DayInput[]): Promise<void> {
-  const existing = await d1Query<{ id: string }>(`SELECT id FROM plan_days WHERE plan_id = ?`, [
-    planId,
-  ]);
+async function writeDays(userId: string, planId: string, days: DayInput[]): Promise<void> {
+  const existing = await d1Query<{ id: string }>(
+    `SELECT id FROM plan_days WHERE user_id = ? AND plan_id = ?`,
+    [userId, planId]
+  );
   for (const day of existing) {
-    await d1Query(`DELETE FROM plan_exercises WHERE day_id = ?`, [day.id]);
+    await d1Query(`DELETE FROM plan_exercises WHERE user_id = ? AND day_id = ?`, [userId, day.id]);
   }
-  await d1Query(`DELETE FROM plan_days WHERE plan_id = ?`, [planId]);
+  await d1Query(`DELETE FROM plan_days WHERE user_id = ? AND plan_id = ?`, [userId, planId]);
 
   const dayRows: (string | number | null)[][] = [];
   const exerciseRows: (string | number | null)[][] = [];
 
   days.forEach((day, dayIndex) => {
     const dayId = newId("day");
-    dayRows.push([dayId, planId, day.name.trim() || `Tag ${dayIndex + 1}`, dayIndex, day.weekday ?? null]);
+    dayRows.push([
+      userId,
+      dayId,
+      planId,
+      day.name.trim() || `Tag ${dayIndex + 1}`,
+      dayIndex,
+      day.weekday ?? null,
+    ]);
 
     day.exercises.forEach((ex, exIndex) => {
       const repMin = ex.repMin ?? 8;
       const repMax = ex.repMax ?? 12;
       exerciseRows.push([
+        userId,
         newId("pe"),
         dayId,
         ex.exerciseId,
@@ -139,10 +155,15 @@ async function writeDays(planId: string, days: DayInput[]): Promise<void> {
     });
   });
 
-  await d1InsertMany("plan_days", ["id", "plan_id", "name", "position", "weekday"], dayRows);
+  await d1InsertMany(
+    "plan_days",
+    ["user_id", "id", "plan_id", "name", "position", "weekday"],
+    dayRows
+  );
   await d1InsertMany(
     "plan_exercises",
     [
+      "user_id",
       "id",
       "day_id",
       "exercise_id",
@@ -158,11 +179,17 @@ async function writeDays(planId: string, days: DayInput[]): Promise<void> {
   );
 }
 
-export async function GET() {
-  return NextResponse.json({ plans: await loadPlans() });
+export async function GET(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
+  return NextResponse.json({ plans: await loadPlans(userId) });
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const body = (await req.json()) as {
     name?: string;
     days?: DayInput[];
@@ -170,7 +197,10 @@ export async function POST(req: NextRequest) {
     weeklyTarget?: number | null;
   };
 
-  const countRow = await d1Query<{ count: number }>(`SELECT COUNT(*) AS count FROM workout_plans`);
+  const countRow = await d1Query<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM workout_plans WHERE user_id = ?`,
+    [userId]
+  );
   const position = countRow[0]?.count ?? 0;
 
   // Duplizieren: Name und Struktur der Vorlage übernehmen.
@@ -179,7 +209,7 @@ export async function POST(req: NextRequest) {
   let weeklyTarget = body.weeklyTarget ?? null;
 
   if (body.duplicateOf) {
-    const plans = await loadPlans();
+    const plans = await loadPlans(userId);
     const source = plans.find((p) => p.id === body.duplicateOf);
     if (!source) {
       return NextResponse.json({ error: "Vorlage nicht gefunden" }, { status: 404 });
@@ -205,17 +235,20 @@ export async function POST(req: NextRequest) {
 
   const id = newId("plan");
   await d1Query(
-    `INSERT INTO workout_plans (id, name, is_active, position, weekly_target)
-     VALUES (?, ?, ?, ?, ?)`,
-    [id, name, position === 0 ? 1 : 0, position, weeklyTarget]
+    `INSERT INTO workout_plans (user_id, id, name, is_active, position, weekly_target)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [userId, id, name, position === 0 ? 1 : 0, position, weeklyTarget]
   );
-  await writeDays(id, days);
+  await writeDays(userId, id, days);
 
-  const plans = await loadPlans();
+  const plans = await loadPlans(userId);
   return NextResponse.json({ plan: plans.find((p) => p.id === id), plans });
 }
 
 export async function PUT(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const body = (await req.json()) as {
     id?: string;
     name?: string;
@@ -227,8 +260,9 @@ export async function PUT(req: NextRequest) {
   if (!body.id) return NextResponse.json({ error: "id ist erforderlich" }, { status: 400 });
 
   const current = await d1Query<PlanRow>(
-    `SELECT id, name, is_active, position, weekly_target FROM workout_plans WHERE id = ?`,
-    [body.id]
+    `SELECT id, name, is_active, position, weekly_target
+       FROM workout_plans WHERE user_id = ? AND id = ?`,
+    [userId, body.id]
   );
   if (current.length === 0) {
     return NextResponse.json({ error: "Plan nicht gefunden" }, { status: 404 });
@@ -236,41 +270,55 @@ export async function PUT(req: NextRequest) {
 
   if (body.isActive) {
     // Genau ein Plan ist aktiv — der bestimmt, was "Training starten" vorschlägt.
-    await d1Query(`UPDATE workout_plans SET is_active = 0 WHERE id != ?`, [body.id]);
+    await d1Query(`UPDATE workout_plans SET is_active = 0 WHERE user_id = ? AND id != ?`, [
+      userId,
+      body.id,
+    ]);
   }
 
   await d1Query(
-    `UPDATE workout_plans SET name = ?, is_active = ?, weekly_target = ? WHERE id = ?`,
+    `UPDATE workout_plans SET name = ?, is_active = ?, weekly_target = ?
+      WHERE user_id = ? AND id = ?`,
     [
       body.name?.trim() || current[0].name,
       body.isActive === undefined ? current[0].is_active : body.isActive ? 1 : 0,
       body.weeklyTarget === undefined ? current[0].weekly_target : body.weeklyTarget,
+      userId,
       body.id,
     ]
   );
 
-  if (body.days) await writeDays(body.id, body.days);
+  if (body.days) await writeDays(userId, body.id, body.days);
 
-  const plans = await loadPlans();
+  const plans = await loadPlans(userId);
   return NextResponse.json({ plan: plans.find((p) => p.id === body.id), plans });
 }
 
 export async function DELETE(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id ist erforderlich" }, { status: 400 });
 
-  const days = await d1Query<{ id: string }>(`SELECT id FROM plan_days WHERE plan_id = ?`, [id]);
+  const days = await d1Query<{ id: string }>(
+    `SELECT id FROM plan_days WHERE user_id = ? AND plan_id = ?`,
+    [userId, id]
+  );
   for (const day of days) {
-    await d1Query(`DELETE FROM plan_exercises WHERE day_id = ?`, [day.id]);
+    await d1Query(`DELETE FROM plan_exercises WHERE user_id = ? AND day_id = ?`, [userId, day.id]);
   }
-  await d1Query(`DELETE FROM plan_days WHERE plan_id = ?`, [id]);
-  await d1Query(`DELETE FROM workout_plans WHERE id = ?`, [id]);
+  await d1Query(`DELETE FROM plan_days WHERE user_id = ? AND plan_id = ?`, [userId, id]);
+  await d1Query(`DELETE FROM workout_plans WHERE user_id = ? AND id = ?`, [userId, id]);
 
   // Absolvierte Einheiten bleiben erhalten — sie sind der Verlauf, nicht der Plan.
-  const remaining = await loadPlans();
+  const remaining = await loadPlans(userId);
   if (remaining.length > 0 && !remaining.some((p) => p.isActive)) {
-    await d1Query(`UPDATE workout_plans SET is_active = 1 WHERE id = ?`, [remaining[0].id]);
+    await d1Query(`UPDATE workout_plans SET is_active = 1 WHERE user_id = ? AND id = ?`, [
+      userId,
+      remaining[0].id,
+    ]);
   }
 
-  return NextResponse.json({ plans: await loadPlans() });
+  return NextResponse.json({ plans: await loadPlans(userId) });
 }

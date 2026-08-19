@@ -4,10 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UserMenu } from "@/components/user-menu";
 import { NAV_LINKS, isActiveLink } from "@/lib/nav-links";
 
 export function Nav() {
   const pathname = usePathname();
+
+  // Auf der Login-Seite gibt es noch nichts zu navigieren.
+  if (pathname === "/login") return null;
 
   return (
     // steep's nav is whisper-quiet: no border, no shadow, just the logo and links.
@@ -38,7 +42,10 @@ export function Nav() {
           })}
         </nav>
 
-        <ThemeToggle />
+        <div className="flex items-center gap-1.5">
+          <ThemeToggle />
+          <UserMenu />
+        </div>
       </div>
     </header>
   );

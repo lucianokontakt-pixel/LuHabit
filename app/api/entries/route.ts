@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
 import { HabitType } from "@/lib/habits";
+import { currentUserId } from "@/lib/server-user";
 
 type EntryRow = { habit: HabitType; date: string; value: number };
 
+const UNAUTHORIZED = { error: "Nicht angemeldet" };
+
 export async function GET(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const { searchParams } = new URL(req.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const habit = searchParams.get("habit");
 
+  // Der Nutzerfilter steht fest im SQL, nicht in der dynamischen Liste —
+  // so ist auch beim Überfliegen sichtbar, dass er nicht wegfallen kann.
   const conditions: string[] = [];
-  const params: (string | number)[] = [];
+  const params: (string | number)[] = [userId];
 
   if (habit) {
     conditions.push("habit = ?");
@@ -26,10 +34,9 @@ export async function GET(req: NextRequest) {
     params.push(to);
   }
 
-  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-
+  const filters = conditions.length ? ` AND ${conditions.join(" AND ")}` : "";
   const rows = await d1Query<EntryRow>(
-    `SELECT habit, date, value FROM entries ${where} ORDER BY date ASC`,
+    `SELECT habit, date, value FROM entries WHERE user_id = ?${filters} ORDER BY date ASC`,
     params
   );
 
@@ -37,6 +44,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const body = await req.json();
   const { habit, date, delta, value } = body as {
     habit: HabitType;
@@ -55,21 +65,21 @@ export async function POST(req: NextRequest) {
 
   if (delta !== undefined) {
     await d1Query(
-      `INSERT INTO entries (habit, date, value) VALUES (?, ?, ?)
-       ON CONFLICT(habit, date) DO UPDATE SET value = MAX(0, value + excluded.value)`,
-      [habit, date, delta]
+      `INSERT INTO entries (user_id, habit, date, value) VALUES (?, ?, ?, ?)
+       ON CONFLICT(user_id, habit, date) DO UPDATE SET value = MAX(0, value + excluded.value)`,
+      [userId, habit, date, delta]
     );
   } else {
     await d1Query(
-      `INSERT INTO entries (habit, date, value) VALUES (?, ?, ?)
-       ON CONFLICT(habit, date) DO UPDATE SET value = excluded.value`,
-      [habit, date, value!]
+      `INSERT INTO entries (user_id, habit, date, value) VALUES (?, ?, ?, ?)
+       ON CONFLICT(user_id, habit, date) DO UPDATE SET value = excluded.value`,
+      [userId, habit, date, value!]
     );
   }
 
   const rows = await d1Query<EntryRow>(
-    `SELECT habit, date, value FROM entries WHERE habit = ? AND date = ?`,
-    [habit, date]
+    `SELECT habit, date, value FROM entries WHERE user_id = ? AND habit = ? AND date = ?`,
+    [userId, habit, date]
   );
 
   return NextResponse.json({ entry: rows[0] ?? { habit, date, value: 0 } });

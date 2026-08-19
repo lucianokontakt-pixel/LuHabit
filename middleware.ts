@@ -1,19 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE, hashPasscode } from "@/lib/auth";
+import { AUTH_COOKIE, authConfigured, readSessionCookie } from "@/lib/auth";
 
 export async function middleware(req: NextRequest) {
-  const passcode = process.env.APP_PASSCODE;
-
-  // Kein Passcode gesetzt -> App bleibt offen (z.B. für lokale Entwicklung).
-  if (!passcode) {
+  // Ohne eingerichteten Login bleibt die App offen — so wie in der lokalen
+  // Entwicklung ohne Konfiguration.
+  if (!authConfigured()) {
     return NextResponse.next();
   }
 
-  const cookie = req.cookies.get(AUTH_COOKIE)?.value;
-  const expected = await hashPasscode(passcode);
-
-  if (cookie === expected) {
+  const session = await readSessionCookie(req.cookies.get(AUTH_COOKIE)?.value);
+  if (session) {
     return NextResponse.next();
+  }
+
+  // API-Anfragen bekommen 401 statt einer Weiterleitung auf HTML — sonst
+  // versucht der Client, eine Login-Seite als JSON zu lesen.
+  if (req.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   }
 
   const loginUrl = new URL("/login", req.url);

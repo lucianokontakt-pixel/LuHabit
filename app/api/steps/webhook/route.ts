@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
 import { todayISO } from "@/lib/habits";
+import { OWNER_USER_ID } from "@/lib/auth";
 
 // Für den iOS Shortcut gedacht: liest die Schritte aus der Health-App
 // und schickt sie hierher. Aufruf z.B.:
@@ -29,10 +30,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "steps (Zahl >= 0) erforderlich" }, { status: 400 });
   }
 
+  // Der Shortcut kennt keine Sitzung, deshalb schreibt er fest auf das
+  // Owner-Konto. Für weitere Nutzer bräuchte es je Konto ein eigenes Secret.
   await d1Query(
-    `INSERT INTO entries (habit, date, value) VALUES ('steps', ?, ?)
-     ON CONFLICT(habit, date) DO UPDATE SET value = excluded.value`,
-    [date, steps]
+    `INSERT INTO entries (user_id, habit, date, value) VALUES (?, 'steps', ?, ?)
+     ON CONFLICT(user_id, habit, date) DO UPDATE SET value = excluded.value`,
+    [OWNER_USER_ID, date, steps]
   );
 
   return NextResponse.json({ ok: true, date, steps });

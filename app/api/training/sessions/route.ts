@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query, d1InsertMany } from "@/lib/d1";
+import { currentUserId } from "@/lib/server-user";
 import type { WorkoutSession } from "@/lib/training";
 
 type SessionRow = {
@@ -22,11 +23,16 @@ type SetRow = {
   done: number;
 };
 
+const UNAUTHORIZED = { error: "Nicht angemeldet" };
+
 function newId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export async function GET(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const limitParam = Number(req.nextUrl.searchParams.get("limit") ?? "120");
   const limit = Number.isFinite(limitParam) ? Math.min(500, Math.max(1, limitParam)) : 120;
   const from = req.nextUrl.searchParams.get("from");
@@ -34,13 +40,15 @@ export async function GET(req: NextRequest) {
   const sessions = from
     ? await d1Query<SessionRow>(
         `SELECT id, plan_id, day_id, day_name, date, duration_seconds, note
-           FROM workout_sessions WHERE date >= ? ORDER BY date DESC, started_at DESC LIMIT ?`,
-        [from, limit]
+           FROM workout_sessions WHERE user_id = ? AND date >= ?
+          ORDER BY date DESC, started_at DESC LIMIT ?`,
+        [userId, from, limit]
       )
     : await d1Query<SessionRow>(
         `SELECT id, plan_id, day_id, day_name, date, duration_seconds, note
-           FROM workout_sessions ORDER BY date DESC, started_at DESC LIMIT ?`,
-        [limit]
+           FROM workout_sessions WHERE user_id = ?
+          ORDER BY date DESC, started_at DESC LIMIT ?`,
+        [userId, limit]
       );
 
   if (sessions.length === 0) return NextResponse.json({ sessions: [] });
@@ -48,8 +56,9 @@ export async function GET(req: NextRequest) {
   const placeholders = sessions.map(() => "?").join(", ");
   const sets = await d1Query<SetRow>(
     `SELECT id, session_id, exercise_id, set_index, weight, reps, done
-       FROM workout_sets WHERE session_id IN (${placeholders}) ORDER BY set_index ASC`,
-    sessions.map((s) => s.id)
+       FROM workout_sets WHERE user_id = ? AND session_id IN (${placeholders})
+      ORDER BY set_index ASC`,
+    [userId, ...sessions.map((s) => s.id)]
   );
 
   const bySession = new Map<string, SetRow[]>();
@@ -81,6 +90,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const body = (await req.json()) as {
     planId?: string | null;
     dayId?: string | null;
@@ -110,9 +122,11 @@ export async function POST(req: NextRequest) {
 
   const id = newId("ws");
   await d1Query(
-    `INSERT INTO workout_sessions (id, plan_id, day_id, day_name, date, finished_at, duration_seconds, note)
-     VALUES (?, ?, ?, ?, ?, datetime('now'), ?, ?)`,
+    `INSERT INTO workout_sessions
+       (user_id, id, plan_id, day_id, day_name, date, finished_at, duration_seconds, note)
+     VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?, ?)`,
     [
+      userId,
       id,
       body.planId ?? null,
       body.dayId ?? null,
@@ -125,8 +139,9 @@ export async function POST(req: NextRequest) {
 
   await d1InsertMany(
     "workout_sets",
-    ["id", "session_id", "exercise_id", "set_index", "weight", "reps", "done"],
+    ["user_id", "id", "session_id", "exercise_id", "set_index", "weight", "reps", "done"],
     sets.map((s, i) => [
+      userId,
       newId("set"),
       id,
       s.exerciseId,
@@ -141,10 +156,13 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id ist erforderlich" }, { status: 400 });
 
-  await d1Query(`DELETE FROM workout_sets WHERE session_id = ?`, [id]);
-  await d1Query(`DELETE FROM workout_sessions WHERE id = ?`, [id]);
+  await d1Query(`DELETE FROM workout_sets WHERE user_id = ? AND session_id = ?`, [userId, id]);
+  await d1Query(`DELETE FROM workout_sessions WHERE user_id = ? AND id = ?`, [userId, id]);
   return NextResponse.json({ ok: true });
 }
