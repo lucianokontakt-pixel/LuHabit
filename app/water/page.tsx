@@ -1,5 +1,6 @@
-import { HabitDetail } from "@/components/habit-detail";
+import { redirect } from "next/navigation";
 
-export default function WaterPage() {
-  return <HabitDetail habit="water" />;
+// Legacy-Route: alle Habits leben inzwischen unter /habit/[id].
+export default function LegacyHabitPage() {
+  redirect("/habit/water");
 }

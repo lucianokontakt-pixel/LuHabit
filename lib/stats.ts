@@ -49,3 +49,44 @@ export function average(entries: Entry[], overDays: number): number {
   if (overDays === 0) return 0;
   return sum(entries) / overDays;
 }
+
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mär",
+  "Apr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Dez",
+];
+
+export type MonthBucket = { key: string; label: string; year: number; month: number; days: number };
+
+export function monthRange(months: number): MonthBucket[] {
+  const buckets: MonthBucket[] = [];
+  const now = new Date();
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const days = new Date(year, month + 1, 0).getDate();
+    buckets.push({
+      key: `${year}-${String(month + 1).padStart(2, "0")}`,
+      label: MONTH_LABELS[month],
+      year,
+      month,
+      days,
+    });
+  }
+  return buckets;
+}
+
+export function monthlyTotal(entries: Entry[], bucket: MonthBucket): number {
+  const prefix = bucket.key;
+  return sum(entries.filter((e) => e.date.startsWith(prefix)));
+}

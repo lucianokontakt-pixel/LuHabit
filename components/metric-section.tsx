@@ -1,12 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Minus, type LucideIcon } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import type { LucideIcon } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { StatValue, type DeltaDirection } from "@/components/stat-value";
 import { TrendChart } from "@/components/trend-chart";
 import { useMetricData } from "@/lib/use-metric-data";
+import { formatNumber } from "@/lib/format";
+import type { Entry } from "@/lib/api-client";
+
+/** Vergleichswert von vor ~n Tagen. Ohne zweiten Messpunkt gibt es kein Delta. */
+function valueDaysAgo(entries: Entry[], days: number): number | null {
+  if (entries.length < 2) return null;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const iso = cutoff.toLocaleDateString("sv-SE");
+  const older = entries.filter((e) => e.date <= iso);
+  if (older.length > 0) return older[older.length - 1].value;
+  return entries[0].value;
+}
 
 export function MetricSection({
   metric,
@@ -14,82 +28,85 @@ export function MetricSection({
   unit,
   icon: Icon,
   step = 0.1,
+  direction = "neutral",
+  days = 30,
 }: {
   metric: string;
   label: string;
   unit: string;
   icon: LucideIcon;
   step?: number;
+  direction?: DeltaDirection;
+  days?: number;
 }) {
   const { entries, loading, addValue } = useMetricData(metric);
   const [input, setInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const latest = entries[entries.length - 1];
-  const previous = entries[entries.length - 2];
-  const delta = latest && previous ? latest.value - previous.value : null;
+  const reference = valueDaysAgo(entries, days);
+  const delta = latest && reference !== null ? latest.value - reference : null;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const val = Number(input.replace(",", "."));
-    if (Number.isFinite(val) && val > 0) {
-      addValue(val);
-      setInput("");
+    const value = Number(input.replace(",", "."));
+    if (!Number.isFinite(value) || value <= 0) {
+      setError("Bitte eine Zahl größer als 0 eintragen.");
+      return;
     }
+    setError(null);
+    addValue(value);
+    setInput("");
   }
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-secondary">
-            <Icon className="size-5" />
-          </div>
-          <div>
-            <CardTitle className="text-base">{label}</CardTitle>
-            <CardDescription>
-              {latest ? `Zuletzt: ${latest.value} ${unit}` : "Noch keine Einträge"}
-            </CardDescription>
-          </div>
-        </div>
-        {delta !== null && (
-          <span className="flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-muted-foreground">
-            {delta > 0 ? (
-              <ArrowUp className="size-3" />
-            ) : delta < 0 ? (
-              <ArrowDown className="size-3" />
-            ) : (
-              <Minus className="size-3" />
-            )}
-            {Math.abs(delta).toFixed(1)} {unit}
-          </span>
-        )}
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-4 px-(--card-spacing)">
+        <StatValue
+          label={label}
+          value={latest ? formatNumber(latest.value) : "—"}
+          unit={latest ? unit : undefined}
+          delta={delta}
+          deltaUnit={unit}
+          deltaLabel={`in ${days} Tagen`}
+          direction={direction}
+        />
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-tile bg-elevated text-muted-foreground">
+          <Icon className="size-4" />
+        </span>
+      </div>
+
+      <div className="px-(--card-spacing)">
         {loading ? (
-          <div className="h-[220px] animate-pulse rounded-md bg-muted" />
+          <div className="h-[180px] animate-pulse rounded-panel bg-elevated" />
         ) : entries.length > 1 ? (
-          <TrendChart entries={entries} />
+          <TrendChart entries={entries} unit={unit} />
         ) : (
-          <div className="flex h-[220px] items-center justify-center text-sm text-muted-foreground">
-            Noch nicht genug Daten für ein Diagramm
+          <div className="flex h-[180px] items-center justify-center rounded-panel bg-elevated/60 text-center text-sm text-muted-foreground">
+            Noch nicht genug Daten für einen Verlauf —<br />
+            trag zwei Werte ein.
           </div>
         )}
-        <form onSubmit={handleSubmit} className="flex items-center gap-2">
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-1.5 px-(--card-spacing)">
+        <div className="flex items-center gap-2">
           <Input
             type="number"
             inputMode="decimal"
             step={step}
             min={0}
-            placeholder={`Neuer Wert (${unit})`}
+            placeholder={`Neuer Wert in ${unit}`}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            className="max-w-xs"
+            aria-label={`${label} eintragen`}
           />
-          <Button type="submit" variant="outline">
+          <Button type="submit" size="lg" className="h-11 shrink-0">
             Eintragen
           </Button>
-        </form>
-      </CardContent>
+        </div>
+        {error && <p className="text-xs text-destructive">{error}</p>}
+      </form>
     </Card>
   );
 }

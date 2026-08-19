@@ -9,6 +9,7 @@ const HISTORY_DAYS = 180;
 export function useHabitData(habit: HabitType, defaultGoal: number) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [goal, setGoalState] = useState<number>(defaultGoal);
+  const [weeklyGoal, setWeeklyGoalState] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,6 +24,7 @@ export function useHabitData(habit: HabitType, defaultGoal: number) {
       setEntries(entriesData);
       const g = goalsData.find((x) => x.habit === habit);
       setGoalState(g?.target ?? defaultGoal);
+      setWeeklyGoalState(g?.weeklyTarget ?? undefined);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Fehler beim Laden");
     } finally {
@@ -71,5 +73,28 @@ export function useHabitData(habit: HabitType, defaultGoal: number) {
     [habit]
   );
 
-  return { entries, goal, todayValue, loading, error, addDelta, updateGoal, reload: load };
+  const updateWeeklyGoal = useCallback(
+    async (weekly: number | null) => {
+      setWeeklyGoalState(weekly ?? undefined);
+      try {
+        await setGoal(habit, goal, weekly);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Fehler beim Speichern");
+      }
+    },
+    [habit, goal]
+  );
+
+  return {
+    entries,
+    goal,
+    weeklyGoal,
+    todayValue,
+    loading,
+    error,
+    addDelta,
+    updateGoal,
+    updateWeeklyGoal,
+    reload: load,
+  };
 }

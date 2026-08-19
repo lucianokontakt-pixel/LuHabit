@@ -1,107 +1,62 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Calculator } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useEffect } from "react";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-
-const ACTIVITY_LEVELS = [
-  { value: "1.2", label: "Sitzend", hint: "wenig bis keine Bewegung" },
-  { value: "1.375", label: "Leicht aktiv", hint: "Sport 1–3x / Woche" },
-  { value: "1.55", label: "Moderat aktiv", hint: "Sport 3–5x / Woche" },
-  { value: "1.725", label: "Sehr aktiv", hint: "Sport 6–7x / Woche" },
-  { value: "1.9", label: "Extrem aktiv", hint: "körperliche Arbeit + Sport" },
-];
-
-const STORAGE_KEY = "luhabit-calorie-inputs";
-
-type Inputs = {
-  age: string;
-  gender: "male" | "female";
-  height: string;
-  weight: string;
-  activity: string;
-};
-
-const defaultInputs: Inputs = {
-  age: "",
-  gender: "male",
-  height: "",
-  weight: "",
-  activity: "1.375",
-};
+import { formatNumber } from "@/lib/format";
+import { ACTIVITY_LEVELS, basalMetabolicRate, useBodyProfile } from "@/lib/body-profile";
 
 export function CalorieCalculator({ latestWeight }: { latestWeight?: number }) {
-  const [inputs, setInputs] = useState<Inputs>(defaultInputs);
+  const { profile, update, hydrated } = useBodyProfile();
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- lädt gespeicherte Werte einmalig beim Mount
-      if (raw) setInputs((prev) => ({ ...prev, ...JSON.parse(raw) }));
-    } catch {
-      // ignorieren
+    if (hydrated && !profile.weight && latestWeight) {
+      update({ weight: String(latestWeight) });
     }
-  }, []);
+  }, [hydrated, latestWeight, profile.weight, update]);
 
-  useEffect(() => {
-    if (!inputs.weight && latestWeight) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- übernimmt einmalig das zuletzt getrackte Gewicht als Vorschlag
-      setInputs((prev) => ({ ...prev, weight: String(latestWeight) }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [latestWeight]);
+  const age = Number(profile.age);
+  const height = Number(profile.height);
+  const weight = Number(profile.weight);
+  const activity = Number(profile.activity);
 
-  function update(patch: Partial<Inputs>) {
-    const next = { ...inputs, ...patch };
-    setInputs(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // ignorieren
-    }
-  }
-
-  const age = Number(inputs.age);
-  const height = Number(inputs.height);
-  const weight = Number(inputs.weight);
-  const activity = Number(inputs.activity);
-  const valid = age > 0 && height > 0 && weight > 0;
-
-  const bmr = valid
-    ? inputs.gender === "male"
-      ? 10 * weight + 6.25 * height - 5 * age + 5
-      : 10 * weight + 6.25 * height - 5 * age - 161
-    : null;
+  const bmr = basalMetabolicRate({ gender: profile.gender, weight, height, age });
   const tdee = bmr !== null ? bmr * activity : null;
 
+  const results =
+    bmr !== null && tdee !== null
+      ? [
+          { label: "Grundumsatz", value: bmr, hint: "BMR" },
+          { label: "Tagesbedarf", value: tdee, hint: "TDEE" },
+          { label: "Abnehmen", value: tdee - 500, hint: "−500 kcal" },
+          { label: "Zunehmen", value: tdee + 300, hint: "+300 kcal" },
+        ]
+      : [];
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-secondary">
-            <Calculator className="size-5" />
-          </div>
-          <div>
-            <CardTitle className="text-base">Kalorienrechner</CardTitle>
-            <CardDescription>Grundumsatz &amp; Tagesbedarf</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+    <Card className="gap-5">
+      <div className="px-(--card-spacing)">
+        <h2 className="text-subheading font-display">Kalorienrechner</h2>
+        <p className="text-sm text-muted-foreground">
+          Grundumsatz und Tagesbedarf nach Mifflin-St Jeor.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-4 px-(--card-spacing)">
         <div className="flex gap-2">
           {(["male", "female"] as const).map((g) => (
             <button
               key={g}
               type="button"
               onClick={() => update({ gender: g })}
+              aria-pressed={profile.gender === g}
               className={cn(
-                "flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors",
-                inputs.gender === g
-                  ? "border-foreground bg-secondary"
-                  : "border-border text-muted-foreground hover:bg-secondary/50"
+                "h-10 flex-1 rounded-pill text-sm font-medium transition-colors",
+                profile.gender === g
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-elevated text-muted-foreground ring-1 ring-foreground/8 hover:text-foreground"
               )}
             >
               {g === "male" ? "Männlich" : "Weiblich"}
@@ -109,101 +64,99 @@ export function CalorieCalculator({ latestWeight }: { latestWeight?: number }) {
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2.5">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="cal-age">Alter</Label>
+            <Label htmlFor="cal-age" className="text-xs text-muted-foreground">
+              Alter
+            </Label>
             <Input
               id="cal-age"
               type="number"
               min={0}
               inputMode="numeric"
-              value={inputs.age}
+              value={profile.age}
               onChange={(e) => update({ age: e.target.value })}
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="cal-height">Größe (cm)</Label>
+            <Label htmlFor="cal-height" className="text-xs text-muted-foreground">
+              Größe (cm)
+            </Label>
             <Input
               id="cal-height"
               type="number"
               min={0}
               inputMode="numeric"
-              value={inputs.height}
+              value={profile.height}
               onChange={(e) => update({ height: e.target.value })}
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="cal-weight">Gewicht (kg)</Label>
+            <Label htmlFor="cal-weight" className="text-xs text-muted-foreground">
+              Gewicht (kg)
+            </Label>
             <Input
               id="cal-weight"
               type="number"
               min={0}
               inputMode="decimal"
-              value={inputs.weight}
+              value={profile.weight}
               onChange={(e) => update({ weight: e.target.value })}
             />
           </div>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label>Aktivitätslevel</Label>
+        <div className="flex flex-col gap-2">
+          <Label className="text-xs text-muted-foreground">Aktivitätslevel</Label>
           <div className="flex flex-col gap-1.5">
             {ACTIVITY_LEVELS.map((level) => (
               <button
                 key={level.value}
                 type="button"
                 onClick={() => update({ activity: level.value })}
+                aria-pressed={profile.activity === level.value}
                 className={cn(
-                  "flex items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors",
-                  inputs.activity === level.value
-                    ? "border-foreground bg-secondary"
-                    : "border-border hover:bg-secondary/50"
+                  "flex items-center justify-between gap-3 rounded-field px-3.5 py-2.5 text-left text-sm transition-colors",
+                  profile.activity === level.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-elevated ring-1 ring-foreground/8 hover:ring-foreground/20"
                 )}
               >
                 <span className="font-medium">{level.label}</span>
-                <span className="text-xs text-muted-foreground">{level.hint}</span>
+                <span
+                  className={cn(
+                    "text-xs",
+                    profile.activity === level.value
+                      ? "text-primary-foreground/70"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {level.hint}
+                </span>
               </button>
             ))}
           </div>
         </div>
+      </div>
 
-        {bmr !== null && tdee !== null ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border bg-card p-4">
-              <p className="text-xs text-muted-foreground">Grundumsatz (BMR)</p>
-              <p className="text-2xl font-semibold tabular-nums">
-                {Math.round(bmr)}
-                <span className="ml-1 text-sm font-normal text-muted-foreground">kcal</span>
+      {results.length > 0 ? (
+        <div className="grid grid-cols-2 gap-2.5 px-(--card-spacing)">
+          {results.map((r) => (
+            <div key={r.label} className="rounded-panel bg-elevated p-4">
+              <p className="text-xs text-muted-foreground">{r.label}</p>
+              <p className="nums mt-1 text-body-lg leading-none">
+                {formatNumber(Math.round(r.value))}
+                <span className="ml-1 text-xs font-normal text-muted-foreground">kcal</span>
               </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{r.hint}</p>
             </div>
-            <div className="rounded-xl border bg-card p-4">
-              <p className="text-xs text-muted-foreground">Tagesbedarf (TDEE)</p>
-              <p className="text-2xl font-semibold tabular-nums">
-                {Math.round(tdee)}
-                <span className="ml-1 text-sm font-normal text-muted-foreground">kcal</span>
-              </p>
-            </div>
-            <div className="rounded-xl border bg-card p-4">
-              <p className="text-xs text-muted-foreground">Abnehmen (−500)</p>
-              <p className="text-xl font-semibold tabular-nums">
-                {Math.round(tdee - 500)}
-                <span className="ml-1 text-sm font-normal text-muted-foreground">kcal</span>
-              </p>
-            </div>
-            <div className="rounded-xl border bg-card p-4">
-              <p className="text-xs text-muted-foreground">Zunehmen (+300)</p>
-              <p className="text-xl font-semibold tabular-nums">
-                {Math.round(tdee + 300)}
-                <span className="ml-1 text-sm font-normal text-muted-foreground">kcal</span>
-              </p>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Alter, Größe und Gewicht eingeben, um deinen Bedarf zu berechnen.
-          </p>
-        )}
-      </CardContent>
+          ))}
+        </div>
+      ) : (
+        <p className="px-(--card-spacing) text-sm text-muted-foreground">
+          Alter, Größe und Gewicht eintragen, um deinen Bedarf zu berechnen.
+        </p>
+      )}
     </Card>
   );
 }

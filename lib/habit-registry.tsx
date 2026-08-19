@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { DEFAULT_HABIT_SUGGESTIONS, HabitConfig, iconForName } from "@/lib/habits";
+import { DEFAULT_HABIT_SUGGESTIONS, HabitConfig, HabitKind, iconForName } from "@/lib/habits";
 import {
   fetchCustomHabits,
   createCustomHabit,
@@ -17,6 +17,8 @@ type HabitFormInput = {
   defaultGoal: number;
   quickAdd: number[];
   step: number;
+  kind: HabitKind;
+  weeklyGoal?: number | null;
 };
 
 type RegistryContextValue = {
@@ -40,6 +42,7 @@ function toConfig(c: CustomHabit): HabitConfig {
     defaultGoal: c.defaultGoal,
     quickAdd: c.quickAdd,
     step: c.step,
+    kind: c.kind ?? "counter",
     isCustom: true,
   };
 }

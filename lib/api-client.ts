@@ -1,7 +1,7 @@
-import { HabitType } from "@/lib/habits";
+import { HabitType, HabitKind } from "@/lib/habits";
 
 export type Entry = { habit: HabitType; date: string; value: number };
-export type Goal = { habit: HabitType; target: number };
+export type Goal = { habit: HabitType; target: number; weeklyTarget?: number | null };
 
 export async function fetchEntries(params: {
   habit?: HabitType;
@@ -42,11 +42,15 @@ export async function fetchGoals(): Promise<Goal[]> {
   return data.goals as Goal[];
 }
 
-export async function setGoal(habit: HabitType, target: number): Promise<void> {
+export async function setGoal(
+  habit: HabitType,
+  target: number,
+  weeklyTarget?: number | null
+): Promise<void> {
   const res = await fetch("/api/goals", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ habit, target }),
+    body: JSON.stringify({ habit, target, weeklyTarget }),
   });
   if (!res.ok) throw new Error("Konnte Ziel nicht speichern");
 }
@@ -59,6 +63,7 @@ export type CustomHabit = {
   defaultGoal: number;
   quickAdd: number[];
   step: number;
+  kind: HabitKind;
 };
 
 export async function fetchCustomHabits(): Promise<CustomHabit[]> {
@@ -75,6 +80,8 @@ export async function createCustomHabit(params: {
   defaultGoal: number;
   quickAdd: number[];
   step: number;
+  kind: HabitKind;
+  weeklyGoal?: number | null;
 }): Promise<CustomHabit> {
   const res = await fetch("/api/habits", {
     method: "POST",
@@ -95,6 +102,8 @@ export async function updateCustomHabit(
     defaultGoal: number;
     quickAdd: number[];
     step: number;
+    kind: HabitKind;
+    weeklyGoal?: number | null;
   }
 ): Promise<CustomHabit> {
   const res = await fetch("/api/habits", {

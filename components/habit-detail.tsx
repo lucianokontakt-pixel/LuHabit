@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Flame, Trophy, Pencil, Check } from "lucide-react";
+import { Flame, Trophy, Pencil, Check, CalendarRange } from "lucide-react";
 import { HabitConfig, HabitType, isoDateDaysAgo } from "@/lib/habits";
+import { cn } from "@/lib/utils";
 import { useHabitRegistry } from "@/lib/habit-registry";
 import { useHabitData } from "@/lib/use-habit-data";
 import { computeStreaks, sum } from "@/lib/stats";
@@ -35,18 +36,20 @@ function HabitDetailContent({
   resolvedConfig: HabitConfig;
 }) {
   const Icon = resolvedConfig.icon;
-  const { entries, goal, todayValue, loading, addDelta, updateGoal } = useHabitData(
-    habit,
-    resolvedConfig.defaultGoal
-  );
+  const isToggle = resolvedConfig.kind === "toggle";
+  const { entries, goal, weeklyGoal, todayValue, loading, addDelta, updateGoal, updateWeeklyGoal } =
+    useHabitData(habit, resolvedConfig.defaultGoal);
   const [manualValue, setManualValue] = useState("");
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState(String(goal));
+  const [weeklyGoalInput, setWeeklyGoalInput] = useState(weeklyGoal ? String(weeklyGoal) : "");
 
   const streaks = computeStreaks(entries, goal);
   const weekEntries = entries.filter((e) => e.date >= isoDateDaysAgo(6));
   const weekTotal = sum(weekEntries);
   const progress = goal > 0 ? Math.min(100, (todayValue / goal) * 100) : 0;
+  const weeklyProgress =
+    weeklyGoal && weeklyGoal > 0 ? Math.min(100, (weekTotal / weeklyGoal) * 100) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -60,19 +63,21 @@ function HabitDetailContent({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className={cn("grid gap-4 sm:grid-cols-3", weeklyProgress !== null && "lg:grid-cols-4")}>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Heute</CardDescription>
             <CardTitle className="text-2xl">
-              {todayValue}
-              <span className="ml-1 text-sm font-normal text-muted-foreground">
-                / {goal} {resolvedConfig.unit}
-              </span>
+              {isToggle ? (todayValue > 0 ? "Erledigt" : "Offen") : todayValue}
+              {!isToggle && (
+                <span className="ml-1 text-sm font-normal text-muted-foreground">
+                  / {goal} {resolvedConfig.unit}
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Progress value={progress} />
+            <Progress value={isToggle ? (todayValue > 0 ? 100 : 0) : progress} />
           </CardContent>
         </Card>
 
@@ -103,6 +108,27 @@ function HabitDetailContent({
             Ø {(weekTotal / 7).toFixed(1)} {resolvedConfig.unit} / Tag
           </CardContent>
         </Card>
+
+        {weeklyProgress !== null && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-1.5">
+                <CalendarRange className="size-3.5" />
+                Wochenziel
+              </CardDescription>
+              <CardTitle className="text-2xl">
+                {Math.round(weeklyProgress)}
+                <span className="ml-1 text-sm font-normal text-muted-foreground">%</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Progress value={weeklyProgress} />
+              <p className="mt-2 text-xs text-muted-foreground">
+                {weekTotal} / {weeklyGoal} {resolvedConfig.unit}
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Card>
@@ -110,42 +136,55 @@ function HabitDetailContent({
           <CardTitle className="text-base">Eintragen</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-wrap gap-2">
-            {resolvedConfig.quickAdd.map((amount) => (
-              <Button key={amount} variant="secondary" onClick={() => addDelta(amount)}>
-                +{amount} {resolvedConfig.unit}
-              </Button>
-            ))}
-            {todayValue > 0 && (
-              <Button variant="outline" onClick={() => addDelta(-resolvedConfig.step)}>
-                -{resolvedConfig.step}
-              </Button>
-            )}
-          </div>
-          <Separator />
-          <form
-            className="flex items-center gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const val = Number(manualValue);
-              if (Number.isFinite(val) && val >= 0) {
-                addDelta(val - todayValue);
-                setManualValue("");
-              }
-            }}
-          >
-            <Input
-              type="number"
-              min={0}
-              placeholder={`Genauen Wert für heute setzen (${resolvedConfig.unit})`}
-              value={manualValue}
-              onChange={(e) => setManualValue(e.target.value)}
-              className="max-w-xs"
-            />
-            <Button type="submit" variant="outline">
-              Setzen
+          {isToggle ? (
+            <Button
+              variant={todayValue > 0 ? "secondary" : "outline"}
+              className="h-11 w-full max-w-xs gap-1.5"
+              onClick={() => addDelta(todayValue > 0 ? -todayValue : 1)}
+            >
+              <Check className={cn("size-4", todayValue <= 0 && "opacity-40")} />
+              {todayValue > 0 ? "Geschafft" : "Als erledigt markieren"}
             </Button>
-          </form>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {resolvedConfig.quickAdd.map((amount) => (
+                  <Button key={amount} variant="secondary" onClick={() => addDelta(amount)}>
+                    +{amount} {resolvedConfig.unit}
+                  </Button>
+                ))}
+                {todayValue > 0 && (
+                  <Button variant="outline" onClick={() => addDelta(-resolvedConfig.step)}>
+                    -{resolvedConfig.step}
+                  </Button>
+                )}
+              </div>
+              <Separator />
+              <form
+                className="flex items-center gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const val = Number(manualValue);
+                  if (Number.isFinite(val) && val >= 0) {
+                    addDelta(val - todayValue);
+                    setManualValue("");
+                  }
+                }}
+              >
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder={`Genauen Wert für heute setzen (${resolvedConfig.unit})`}
+                  value={manualValue}
+                  onChange={(e) => setManualValue(e.target.value)}
+                  className="max-w-xs"
+                />
+                <Button type="submit" variant="outline">
+                  Setzen
+                </Button>
+              </form>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -173,22 +212,28 @@ function HabitDetailContent({
               size="sm"
               onClick={() => {
                 setGoalInput(String(goal));
+                setWeeklyGoalInput(weeklyGoal ? String(weeklyGoal) : "");
                 setEditingGoal(true);
               }}
             >
               <Pencil className="size-3.5" />
-              Ziel: {goal} {resolvedConfig.unit}
+              Ziel: {goal}
+              {weeklyGoal ? ` · Woche: ${weeklyGoal}` : ""} {resolvedConfig.unit}
             </Button>
           ) : (
             <form
-              className="flex items-center gap-2"
+              className="flex flex-wrap items-center gap-2"
               onSubmit={(e) => {
                 e.preventDefault();
                 const val = Number(goalInput);
-                if (Number.isFinite(val) && val > 0) {
-                  updateGoal(val);
-                  setEditingGoal(false);
+                const weeklyVal = weeklyGoalInput.trim() ? Number(weeklyGoalInput) : null;
+                if (!Number.isFinite(val) || val <= 0) return;
+                if (weeklyGoalInput.trim() && (!Number.isFinite(weeklyVal) || (weeklyVal ?? 0) <= 0)) {
+                  return;
                 }
+                updateGoal(val);
+                updateWeeklyGoal(weeklyVal);
+                setEditingGoal(false);
               }}
             >
               <Input
@@ -196,8 +241,17 @@ function HabitDetailContent({
                 min={1}
                 value={goalInput}
                 onChange={(e) => setGoalInput(e.target.value)}
+                placeholder="Tagesziel"
                 className="h-8 w-24"
                 autoFocus
+              />
+              <Input
+                type="number"
+                min={1}
+                value={weeklyGoalInput}
+                onChange={(e) => setWeeklyGoalInput(e.target.value)}
+                placeholder="Wochenziel"
+                className="h-8 w-24"
               />
               <Button type="submit" size="sm" variant="secondary">
                 <Check className="size-3.5" />

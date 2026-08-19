@@ -54,3 +54,29 @@ export async function d1Query<T = Record<string, unknown>>(
 
   return data.result[0]?.results ?? [];
 }
+
+/**
+ * D1 erlaubt rund 100 gebundene Parameter pro Statement. Größere Einfügungen
+ * werden deshalb in Blöcke zerlegt statt Werte in den SQL-String zu schreiben.
+ */
+const MAX_BOUND_PARAMS = 90;
+
+export async function d1InsertMany(
+  table: string,
+  columns: string[],
+  rows: (string | number | null)[][]
+): Promise<void> {
+  if (rows.length === 0) return;
+
+  const perRow = columns.length;
+  const rowsPerChunk = Math.max(1, Math.floor(MAX_BOUND_PARAMS / perRow));
+  const placeholder = `(${columns.map(() => "?").join(", ")})`;
+
+  for (let i = 0; i < rows.length; i += rowsPerChunk) {
+    const chunk = rows.slice(i, i + rowsPerChunk);
+    const sql = `INSERT INTO ${table} (${columns.join(", ")}) VALUES ${chunk
+      .map(() => placeholder)
+      .join(", ")}`;
+    await d1Query(sql, chunk.flat());
+  }
+}

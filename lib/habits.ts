@@ -19,6 +19,8 @@ import {
 
 export type HabitType = string;
 
+export type HabitKind = "counter" | "toggle";
+
 export type HabitConfig = {
   type: HabitType;
   label: string;
@@ -27,6 +29,7 @@ export type HabitConfig = {
   defaultGoal: number;
   quickAdd: number[];
   step: number;
+  kind: HabitKind;
   isCustom?: boolean;
 };
 
@@ -43,6 +46,7 @@ export const DEFAULT_HABIT_SUGGESTIONS: HabitConfig[] = [
     defaultGoal: 10000,
     quickAdd: [1000, 2500, 5000],
     step: 500,
+    kind: "counter",
   },
   {
     type: "water",
@@ -52,6 +56,7 @@ export const DEFAULT_HABIT_SUGGESTIONS: HabitConfig[] = [
     defaultGoal: 2000,
     quickAdd: [250, 500, 750],
     step: 50,
+    kind: "counter",
   },
   {
     type: "coffee",
@@ -61,6 +66,7 @@ export const DEFAULT_HABIT_SUGGESTIONS: HabitConfig[] = [
     defaultGoal: 3,
     quickAdd: [1],
     step: 1,
+    kind: "counter",
   },
   {
     type: "training",
@@ -70,6 +76,7 @@ export const DEFAULT_HABIT_SUGGESTIONS: HabitConfig[] = [
     defaultGoal: 30,
     quickAdd: [15, 30, 45],
     step: 5,
+    kind: "counter",
   },
   {
     type: "reading",
@@ -79,6 +86,7 @@ export const DEFAULT_HABIT_SUGGESTIONS: HabitConfig[] = [
     defaultGoal: 20,
     quickAdd: [5, 10, 15],
     step: 5,
+    kind: "counter",
   },
   {
     type: "writing",
@@ -88,6 +96,7 @@ export const DEFAULT_HABIT_SUGGESTIONS: HabitConfig[] = [
     defaultGoal: 15,
     quickAdd: [5, 10, 15],
     step: 5,
+    kind: "counter",
   },
 ];
 

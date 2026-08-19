@@ -7,7 +7,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { dateRange, entriesToMap } from "@/lib/stats";
+import { dateRange, entriesToMap, monthRange, monthlyTotal } from "@/lib/stats";
 import type { Entry } from "@/lib/api-client";
 
 const chartConfig = {
@@ -23,18 +23,29 @@ export function WeeklyChart({
   entries,
   goal,
   days = 7,
+  monthly = false,
 }: {
   entries: Entry[];
   goal: number;
   days?: number;
+  monthly?: boolean;
 }) {
-  const map = entriesToMap(entries);
-  const range = dateRange(days - 1, 0);
-  const data = range.map((date) => {
-    const d = new Date(date);
-    const label = days <= 7 ? WEEKDAY_LABELS[(d.getDay() + 6) % 7] : `${d.getDate()}.${d.getMonth() + 1}.`;
-    return { date, label, value: map.get(date) ?? 0 };
-  });
+  const data = monthly
+    ? monthRange(12).map((bucket) => ({
+        date: bucket.key,
+        label: bucket.label,
+        value: monthlyTotal(entries, bucket),
+      }))
+    : (() => {
+        const map = entriesToMap(entries);
+        const range = dateRange(days - 1, 0);
+        return range.map((date) => {
+          const d = new Date(date);
+          const label =
+            days <= 7 ? WEEKDAY_LABELS[(d.getDay() + 6) % 7] : `${d.getDate()}.${d.getMonth() + 1}.`;
+          return { date, label, value: map.get(date) ?? 0 };
+        });
+      })();
 
   return (
     <ChartContainer config={chartConfig} className="h-[180px] w-full">
@@ -48,7 +59,7 @@ export function WeeklyChart({
           fontSize={12}
         />
         <ChartTooltip content={<ChartTooltipContent hideLabel={false} />} />
-        {goal > 0 && (
+        {goal > 0 && !monthly && (
           <ReferenceLine y={goal} stroke="var(--muted-foreground)" strokeDasharray="4 4" />
         )}
         <Bar dataKey="value" fill="var(--color-value)" radius={4} />

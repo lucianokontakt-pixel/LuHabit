@@ -9,6 +9,7 @@ const HISTORY_DAYS = 180;
 export function useAllHabitsData() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [goals, setGoals] = useState<Record<string, number>>({});
+  const [weeklyGoals, setWeeklyGoals] = useState<Record<string, number | undefined>>({});
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -22,6 +23,11 @@ export function useAllHabitsData() {
       setGoals(() => {
         const next: Record<string, number> = {};
         for (const g of goalsData) next[g.habit] = g.target;
+        return next;
+      });
+      setWeeklyGoals(() => {
+        const next: Record<string, number | undefined> = {};
+        for (const g of goalsData) next[g.habit] = g.weeklyTarget ?? undefined;
         return next;
       });
     } finally {
@@ -86,5 +92,15 @@ export function useAllHabitsData() {
     [today, load]
   );
 
-  return { entries, goals, loading, entriesFor, todayValueFor, addDelta, setValue, reload: load };
+  return {
+    entries,
+    goals,
+    weeklyGoals,
+    loading,
+    entriesFor,
+    todayValueFor,
+    addDelta,
+    setValue,
+    reload: load,
+  };
 }
