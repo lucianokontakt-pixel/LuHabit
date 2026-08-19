@@ -66,7 +66,12 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addSession = useCallback((session: WorkoutSession) => {
-    setSessions((prev) => [session, ...prev]);
+    // Einsortieren statt vorne anhängen: eine nachgetragene Einheit ist nicht
+    // die neueste. lastSetsFor und damit die ganze Progression verlassen sich
+    // darauf, dass die Liste absteigend nach Datum steht — genau wie das ORDER
+    // BY der API. sort ist stabil, gleichdatierte Einheiten bleiben also in der
+    // Reihenfolge, in der sie hinzukamen.
+    setSessions((prev) => [session, ...prev].sort((a, b) => b.date.localeCompare(a.date)));
   }, []);
 
   const removeSession = useCallback(async (id: string) => {

@@ -4,7 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Check, ChevronRight, Flame, TrendingUp, TrendingDown } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Flame,
+  TrendingUp,
+  TrendingDown,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -23,8 +31,8 @@ import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
 import { saveSession } from "@/lib/api-training";
 import { addEntry } from "@/lib/api-client";
-import { todayISO } from "@/lib/habits";
-import { formatClock, formatNumber } from "@/lib/format";
+import { addDaysISO, isoDateDaysAgo, todayISO } from "@/lib/habits";
+import { formatClock, formatDayLabel, formatNumber } from "@/lib/format";
 import {
   computeTargets,
   incrementFor,
@@ -58,6 +66,16 @@ export function SessionClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dayId = searchParams.get("day");
+
+  const today = todayISO();
+  /**
+   * Auf welchen Tag die Einheit gebucht wird. Normalfall ist heute; wer eine
+   * Einheit vergessen hat, trägt sie hier auf ihren Tag zurück. Weiter als
+   * einen Monat zurück ergibt es nicht — so weit rekonstruiert niemand Sätze.
+   */
+  const [sessionDate, setSessionDate] = useState(today);
+  const earliestSessionDate = isoDateDaysAgo(30);
+  const isSessionToday = sessionDate === today;
 
   const { plans, exerciseById, sessions, lastSetsFor, addSession, loading } = useTraining();
   const { entries: weightEntries, loading: weightLoading } = useMetricData("weight");
@@ -260,12 +278,15 @@ export function SessionClient() {
       );
 
       // elapsed wird im Sekundentakt fortgeschrieben — kein Date.now() im Render-Pfad.
-      const durationSeconds = elapsed;
+      // Bei einer nachgetragenen Einheit misst die Uhr nur, wie lange das
+      // Eintippen gedauert hat. Diese Zahl ist keine Trainingsdauer, also
+      // bleibt sie leer, statt eine falsche zu erfinden.
+      const durationSeconds = isSessionToday ? elapsed : null;
       const saved = await saveSession({
         planId: located.plan.id,
         dayId: day.id,
         dayName: day.name,
-        date: todayISO(),
+        date: sessionDate,
         durationSeconds,
         sets: payloadSets,
       });
@@ -288,15 +309,19 @@ export function SessionClient() {
         })),
       });
 
-      // Die Einheit zählt auch auf das Training-Habit im Dashboard ein.
-      try {
-        await addEntry({
-          habit: "training",
-          date: todayISO(),
-          delta: Math.max(1, Math.round(durationSeconds / 60)),
-        });
-      } catch {
-        // Das Habit kann gelöscht worden sein — die Einheit ist trotzdem gespeichert
+      // Die Einheit zählt auch auf das Training-Habit im Dashboard ein — aber
+      // nur mit einer echten Dauer. Nachgetragene Minuten trägst du auf der
+      // Habit-Seite selbst nach, dort geht das inzwischen auch rückwirkend.
+      if (durationSeconds !== null) {
+        try {
+          await addEntry({
+            habit: "training",
+            date: sessionDate,
+            delta: Math.max(1, Math.round(durationSeconds / 60)),
+          });
+        } catch {
+          // Das Habit kann gelöscht worden sein — die Einheit ist trotzdem gespeichert
+        }
       }
 
       try {
@@ -305,10 +330,15 @@ export function SessionClient() {
         // egal
       }
 
+      const satzWort = completedSets.length === 1 ? "Satz" : "Sätze";
       toast.success(
-        `${day.name} gespeichert — ${completedSets.length} ${
-          completedSets.length === 1 ? "Satz" : "Sätze"
-        }, ${formatNumber(Math.round(volume))} kg`
+        isSessionToday
+          ? `${day.name} gespeichert — ${completedSets.length} ${satzWort}, ${formatNumber(
+              Math.round(volume)
+            )} kg`
+          : `${day.name} nachgetragen für ${formatDayLabel(sessionDate, today)} — ${
+              completedSets.length
+            } ${satzWort}, ${formatNumber(Math.round(volume))} kg`
       );
       router.push("/training");
     } catch (e) {
@@ -361,6 +391,35 @@ export function SessionClient() {
           </button>
           <h1 className="mt-1 font-display text-4xl leading-tight tracking-tight">{day.name}</h1>
           <p className="text-sm text-muted-foreground">{located.plan.name}</p>
+          <div className="mt-2 flex items-center gap-1">
+            <span className="text-xs text-muted-foreground">Einheit vom</span>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Einen Tag zurück"
+              disabled={sessionDate <= earliestSessionDate}
+              onClick={() => setSessionDate((d) => addDaysISO(d, -1))}
+            >
+              <ChevronLeft />
+            </Button>
+            <span
+              className={cn(
+                "min-w-[6rem] text-center text-xs nums",
+                isSessionToday ? "text-muted-foreground" : "font-medium text-foreground"
+              )}
+            >
+              {formatDayLabel(sessionDate, today)}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Einen Tag vor"
+              disabled={isSessionToday}
+              onClick={() => setSessionDate((d) => addDaysISO(d, 1))}
+            >
+              <ChevronRight />
+            </Button>
+          </div>
         </div>
         <div className="shrink-0 text-right">
           <p className="nums text-heading-sm leading-none">{formatClock(elapsed)}</p>
