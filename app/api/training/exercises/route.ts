@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
 import { validSlugId } from "@/lib/ids";
+import { slugifyExercise } from "@/lib/slugify";
 import { currentUserId } from "@/lib/server-user";
-import type { Equipment, Exercise, Muscle } from "@/lib/training";
+import { DEFAULT_BODYWEIGHT_LOAD, type Equipment, type Exercise, type Muscle } from "@/lib/training";
 
 type ExerciseRow = {
   id: string;
@@ -35,23 +36,6 @@ function toExercise(row: ExerciseRow): Exercise {
 const UNAUTHORIZED = { error: "Nicht angemeldet" };
 
 /** Faustwert für eigene Eigengewichtsübungen — grob ein Liegestütz. */
-const DEFAULT_BODYWEIGHT_LOAD = 0.65;
-
-function slugify(label: string): string {
-  return (
-    label
-      .toLowerCase()
-      .replace(/ä/g, "ae")
-      .replace(/ö/g, "oe")
-      .replace(/ü/g, "ue")
-      .replace(/ß/g, "ss")
-      .normalize("NFKD")
-      .replace(/[̀-ͯ]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "") || "uebung"
-  );
-}
-
 export async function GET(req: NextRequest) {
   const userId = await currentUserId(req);
   if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
@@ -94,7 +78,7 @@ export async function POST(req: NextRequest) {
     if (!given) return NextResponse.json({ error: "Ungültige id" }, { status: 400 });
     id = given;
   } else {
-    const base = slugify(name);
+    const base = slugifyExercise(name);
     const existing = await d1Query<{ id: string }>(
       `SELECT id FROM exercises WHERE user_id = ? AND deleted_at IS NULL AND id LIKE ?`,
       [userId, `${base}%`]

@@ -33,7 +33,6 @@ import { summarizeSession } from "@/lib/session-stats";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
 import { saveSession } from "@/lib/api-training";
-import { isOfflineError, queueSession } from "@/lib/outbox";
 import { addEntry } from "@/lib/api-client";
 import { addDaysISO, isoDateDaysAgo, todayISO } from "@/lib/habits";
 import { formatClock, formatDayLabel, formatNumber } from "@/lib/format";
@@ -517,40 +516,13 @@ export function SessionClient() {
         sets: payloadSets,
       };
 
-      let saved: { id: string; date: string };
-      try {
-        saved = await saveSession(payload);
-      } catch (e) {
-        // Ohne Netz ist die Einheit trotzdem fertig. Sie wandert in die
-        // Warteschlange und geht raus, sobald wieder Empfang da ist — der
-        // Trainings-Store führt sie bis dahin ganz normal mit.
-        if (!isOfflineError(e)) throw e;
-        const queued = queueSession(payload, habitMinutes);
-        clearDraft();
-        toast.success("Einheit gesichert — sie wird gesendet, sobald du wieder Netz hast");
-        setFinishedId(queued.localId);
-        window.scrollTo({ top: 0 });
-        return;
-      }
-
-      addSession({
-        id: saved.id,
-        planId: located.plan.id,
-        dayId: day.id,
-        dayName: day.name,
-        date: saved.date,
-        durationSeconds,
-        note: null,
-        sets: payloadSets.map((s, i) => ({
-          id: `local-${i}`,
-          exerciseId: s.exerciseId,
-          setIndex: s.setIndex,
-          weight: s.weight,
-          reps: s.reps,
-          done: true,
-          warmup: s.warmup,
-        })),
-      });
+      // saveSession legt die Einheit sofort im lokalen Bestand ab und reiht sie
+      // zum Senden ein — sie geht erst tatsächlich raus, sobald Netz da ist,
+      // ohne dass das hier zu einem Fehler wird. addSession bekommt das
+      // vollständige, bereits gespeicherte Objekt direkt zurück, statt auf den
+      // Reload zu warten, den die Warteschlange im Hintergrund anstößt.
+      const saved = await saveSession(payload);
+      addSession(saved);
 
       // Die Einheit zählt auch auf das Training-Habit im Dashboard ein — aber
       // nur mit einer echten Dauer. Nachgetragene Minuten trägst du auf der

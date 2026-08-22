@@ -14,20 +14,27 @@
  * ihr alles, was dahinter steht.
  */
 
-import { applyEffect, queueAll, queuePush, queueRemove } from "@/lib/local-db";
-import { collapse, localEffect, type WriteOp } from "@/lib/write-ops";
+import { applyEffects, queueAll, queuePush, queueRemove } from "@/lib/local-db";
+import { collapse, localEffect, targetOf, type WriteOp } from "@/lib/write-ops";
 import { notifyLocalDataChanged } from "@/lib/local-events";
 
-const listeners = new Set<(pending: number) => void>();
+const listeners = new Set<(pendingTargets: Set<string>) => void>();
 
-export function subscribeQueue(listener: (pending: number) => void): () => void {
+/**
+ * Wer wissen will, ob GENAU EIN Datensatz noch auf das Senden wartet — etwa
+ * "wartet diese eine Einheit noch auf Netz" für die Anzeige nach dem
+ * Abschließen —, meldet sich hier an. Eine reine Zahl hätte dafür nicht
+ * gereicht; targetOf liefert denselben Schlüssel wie beim Einreihen.
+ */
+export function subscribeQueue(listener: (pendingTargets: Set<string>) => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
 
 async function announce() {
   const pending = await queueAll().catch(() => []);
-  for (const listener of listeners) listener(pending.length);
+  const targets = new Set(pending.map((item) => targetOf(item.op)));
+  for (const listener of listeners) listener(targets);
 }
 
 /**
@@ -48,7 +55,7 @@ export function isOfflineError(error: unknown): boolean {
  * eine Änderung in der Schlange, die der Nutzer nirgends sieht.
  */
 export async function enqueue(op: WriteOp): Promise<void> {
-  await applyEffect(localEffect(op));
+  await applyEffects(localEffect(op));
   notifyLocalDataChanged();
   await queuePush(op);
   await announce();
@@ -72,7 +79,7 @@ export async function reapplyPending(): Promise<void> {
   const pending = await queueAll().catch(() => []);
   if (pending.length === 0) return;
   for (const item of collapse(pending)) {
-    await applyEffect(localEffect(item.op));
+    await applyEffects(localEffect(item.op));
   }
 }
 
@@ -101,7 +108,11 @@ async function send(op: WriteOp): Promise<Response> {
     case "exercise.delete":
       return remove(`/api/training/exercises?id=${encodeURIComponent(op.id)}`);
     case "plan.save":
-      return post("/api/training/plans", planBody(op.plan), op.isNew ? "POST" : "PUT");
+      return post(
+        "/api/training/plans",
+        planBody(op.plan, op.isNew || op.daysChanged),
+        op.isNew ? "POST" : "PUT"
+      );
     case "plan.delete":
       return remove(`/api/training/plans?id=${encodeURIComponent(op.id)}`);
     case "session.save":
@@ -115,25 +126,36 @@ async function send(op: WriteOp): Promise<Response> {
   }
 }
 
-function planBody(plan: import("@/lib/training").WorkoutPlan) {
+/**
+ * `includeDays` steuert, ob days im Body landet. Die Route ersetzt bei
+ * vorhandenem days-Feld ALLE Tage und Übungen durch frische Zeilen mit neuen
+ * IDs — das darf nur passieren, wenn die Tage sich wirklich geändert haben.
+ * Sonst würde ein bloßes Aktivieren die "nächster Tag"-Rotation kaputt
+ * machen, die sich auf die dayId einer vergangenen Einheit verlässt.
+ */
+function planBody(plan: import("@/lib/training").WorkoutPlan, includeDays: boolean) {
   return {
     id: plan.id,
     name: plan.name,
     isActive: plan.isActive,
     weeklyTarget: plan.weeklyTarget,
-    days: plan.days.map((day) => ({
-      name: day.name,
-      weekday: day.weekday,
-      exercises: day.exercises.map((e) => ({
-        exerciseId: e.exerciseId,
-        sets: e.sets,
-        repMin: e.repMin,
-        repMax: e.repMax,
-        restSeconds: e.restSeconds,
-        increment: e.increment,
-        startWeight: e.startWeight,
-      })),
-    })),
+    ...(includeDays
+      ? {
+          days: plan.days.map((day) => ({
+            name: day.name,
+            weekday: day.weekday,
+            exercises: day.exercises.map((e) => ({
+              exerciseId: e.exerciseId,
+              sets: e.sets,
+              repMin: e.repMin,
+              repMax: e.repMax,
+              restSeconds: e.restSeconds,
+              increment: e.increment,
+              startWeight: e.startWeight,
+            })),
+          })),
+        }
+      : {}),
   };
 }
 

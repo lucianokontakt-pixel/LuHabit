@@ -2,8 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import * as api from "@/lib/api-training";
-import { pendingToSession, readOutbox, removePending, subscribeOutbox } from "@/lib/outbox";
-import type { PendingSession } from "@/lib/outbox";
+import { subscribeLocalData } from "@/lib/local-events";
+import { subscribeQueue } from "@/lib/write-queue";
 import { workingSets } from "@/lib/training";
 import type { Exercise, WorkoutPlan, WorkoutSession, WorkoutSet } from "@/lib/training";
 
@@ -13,7 +13,7 @@ type TrainingContextValue = {
   plans: WorkoutPlan[];
   activePlan: WorkoutPlan | null;
   sessions: WorkoutSession[];
-  /** Ohne Netz abgeschlossene Einheiten, die noch auf den Server warten. */
+  /** Einheiten, deren Speichern noch in der Warteschlange auf Netz wartet. */
   pendingIds: Set<string>;
   loading: boolean;
   error: string | null;
@@ -32,8 +32,8 @@ const TrainingContext = createContext<TrainingContextValue | null>(null);
 export function TrainingProvider({ children }: { children: React.ReactNode }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [plans, setPlans] = useState<WorkoutPlan[]>([]);
-  const [serverSessions, setServerSessions] = useState<WorkoutSession[]>([]);
-  const [pending, setPending] = useState<PendingSession[]>([]);
+  const [sessions, setSessions] = useState<WorkoutSession[]>([]);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,7 +48,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
       ]);
       setExercises(ex);
       setPlans(pl);
-      setServerSessions(se);
+      setSessions(se);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Trainingsdaten konnten nicht geladen werden");
     } finally {
@@ -61,29 +61,25 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     reload();
   }, [reload]);
 
-  // Wartende Einheiten mitführen, bis OutboxSync sie losgeworden ist. Wird die
-  // Schlange kürzer, ist etwas durchgegangen — dann holt reload die Einheit mit
-  // ihrer echten ID vom Server nach.
-  useEffect(() => {
-    let previous = readOutbox();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Erststand der Warteschlange beim Mount
-    setPending(previous);
-    return subscribeOutbox((next) => {
-      const shrank = next.length < previous.length;
-      previous = next;
-      setPending(next);
-      if (shrank) reload();
-    });
-  }, [reload]);
+  // Der lokale Bestand ist die Wahrheit — er ändert sich sowohl durch eigene
+  // Schreibvorgänge (die App zeigt sie schon optimistisch, siehe addSession)
+  // als auch durch einen Abgleich, der Änderungen von einem anderen Gerät
+  // bringt. Ein Nachladen hier ist der gemeinsame Nenner für beide Fälle.
+  useEffect(() => subscribeLocalData(reload), [reload]);
 
-  const pendingIds = useMemo(() => new Set(pending.map((p) => p.localId)), [pending]);
-
-  const sessions = useMemo(() => {
-    if (pending.length === 0) return serverSessions;
-    return [...pending.map(pendingToSession), ...serverSessions].sort((a, b) =>
-      b.date.localeCompare(a.date)
-    );
-  }, [pending, serverSessions]);
+  // Welche Einheiten noch auf das Senden warten — für die Anzeige nach dem
+  // Abschließen ("gesichert, wird gesendet, sobald du wieder Netz hast").
+  useEffect(
+    () =>
+      subscribeQueue((targets) => {
+        const ids = new Set<string>();
+        for (const target of targets) {
+          if (target.startsWith("sessions:")) ids.add(target.slice("sessions:".length));
+        }
+        setPendingIds(ids);
+      }),
+    []
+  );
 
   const exerciseById = useMemo(() => {
     const map: Record<string, Exercise> = {};
@@ -102,7 +98,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     // darauf, dass die Liste absteigend nach Datum steht — genau wie das ORDER
     // BY der API. sort ist stabil, gleichdatierte Einheiten bleiben also in der
     // Reihenfolge, in der sie hinzukamen.
-    setServerSessions((prev) => [session, ...prev].sort((a, b) => b.date.localeCompare(a.date)));
+    setSessions((prev) => [session, ...prev].sort((a, b) => b.date.localeCompare(a.date)));
   }, []);
 
   /**
@@ -111,7 +107,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
    * lastSetsFor und die ganze Progression verlassen sich auf absteigende Daten.
    */
   const replaceSession = useCallback((session: WorkoutSession) => {
-    setServerSessions((prev) =>
+    setSessions((prev) =>
       prev
         .map((s) => (s.id === session.id ? session : s))
         .sort((a, b) => b.date.localeCompare(a.date))
@@ -119,14 +115,8 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const removeSession = useCallback(async (id: string) => {
-    // Eine wartende Einheit kennt der Server noch gar nicht — die wird nur aus
-    // der Warteschlange geworfen.
-    if (readOutbox().some((p) => p.localId === id)) {
-      removePending(id);
-      return;
-    }
     await api.deleteSession(id);
-    setServerSessions((prev) => prev.filter((s) => s.id !== id));
+    setSessions((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
   const upsertExercise = useCallback((exercise: Exercise) => {

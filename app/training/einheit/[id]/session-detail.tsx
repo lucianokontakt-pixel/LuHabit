@@ -123,29 +123,14 @@ export function SessionDetail({ id }: { id: string }) {
 
     setSaving(true);
     try {
-      await updateSession({
+      const saved = await updateSession({
         id: session.id,
         date,
         durationSeconds,
         note: note.trim() || null,
         sets,
       });
-
-      replaceSession({
-        ...session,
-        date,
-        durationSeconds,
-        note: note.trim() || null,
-        sets: sets.map((s, i) => ({
-          id: `local-${i}`,
-          exerciseId: s.exerciseId,
-          setIndex: s.setIndex,
-          weight: s.weight,
-          reps: s.reps,
-          done: true,
-          warmup: s.warmup,
-        })),
-      });
+      replaceSession(saved);
 
       toast.success("Einheit gespeichert");
       setEditing(false);

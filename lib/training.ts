@@ -41,6 +41,14 @@ export const EQUIPMENT_LABELS: Record<Equipment, string> = {
  * Standard-Gewichtssprung: Oberkörper 2,5 kg, Unterkörper 5 kg.
  * Pro Übung und pro Plan-Eintrag überschreibbar.
  */
+/**
+ * Faustwert für eigene Eigengewichtsübungen — grob ein Liegestütz. Geteilt
+ * zwischen Server und Client: legt jemand offline eine Eigengewichtsübung an,
+ * muss derselbe Wert gelten wie später beim Abgleich, sonst springt der Wert
+ * im Moment des Abgleichs sichtbar um.
+ */
+export const DEFAULT_BODYWEIGHT_LOAD = 0.65;
+
 export function defaultIncrement(muscle: Muscle): number {
   const entry = MUSCLES.find((m) => m.key === muscle);
   return entry?.group === "lower" ? 5 : 2.5;

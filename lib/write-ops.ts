@@ -38,7 +38,13 @@ export type WriteOp =
   | { kind: "habit.delete"; id: string }
   | { kind: "exercise.save"; exercise: StoredExercise; isNew: boolean }
   | { kind: "exercise.delete"; id: string }
-  | { kind: "plan.save"; plan: WorkoutPlan; isNew: boolean }
+  // daysChanged hält fest, ob die Tage wirklich neu geschrieben werden sollen.
+  // Sonst würde jeder plan.save — auch ein bloßes Aktivieren — beim Senden die
+  // Tage mitschicken; die Route ersetzt bei vorhandenem days-Feld ALLE Tage und
+  // Übungen durch frische Zeilen mit neuen IDs. Das würde lastSession.dayId
+  // (die "nächster Tag"-Rotation, siehe lib/training.ts nextDay) still ins
+  // Leere laufen lassen, weil die alte dayId dann zu keinem Tag mehr passt.
+  | { kind: "plan.save"; plan: WorkoutPlan; isNew: boolean; daysChanged: boolean }
   | { kind: "plan.delete"; id: string }
   | { kind: "session.save"; session: WorkoutSession; isNew: boolean }
   | { kind: "session.delete"; id: string }
@@ -79,74 +85,111 @@ function nowStamp(): string {
   return new Date().toISOString().slice(0, 19).replace("T", " ");
 }
 
-export function localEffect(op: WriteOp): LocalEffect {
+/**
+ * Was eine Operation im lokalen Bestand bewirkt — meist ein einzelner Effekt,
+ * bei habit.save und habit.delete zwei: die Route schreibt bei jedem Anlegen,
+ * Ändern und Löschen eines Habits IMMER auch die zugehörige goals-Zeile mit
+ * (dasselbe Ziel liegt in einer eigenen Tabelle). Nur einen Effekt für die
+ * Habit-Zeile zurückzugeben, hätte das Ziel bis zum nächsten Abgleich
+ * unsichtbar gemacht — genau das ist beim Bauen aufgefallen: ein offline
+ * angelegtes Habit zeigte kein Tagesziel, bis der nächste Abgleich es nachlieferte.
+ */
+export function localEffect(op: WriteOp): LocalEffect[] {
   switch (op.kind) {
     case "entry.set":
-      return {
-        collection: "entries",
-        key: entryKey(op.entry.habit, op.entry.date),
-        action: "put",
-        data: op.entry,
-        sort: op.entry.date,
-      };
+      return [
+        {
+          collection: "entries",
+          key: entryKey(op.entry.habit, op.entry.date),
+          action: "put",
+          data: op.entry,
+          sort: op.entry.date,
+        },
+      ];
     case "goal.set":
-      return {
-        collection: "goals",
-        key: op.goal.habit,
-        action: "put",
-        data: op.goal,
-        sort: op.goal.habit,
-      };
+      return [
+        {
+          collection: "goals",
+          key: op.goal.habit,
+          action: "put",
+          data: op.goal,
+          sort: op.goal.habit,
+        },
+      ];
     case "habit.save":
-      return {
-        collection: "habits",
-        key: op.habit.id,
-        action: "put",
-        data: op.habit,
-        sort: nowStamp(),
-      };
+      return [
+        {
+          collection: "habits",
+          key: op.habit.id,
+          action: "put",
+          data: op.habit,
+          sort: nowStamp(),
+        },
+        {
+          collection: "goals",
+          key: op.habit.id,
+          action: "put",
+          data: {
+            habit: op.habit.id,
+            target: op.habit.defaultGoal,
+            weeklyTarget: op.weeklyGoal,
+          },
+          sort: op.habit.id,
+        },
+      ];
     case "habit.delete":
-      return { collection: "habits", key: op.id, action: "delete" };
+      return [
+        { collection: "habits", key: op.id, action: "delete" },
+        { collection: "goals", key: op.id, action: "delete" },
+      ];
     case "exercise.save":
-      return {
-        collection: "exercises",
-        key: op.exercise.id,
-        action: "put",
-        data: op.exercise,
-        sort: op.exercise.name.toLowerCase(),
-      };
+      return [
+        {
+          collection: "exercises",
+          key: op.exercise.id,
+          action: "put",
+          data: op.exercise,
+          sort: op.exercise.name.toLowerCase(),
+        },
+      ];
     case "exercise.delete":
-      return { collection: "exercises", key: op.id, action: "delete" };
+      return [{ collection: "exercises", key: op.id, action: "delete" }];
     case "plan.save":
-      return {
-        collection: "plans",
-        key: op.plan.id,
-        action: "put",
-        data: op.plan,
-        sort: `${pad(op.plan.position)}|${nowStamp()}`,
-      };
+      return [
+        {
+          collection: "plans",
+          key: op.plan.id,
+          action: "put",
+          data: op.plan,
+          sort: `${pad(op.plan.position)}|${nowStamp()}`,
+        },
+      ];
     case "plan.delete":
-      return { collection: "plans", key: op.id, action: "delete" };
+      return [{ collection: "plans", key: op.id, action: "delete" }];
     case "session.save":
-      return {
-        collection: "sessions",
-        key: op.session.id,
-        action: "put",
-        data: op.session,
-        sort: `${op.session.date}|${nowStamp()}`,
-      };
+      return [
+        {
+          collection: "sessions",
+          key: op.session.id,
+          action: "put",
+          data: op.session,
+          sort: `${op.session.date}|${nowStamp()}`,
+        },
+      ];
     case "session.delete":
-      return { collection: "sessions", key: op.id, action: "delete" };
+      return [{ collection: "sessions", key: op.id, action: "delete" }];
     case "emom.save":
-      return {
-        collection: "emom",
-        key: op.template.id,
-        action: "put",
-        data: op.template,
-        sort: `${pad(op.template.position)}|${nowStamp()}`,
-      };
+      return [
+        {
+          collection: "emom",
+          key: op.template.id,
+          action: "put",
+          data: op.template,
+          sort: `${pad(op.template.position)}|${nowStamp()}`,
+        },
+      ];
     case "emom.delete":
-      return { collection: "emom", key: op.id, action: "delete" };
+      return [{ collection: "emom", key: op.id, action: "delete" }];
   }
 }
 
@@ -155,7 +198,10 @@ export function localEffect(op: WriteOp): LocalEffect {
  * Zwei Operationen mit derselben Kennung heben einander auf: die spätere gilt.
  */
 export function targetOf(op: WriteOp): string {
-  const effect = localEffect(op);
+  // Der erste Effekt ist die Hauptsache (die Habit-Zeile, nicht ihr Ziel) —
+  // das entscheidet, welche zweier Operationen auf denselben Datensatz beim
+  // Eindampfen gewinnt und ob eine Einheit noch als "wartet auf Netz" gilt.
+  const [effect] = localEffect(op);
   return `${effect.collection}:${effect.key}`;
 }
 

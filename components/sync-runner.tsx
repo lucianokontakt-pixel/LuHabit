@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
-import { flushOutbox } from "@/lib/outbox";
 import { flushQueue } from "@/lib/write-queue";
 import { syncOnce } from "@/lib/sync";
 
@@ -24,7 +23,6 @@ import { syncOnce } from "@/lib/sync";
 export function SyncRunner() {
   const run = useCallback(async () => {
     try {
-      await flushOutbox();
       await flushQueue();
       await syncOnce();
     } catch {

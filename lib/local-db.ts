@@ -227,12 +227,19 @@ export async function clearLocalDb(): Promise<void> {
  * Eine einzelne Änderung im lokalen Bestand — das, was eine wartende Operation
  * bewirkt. Damit sieht die App ihre eigene Eingabe sofort, auch ohne Netz.
  */
-export async function applyEffect(effect: LocalEffect): Promise<void> {
+export async function applyEffects(effects: LocalEffect[]): Promise<void> {
+  if (effects.length === 0) return;
   const db = await openDb();
-  const tx = db.transaction(effect.collection, "readwrite");
-  const store = tx.objectStore(effect.collection);
-  if (effect.action === "delete") store.delete(effect.key);
-  else store.put({ key: effect.key, sort: effect.sort, data: effect.data });
+  // Eine Transaktion über alle beteiligten Sammlungen: habit.save schreibt
+  // zum Beispiel Habit UND Ziel in einem Zug — halb angewendet wäre schlimmer
+  // als gar nicht angewendet.
+  const stores = [...new Set(effects.map((e) => e.collection))];
+  const tx = db.transaction(stores, "readwrite");
+  for (const effect of effects) {
+    const store = tx.objectStore(effect.collection);
+    if (effect.action === "delete") store.delete(effect.key);
+    else store.put({ key: effect.key, sort: effect.sort, data: effect.data });
+  }
   await done(tx);
 }
 

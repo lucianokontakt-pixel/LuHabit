@@ -2,7 +2,8 @@ import { HabitType, HabitKind } from "@/lib/habits";
 import { readAll, readOne } from "@/lib/local-db";
 import { entryKey } from "@/lib/sync-payload";
 import { enqueue, flushQueue } from "@/lib/write-queue";
-import { ensureLocalData, syncSoon } from "@/lib/sync";
+import { dedupeSlug, slugifyHabit } from "@/lib/slugify";
+import { ensureLocalData } from "@/lib/sync";
 
 export type Entry = { habit: HabitType; date: string; value: number };
 export type Goal = { habit: HabitType; target: number; weeklyTarget?: number | null };
@@ -98,6 +99,22 @@ export async function fetchCustomHabits(): Promise<CustomHabit[]> {
   return readAll<CustomHabit>("habits");
 }
 
+/**
+ * Dieselbe Bereinigung, die die Route serverseitig anwendet — hier gebraucht,
+ * damit ein lokal angelegtes Habit bis zum Abgleich exakt so aussieht wie das,
+ * was der Server gleich daraus macht.
+ */
+function cleanHabitFields(params: {
+  quickAdd: number[];
+  step: number;
+  kind: HabitKind;
+}): { quickAdd: number[]; step: number; kind: HabitKind } {
+  const quickAdd = Array.isArray(params.quickAdd) && params.quickAdd.length ? params.quickAdd : [1];
+  const step = params.step && params.step > 0 ? params.step : quickAdd[0] ?? 1;
+  const kind = params.kind === "toggle" ? "toggle" : "counter";
+  return { quickAdd, step, kind };
+}
+
 export async function createCustomHabit(params: {
   label: string;
   unit: string;
@@ -108,15 +125,27 @@ export async function createCustomHabit(params: {
   kind: HabitKind;
   weeklyGoal?: number | null;
 }): Promise<CustomHabit> {
-  const res = await fetch("/api/habits", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(params),
-  });
-  if (!res.ok) throw new Error("Konnte Habit nicht erstellen");
-  syncSoon();
-  const data = await res.json();
-  return data.habit as CustomHabit;
+  const label = params.label.trim();
+  const existing = await readAll<CustomHabit>("habits");
+  // Derselbe Bezeichner, den auch die Route vergäbe — sonst läge das Habit
+  // lokal unter einer anderen ID als später auf dem Server, und der Abgleich
+  // zeigte es als zweiten, doppelten Eintrag.
+  const id = dedupeSlug(slugifyHabit(label), existing.map((h) => h.id));
+  const { quickAdd, step, kind } = cleanHabitFields(params);
+
+  const habit: CustomHabit = {
+    id,
+    label,
+    unit: params.unit.trim(),
+    icon: params.icon || "Target",
+    defaultGoal: params.defaultGoal,
+    quickAdd,
+    step,
+    kind,
+  };
+  await enqueue({ kind: "habit.save", habit, weeklyGoal: params.weeklyGoal ?? null, isNew: true });
+  void flushQueue();
+  return habit;
 }
 
 export async function updateCustomHabit(
@@ -132,19 +161,23 @@ export async function updateCustomHabit(
     weeklyGoal?: number | null;
   }
 ): Promise<CustomHabit> {
-  const res = await fetch("/api/habits", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, ...params }),
-  });
-  if (!res.ok) throw new Error("Konnte Habit nicht aktualisieren");
-  syncSoon();
-  const data = await res.json();
-  return data.habit as CustomHabit;
+  const { quickAdd, step, kind } = cleanHabitFields(params);
+  const habit: CustomHabit = {
+    id,
+    label: params.label.trim(),
+    unit: params.unit.trim(),
+    icon: params.icon || "Target",
+    defaultGoal: params.defaultGoal,
+    quickAdd,
+    step,
+    kind,
+  };
+  await enqueue({ kind: "habit.save", habit, weeklyGoal: params.weeklyGoal ?? null, isNew: false });
+  void flushQueue();
+  return habit;
 }
 
 export async function deleteCustomHabit(id: string): Promise<void> {
-  const res = await fetch(`/api/habits?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-  if (!res.ok) throw new Error("Konnte Habit nicht löschen");
-  syncSoon();
+  await enqueue({ kind: "habit.delete", id });
+  void flushQueue();
 }

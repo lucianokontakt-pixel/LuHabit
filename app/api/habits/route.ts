@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
 import { validSlugId } from "@/lib/ids";
+import { slugifyHabit } from "@/lib/slugify";
 import { currentUserId } from "@/lib/server-user";
 
 type CustomHabitRow = {
@@ -15,17 +16,6 @@ type CustomHabitRow = {
 };
 
 const UNAUTHORIZED = { error: "Nicht angemeldet" };
-
-function slugify(label: string): string {
-  return (
-    label
-      .toLowerCase()
-      .normalize("NFKD")
-      .replace(/[̀-ͯ]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "") || "habit"
-  );
-}
 
 export async function GET(req: NextRequest) {
   const userId = await currentUserId(req);
@@ -83,7 +73,7 @@ export async function POST(req: NextRequest) {
     if (!given) return NextResponse.json({ error: "Ungültige id" }, { status: 400 });
     id = given;
   } else {
-    const baseId = slugify(label);
+    const baseId = slugifyHabit(label);
     id = baseId;
     const existing = await d1Query<{ id: string }>(
       `SELECT id FROM custom_habits WHERE user_id = ? AND deleted_at IS NULL AND id LIKE ?`,

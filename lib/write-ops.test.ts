@@ -11,7 +11,7 @@ const queued = (ops: WriteOp[]): QueuedOp[] =>
 
 describe("localEffect", () => {
   it("legt einen Eintrag unter habit|datum ab", () => {
-    const effect = localEffect(eintrag("water", "2026-08-22", 750));
+    const [effect] = localEffect(eintrag("water", "2026-08-22", 750));
     expect(effect).toMatchObject({
       collection: "entries",
       key: "water|2026-08-22",
@@ -22,15 +22,12 @@ describe("localEffect", () => {
   });
 
   it("macht aus einer Löschung ein Entfernen, nicht ein Schreiben", () => {
-    expect(localEffect({ kind: "habit.delete", id: "lesen" })).toEqual({
-      collection: "habits",
-      key: "lesen",
-      action: "delete",
-    });
+    const effects = localEffect({ kind: "habit.delete", id: "lesen" });
+    expect(effects).toContainEqual({ collection: "habits", key: "lesen", action: "delete" });
   });
 
   it("sortiert Übungen nach Namen, Groß- und Kleinschreibung egal", () => {
-    const effect = localEffect({
+    const [effect] = localEffect({
       kind: "exercise.save",
       isNew: true,
       exercise: {
@@ -41,6 +38,37 @@ describe("localEffect", () => {
     });
     expect(effect.action).toBe("put");
     if (effect.action === "put") expect(effect.sort).toBe("ab wheel");
+  });
+
+  it("schreibt bei habit.save auch das Ziel — sonst bliebe es bis zum nächsten Abgleich unsichtbar", () => {
+    const effects = localEffect({
+      kind: "habit.save",
+      isNew: true,
+      weeklyGoal: 3,
+      habit: {
+        id: "dehnen", label: "Dehnen", unit: "Minuten", icon: "Target",
+        defaultGoal: 10, quickAdd: [5], step: 5, kind: "counter",
+      },
+    });
+    expect(effects).toContainEqual({
+      collection: "habits",
+      key: "dehnen",
+      action: "put",
+      data: expect.objectContaining({ id: "dehnen", label: "Dehnen" }),
+      sort: expect.any(String),
+    });
+    expect(effects).toContainEqual({
+      collection: "goals",
+      key: "dehnen",
+      action: "put",
+      data: { habit: "dehnen", target: 10, weeklyTarget: 3 },
+      sort: "dehnen",
+    });
+  });
+
+  it("löscht bei habit.delete auch das Ziel mit", () => {
+    const effects = localEffect({ kind: "habit.delete", id: "lesen" });
+    expect(effects).toContainEqual({ collection: "goals", key: "lesen", action: "delete" });
   });
 });
 
@@ -117,5 +145,16 @@ describe("collapse", () => {
 
   it("kommt mit einer leeren Schlange klar", () => {
     expect(collapse([])).toEqual([]);
+  });
+});
+
+describe("localEffect — plan.save daysChanged betrifft nur die Netzwerkseite", () => {
+  it("ändert daran nichts am lokalen Effekt — der schreibt immer den vollen Plan", () => {
+    const plan: import("@/lib/training").WorkoutPlan = {
+      id: "plan-1", name: "PPL", isActive: true, position: 0, weeklyTarget: null, days: [],
+    };
+    const mit = localEffect({ kind: "plan.save", plan, isNew: false, daysChanged: true });
+    const ohne = localEffect({ kind: "plan.save", plan, isNew: false, daysChanged: false });
+    expect(mit).toEqual(ohne);
   });
 });
