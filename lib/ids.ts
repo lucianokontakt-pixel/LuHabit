@@ -49,3 +49,17 @@ export function resolveNewId(prefix: string, value: unknown): string | null {
   if (value === undefined || value === null) return newId(prefix);
   return validClientId(prefix, value);
 }
+
+/**
+ * Habits und Übungen tragen keine Präfix-ID, sondern einen Bezeichner aus ihrem
+ * Namen ("bankdruecken-lh"). Auch der darf vom Client kommen: der Server
+ * vergibt sonst bei jedem Wiederholungsversuch eine neue ID mit angehängter
+ * Zahl, und aus einem abgebrochenen Anlegen würden zwei Habits.
+ */
+export function validSlugId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const id = value.trim();
+  if (id.length === 0 || id.length > MAX_LENGTH) return null;
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(id)) return null;
+  return id;
+}

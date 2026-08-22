@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
+import { validSlugId } from "@/lib/ids";
 import { currentUserId } from "@/lib/server-user";
 import type { Equipment, Exercise, Muscle } from "@/lib/training";
 
@@ -68,6 +69,7 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
 
   const body = (await req.json()) as {
+    id?: string;
     name?: string;
     muscle?: string;
     equipment?: string;
@@ -85,16 +87,24 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const base = slugify(name);
-  const existing = await d1Query<{ id: string }>(
-    `SELECT id FROM exercises WHERE user_id = ? AND deleted_at IS NULL AND id LIKE ?`,
-    [userId, `${base}%`]
-  );
-  let id = base;
-  if (existing.some((e) => e.id === id)) {
-    let n = 2;
-    while (existing.some((e) => e.id === `${base}-${n}`)) n++;
-    id = `${base}-${n}`;
+  // Siehe habits/route.ts: eine mitgeschickte ID macht das Anlegen wiederholbar.
+  let id: string;
+  if (body.id !== undefined && body.id !== null) {
+    const given = validSlugId(body.id);
+    if (!given) return NextResponse.json({ error: "Ungültige id" }, { status: 400 });
+    id = given;
+  } else {
+    const base = slugify(name);
+    const existing = await d1Query<{ id: string }>(
+      `SELECT id FROM exercises WHERE user_id = ? AND deleted_at IS NULL AND id LIKE ?`,
+      [userId, `${base}%`]
+    );
+    id = base;
+    if (existing.some((e) => e.id === id)) {
+      let n = 2;
+      while (existing.some((e) => e.id === `${base}-${n}`)) n++;
+      id = `${base}-${n}`;
+    }
   }
 
   // Eigengewichtsübungen bewegen den Körper, nicht die Hantel — ohne einen

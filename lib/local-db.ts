@@ -15,6 +15,7 @@
 
 import type { SyncSnapshot } from "@/lib/sync-payload";
 import { entryKey } from "@/lib/sync-payload";
+import type { LocalEffect, QueuedOp, WriteOp } from "@/lib/write-ops";
 
 const DB_NAME = "luhabit";
 const DB_VERSION = 1;
@@ -219,5 +220,50 @@ export async function clearLocalDb(): Promise<void> {
   for (const store of [...DATA_STORES, META_STORE, QUEUE_STORE]) {
     tx.objectStore(store).clear();
   }
+  await done(tx);
+}
+
+/**
+ * Eine einzelne Änderung im lokalen Bestand — das, was eine wartende Operation
+ * bewirkt. Damit sieht die App ihre eigene Eingabe sofort, auch ohne Netz.
+ */
+export async function applyEffect(effect: LocalEffect): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(effect.collection, "readwrite");
+  const store = tx.objectStore(effect.collection);
+  if (effect.action === "delete") store.delete(effect.key);
+  else store.put({ key: effect.key, sort: effect.sort, data: effect.data });
+  await done(tx);
+}
+
+/**
+ * Eine Operation in die Warteschlange stellen. Die laufende Nummer vergibt
+ * IndexedDB — sie bestimmt die Reihenfolge, in der gesendet wird.
+ */
+export async function queuePush(op: WriteOp): Promise<number> {
+  const db = await openDb();
+  const tx = db.transaction(QUEUE_STORE, "readwrite");
+  const seq = await request(
+    tx.objectStore(QUEUE_STORE).add({ op, createdAt: new Date().toISOString() })
+  );
+  await done(tx);
+  return Number(seq);
+}
+
+/** Alles, was noch wartet, in der Reihenfolge des Einstellens. */
+export async function queueAll(): Promise<QueuedOp[]> {
+  const db = await openDb();
+  const tx = db.transaction(QUEUE_STORE, "readonly");
+  const rows = (await request(tx.objectStore(QUEUE_STORE).getAll())) as QueuedOp[];
+  return rows.sort((a, b) => a.seq - b.seq);
+}
+
+/** Erledigte Operationen aus der Schlange nehmen. */
+export async function queueRemove(seqs: number[]): Promise<void> {
+  if (seqs.length === 0) return;
+  const db = await openDb();
+  const tx = db.transaction(QUEUE_STORE, "readwrite");
+  const store = tx.objectStore(QUEUE_STORE);
+  for (const seq of seqs) store.delete(seq);
   await done(tx);
 }

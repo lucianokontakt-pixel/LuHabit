@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newId, resolveNewId, validClientId } from "@/lib/ids";
+import { newId, resolveNewId, validClientId, validSlugId } from "@/lib/ids";
 
 describe("newId", () => {
   it("trägt das Präfix und übersteht die eigene Prüfung", () => {
@@ -56,5 +56,31 @@ describe("resolveNewId", () => {
 
   it("meldet eine ungültige, statt heimlich eine andere zu vergeben", () => {
     expect(resolveNewId("ws", "quatsch")).toBeNull();
+  });
+});
+
+describe("validSlugId", () => {
+  it("nimmt einen Bezeichner aus einem Namen an", () => {
+    expect(validSlugId("bankdruecken-lh")).toBe("bankdruecken-lh");
+    expect(validSlugId("lesen")).toBe("lesen");
+    expect(validSlugId("lesen-2")).toBe("lesen-2");
+  });
+
+  it("lehnt führende, doppelte und abschließende Bindestriche ab", () => {
+    expect(validSlugId("-lesen")).toBeNull();
+    expect(validSlugId("lesen-")).toBeNull();
+    expect(validSlugId("le--sen")).toBeNull();
+  });
+
+  it("lehnt Leeres, Sonderzeichen und Großbuchstaben ab", () => {
+    expect(validSlugId("")).toBeNull();
+    expect(validSlugId("Lesen")).toBeNull();
+    expect(validSlugId("lesen buch")).toBeNull();
+    expect(validSlugId("lesen'; DROP TABLE")).toBeNull();
+    expect(validSlugId(42)).toBeNull();
+  });
+
+  it("lehnt übermäßig lange Bezeichner ab", () => {
+    expect(validSlugId("a".repeat(80))).toBeNull();
   });
 });

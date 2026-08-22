@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
+import { validSlugId } from "@/lib/ids";
 import { currentUserId } from "@/lib/server-user";
 
 type CustomHabitRow = {
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const { label, unit, icon, defaultGoal, quickAdd, step, kind, weeklyGoal } = body as {
+    id?: string;
     label: string;
     unit: string;
     icon: string;
@@ -71,16 +73,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const baseId = slugify(label);
-  let id = baseId;
-  const existing = await d1Query<{ id: string }>(
-    `SELECT id FROM custom_habits WHERE user_id = ? AND deleted_at IS NULL AND id LIKE ?`,
-    [userId, `${baseId}%`]
-  );
-  if (existing.some((e) => e.id === id)) {
-    let n = 2;
-    while (existing.some((e) => e.id === `${baseId}-${n}`)) n++;
-    id = `${baseId}-${n}`;
+  // Bringt der Client eine ID mit, gilt sie. Vergäbe der Server sie hier selbst,
+  // würde ein Wiederholungsversuch nach unklarem Abbruch den vorhandenen
+  // Bezeichner sehen und "lesen-2" anlegen — aus einem abgebrochenen Anlegen
+  // würden zwei Habits. Mit fester ID trifft die Wiederholung dieselbe Zeile.
+  let id: string;
+  if (body.id !== undefined && body.id !== null) {
+    const given = validSlugId(body.id);
+    if (!given) return NextResponse.json({ error: "Ungültige id" }, { status: 400 });
+    id = given;
+  } else {
+    const baseId = slugify(label);
+    id = baseId;
+    const existing = await d1Query<{ id: string }>(
+      `SELECT id FROM custom_habits WHERE user_id = ? AND deleted_at IS NULL AND id LIKE ?`,
+      [userId, `${baseId}%`]
+    );
+    if (existing.some((e) => e.id === id)) {
+      let n = 2;
+      while (existing.some((e) => e.id === `${baseId}-${n}`)) n++;
+      id = `${baseId}-${n}`;
+    }
   }
 
   const cleanQuickAdd = Array.isArray(quickAdd) && quickAdd.length ? quickAdd : [1];

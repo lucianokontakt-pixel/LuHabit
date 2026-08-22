@@ -7,6 +7,8 @@
 
 import { readCursor, applySnapshot, localDbAvailable } from "@/lib/local-db";
 import { readSyncPayload } from "@/lib/sync-payload";
+import { notifyLocalDataChanged } from "@/lib/local-events";
+import { reapplyPending } from "@/lib/write-queue";
 
 export type SyncResult =
   | { status: "ok"; cursor: string; full: boolean; received: number }
@@ -68,6 +70,10 @@ export async function syncOnce(): Promise<SyncResult> {
   }
 
   await applySnapshot(snapshot);
+  // Der Abgleich bringt den Stand des Servers — der kennt die noch nicht
+  // gesendeten Änderungen nicht. Ohne dieses Nachlegen spränge die Anzeige auf
+  // den alten Wert zurück, und der Nutzer hielte seine Eingabe für verloren.
+  await reapplyPending();
   notifyLocalDataChanged();
   return {
     status: "ok",
@@ -75,18 +81,6 @@ export async function syncOnce(): Promise<SyncResult> {
     full: snapshot.full,
     received: countRecords(snapshot),
   };
-}
-
-const listeners = new Set<() => void>();
-
-/** Wer aus dem lokalen Bestand liest, will es erfahren, wenn er sich ändert. */
-export function subscribeLocalData(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-export function notifyLocalDataChanged() {
-  for (const listener of listeners) listener();
 }
 
 let pendingSoon: ReturnType<typeof setTimeout> | null = null;
