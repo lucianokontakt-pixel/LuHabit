@@ -33,6 +33,7 @@ export async function createExercise(params: {
   equipment: Equipment;
   increment?: number | null;
   bodyweightFactor?: number | null;
+  warmup?: "always" | "never" | null;
 }): Promise<Exercise> {
   const res = await fetch("/api/training/exercises", {
     method: "POST",
@@ -49,6 +50,8 @@ export async function updateExercise(params: {
   equipment?: Equipment;
   increment?: number | null;
   bodyweightFactor?: number | null;
+  loadFactor?: number | null;
+  warmup?: "always" | "never" | null;
   hidden?: boolean;
 }): Promise<Exercise> {
   const res = await fetch("/api/training/exercises", {
@@ -117,17 +120,49 @@ export async function fetchSessions(params: { limit?: number; from?: string } = 
   return (await json<{ sessions: WorkoutSession[] }>(res, "Konnte Einheiten nicht laden")).sessions;
 }
 
-export async function saveSession(params: {
+export type SessionInput = {
   planId?: string | null;
   dayId?: string | null;
   dayName: string;
   date?: string;
   durationSeconds?: number | null;
   note?: string | null;
-  sets: { exerciseId: string; setIndex: number; weight: number; reps: number; done?: boolean }[];
-}): Promise<{ id: string; date: string }> {
+  sets: {
+    exerciseId: string;
+    setIndex: number;
+    weight: number;
+    reps: number;
+    done?: boolean;
+    warmup?: boolean;
+  }[];
+};
+
+export async function saveSession(params: SessionInput): Promise<{ id: string; date: string }> {
   const res = await fetch("/api/training/sessions", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  return json(res, "Konnte Einheit nicht speichern");
+}
+
+export async function updateSession(params: {
+  id: string;
+  dayName?: string;
+  date?: string;
+  durationSeconds?: number | null;
+  note?: string | null;
+  sets?: {
+    exerciseId: string;
+    setIndex: number;
+    weight: number;
+    reps: number;
+    done?: boolean;
+    warmup?: boolean;
+  }[];
+}): Promise<{ id: string; date: string }> {
+  const res = await fetch("/api/training/sessions", {
+    method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
   });

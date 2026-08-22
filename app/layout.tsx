@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Nav } from "@/components/nav";
 import { BottomNav } from "@/components/bottom-nav";
+import { OutboxSync } from "@/components/outbox-sync";
+import { ServiceWorkerRegistration } from "@/components/service-worker";
 import { Toaster } from "@/components/ui/sonner";
 import { HabitRegistryProvider } from "@/lib/habit-registry";
 
@@ -74,6 +76,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </main>
             <BottomNav />
             <Toaster />
+            <ServiceWorkerRegistration />
+            <OutboxSync />
           </HabitRegistryProvider>
         </ThemeProvider>
       </body>

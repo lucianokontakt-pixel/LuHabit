@@ -66,7 +66,14 @@ export function UserMenu() {
         {/* Echtes Formular statt window.location: das Abmelden setzt
             serverseitig Cookies und braucht eine vollständige Navigation. */}
         <form ref={logoutForm} action="/api/auth/logout" method="post" className="hidden" />
-        <DropdownMenuItem onClick={() => logoutForm.current?.submit()}>
+        <DropdownMenuItem
+          onClick={() => {
+            // Der Offline-Cache hält Seiten und Antworten des angemeldeten
+            // Kontos — die dürfen nach dem Abmelden nicht liegen bleiben.
+            navigator.serviceWorker?.controller?.postMessage("luhabit-clear-cache");
+            logoutForm.current?.submit();
+          }}
+        >
           <LogOut className="size-4" />
           Abmelden
         </DropdownMenuItem>

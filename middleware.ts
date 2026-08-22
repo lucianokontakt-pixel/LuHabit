@@ -37,6 +37,6 @@ export const config = {
     // isPublicPath — Icons bleiben ohne Anmeldung erreichbar, die Login-Seite
     // selbst braucht sie, und ein Redirect auf HTML ergibt für ein Bild
     // keinen Sinn.
-    "/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|sw.js).*)",
   ],
 };
