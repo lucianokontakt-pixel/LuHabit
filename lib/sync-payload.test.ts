@@ -146,6 +146,53 @@ describe("readSyncPayload — Einheiten als Dokument", () => {
   });
 });
 
+describe("readSyncPayload — Sortierschlüssel bilden die Reihenfolge des Servers nach", () => {
+  it("trennt zwei Einheiten am selben Tag nach ihrer Startzeit", () => {
+    // Genau hier hängt die Progression dran: lastSetsFor nimmt die erste
+    // Einheit mit dieser Übung, absteigend sortiert. Ohne die Startzeit wäre
+    // bei gleichem Datum offen, welche das ist.
+    const snap = readSyncPayload(
+      payload({
+        sessions: [
+          { id: "frueh", plan_id: null, day_id: null, day_name: "A", date: "2026-08-22", duration_seconds: null, note: null, started_at: "2026-08-22 08:00:00", deleted_at: null },
+          { id: "spaet", plan_id: null, day_id: null, day_name: "B", date: "2026-08-22", duration_seconds: null, note: null, started_at: "2026-08-22 18:00:00", deleted_at: null },
+        ],
+      })
+    );
+    const keys = snap.sortKeys.sessions;
+    expect(keys.spaet > keys.frueh).toBe(true);
+  });
+
+  it("sortiert Übungen wie die Route: nach Namen, Groß- und Kleinschreibung egal", () => {
+    const snap = readSyncPayload(
+      payload({
+        exercises: [
+          { id: "b", name: "Bankdrücken", muscle: "chest", equipment: "barbell", is_custom: 0, hidden: 0, increment: null, bodyweight_factor: null, load_factor: null, warmup: null, deleted_at: null },
+          { id: "a", name: "ab-wheel", muscle: "core", equipment: "bodyweight", is_custom: 0, hidden: 0, increment: null, bodyweight_factor: null, load_factor: null, warmup: null, deleted_at: null },
+        ],
+      })
+    );
+    expect(snap.sortKeys.exercises.a < snap.sortKeys.exercises.b).toBe(true);
+  });
+
+  it("sortiert Pläne nach position, auch über die Zehnerstelle hinweg", () => {
+    // Als Text verglichen käme "10" vor "9" — deshalb aufgefüllt.
+    const plan = (id: string, position: number) => ({
+      id, name: id, is_active: 0, position, weekly_target: null, created_at: "2026-01-01 00:00:00", deleted_at: null,
+    });
+    const snap = readSyncPayload(payload({ plans: [plan("neun", 9), plan("zehn", 10)] }));
+    expect(snap.sortKeys.plans.neun < snap.sortKeys.plans.zehn).toBe(true);
+  });
+
+  it("vergibt für gelöschte Datensätze keinen Sortierschlüssel", () => {
+    const snap = readSyncPayload(
+      payload({ habits: [{ id: "weg", created_at: "2026-01-01 00:00:00", deleted_at: "2026-08-22 10:00:00" }] })
+    );
+    expect(snap.sortKeys.habits).toEqual({});
+    expect(snap.removed.habits).toEqual(["weg"]);
+  });
+});
+
 describe("readSyncPayload — kaputte Daten dürfen den Abgleich nicht kippen", () => {
   it("rettet ein Habit mit zerschossenem quick_add mit Standardwerten", () => {
     const snap = readSyncPayload(

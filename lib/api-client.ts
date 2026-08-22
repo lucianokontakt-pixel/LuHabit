@@ -1,4 +1,6 @@
 import { HabitType, HabitKind } from "@/lib/habits";
+import { readAll } from "@/lib/local-db";
+import { ensureLocalData, syncSoon } from "@/lib/sync";
 
 export type Entry = { habit: HabitType; date: string; value: number };
 export type Goal = { habit: HabitType; target: number; weeklyTarget?: number | null };
@@ -8,15 +10,16 @@ export async function fetchEntries(params: {
   from?: string;
   to?: string;
 }): Promise<Entry[]> {
-  const search = new URLSearchParams();
-  if (params.habit) search.set("habit", params.habit);
-  if (params.from) search.set("from", params.from);
-  if (params.to) search.set("to", params.to);
-
-  const res = await fetch(`/api/entries?${search.toString()}`);
-  if (!res.ok) throw new Error("Konnte Einträge nicht laden");
-  const data = await res.json();
-  return data.entries as Entry[];
+  await ensureLocalData();
+  const all = await readAll<Entry>("entries");
+  // Dieselben Filter, die vorher im SQL standen. Sortiert ist bereits nach
+  // Datum aufsteigend, so wie es die Route lieferte.
+  return all.filter(
+    (e) =>
+      (!params.habit || e.habit === params.habit) &&
+      (!params.from || e.date >= params.from) &&
+      (!params.to || e.date <= params.to)
+  );
 }
 
 export async function addEntry(params: {
@@ -31,15 +34,14 @@ export async function addEntry(params: {
     body: JSON.stringify(params),
   });
   if (!res.ok) throw new Error("Konnte Eintrag nicht speichern");
+  syncSoon();
   const data = await res.json();
   return data.entry as Entry;
 }
 
 export async function fetchGoals(): Promise<Goal[]> {
-  const res = await fetch("/api/goals");
-  if (!res.ok) throw new Error("Konnte Ziele nicht laden");
-  const data = await res.json();
-  return data.goals as Goal[];
+  await ensureLocalData();
+  return readAll<Goal>("goals");
 }
 
 export async function setGoal(
@@ -53,6 +55,7 @@ export async function setGoal(
     body: JSON.stringify({ habit, target, weeklyTarget }),
   });
   if (!res.ok) throw new Error("Konnte Ziel nicht speichern");
+  syncSoon();
 }
 
 export type CustomHabit = {
@@ -67,10 +70,8 @@ export type CustomHabit = {
 };
 
 export async function fetchCustomHabits(): Promise<CustomHabit[]> {
-  const res = await fetch("/api/habits");
-  if (!res.ok) throw new Error("Konnte eigene Habits nicht laden");
-  const data = await res.json();
-  return data.habits as CustomHabit[];
+  await ensureLocalData();
+  return readAll<CustomHabit>("habits");
 }
 
 export async function createCustomHabit(params: {
@@ -89,6 +90,7 @@ export async function createCustomHabit(params: {
     body: JSON.stringify(params),
   });
   if (!res.ok) throw new Error("Konnte Habit nicht erstellen");
+  syncSoon();
   const data = await res.json();
   return data.habit as CustomHabit;
 }
@@ -112,6 +114,7 @@ export async function updateCustomHabit(
     body: JSON.stringify({ id, ...params }),
   });
   if (!res.ok) throw new Error("Konnte Habit nicht aktualisieren");
+  syncSoon();
   const data = await res.json();
   return data.habit as CustomHabit;
 }
@@ -119,4 +122,5 @@ export async function updateCustomHabit(
 export async function deleteCustomHabit(id: string): Promise<void> {
   const res = await fetch(`/api/habits?id=${encodeURIComponent(id)}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Konnte Habit nicht löschen");
+  syncSoon();
 }

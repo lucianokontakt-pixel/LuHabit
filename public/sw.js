@@ -10,7 +10,7 @@
  * fliegen alle Caches mit anderem Namen raus.
  */
 
-const VERSION = "v2";
+const VERSION = "v4";
 const STATIC_CACHE = `luhabit-static-${VERSION}`;
 const PAGE_CACHE = `luhabit-pages-${VERSION}`;
 const KEEP = [STATIC_CACHE, PAGE_CACHE];
@@ -19,26 +19,53 @@ const KEEP = [STATIC_CACHE, PAGE_CACHE];
 const FALLBACK = "/training";
 
 /**
- * Diese Seiten werden gleich beim Installieren geholt, nicht erst beim ersten
- * Besuch. Sonst wäre die laufende Einheit ausgerechnet dann nicht abrufbar,
- * wenn man sie zum ersten Mal offline braucht.
+ * Alle festen Seiten der App werden gleich beim Installieren geholt, nicht erst
+ * beim ersten Besuch. Sonst führt genau die eine Seite, die man offline noch
+ * nie geöffnet hatte, auf die Rückfallseite — und das ist die Seite, die man
+ * dann gerade braucht.
+ *
+ * Es sind kleine Hüllen: den Inhalt baut die App aus dem lokalen Bestand, hier
+ * liegt nur das Gerüst.
+ *
+ * Nicht dabei und mit Absicht:
+ *   /coffee, /water, /steps, /reading, /writing, /habits leiten auf /habit/<id>
+ *   bzw. / weiter. Eine Weiterleitung gehört nicht in den Cache, und die Ziele
+ *   tragen eine ID, die niemand vorab kennt — die landen beim ersten Besuch im
+ *   Cache. Wer eine Habit-Seite offline öffnen will, muss sie einmal mit Netz
+ *   geöffnet haben.
+ *   /login muss immer aus dem Netz kommen.
  */
-const WARMUP = ["/", "/training", "/training/session", "/training/emom"];
+const WARMUP = [
+  "/",
+  "/training",
+  "/training/session",
+  "/training/emom",
+  "/training/plaene",
+  "/training/progression",
+  "/training/statistik",
+  "/training/uebungen",
+  "/stats",
+  "/koerper",
+  "/einstellungen",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(PAGE_CACHE);
-      await Promise.all(
-        WARMUP.map(async (path) => {
-          try {
-            const response = await fetch(path, { credentials: "same-origin" });
-            if (isCacheable(response)) await cache.put(path, response);
-          } catch {
-            // Kein Netz beim Installieren — die Seite landet beim ersten Besuch im Cache
-          }
-        })
-      );
+      // Nacheinander, nicht alle auf einmal. Der Browser erlaubt nur eine
+      // Handvoll gleichzeitiger Verbindungen zur selben Adresse; alles auf
+      // einmal loszuschicken hat die Installation zuverlässig steckenbleiben
+      // lassen, sodass die meisten Seiten gar nicht im Cache ankamen. Wie lange
+      // die Installation dauert, merkt ohnehin niemand.
+      for (const path of WARMUP) {
+        try {
+          const response = await fetch(path, { credentials: "same-origin" });
+          if (isCacheable(response)) await cache.put(path, response);
+        } catch {
+          // Kein Netz beim Installieren — die Seite landet beim ersten Besuch im Cache
+        }
+      }
       await self.skipWaiting();
     })()
   );

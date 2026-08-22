@@ -57,9 +57,29 @@ export type StoredBodyProfile = {
 };
 
 /**
+ * Die Sammlungen, in denen ein Datensatz liegen kann. Muss zu DATA_STORES in
+ * lib/local-db.ts passen.
+ */
+export type Collection =
+  | "entries"
+  | "goals"
+  | "habits"
+  | "exercises"
+  | "plans"
+  | "sessions"
+  | "emom";
+
+/**
  * Was der Abgleich geliefert hat, sortiert nach "einsortieren" und "entfernen".
  * Die Schlüssel in `removed` sind dieselben, unter denen die Datensätze
  * gespeichert liegen — bei Einträgen also habit|datum, sonst die ID.
+ *
+ * `sortKeys` hält je Datensatz die Zeichenkette, nach der die Sammlung sortiert
+ * wird. Sie steht getrennt, weil sie Felder braucht, die es in den
+ * Domänenobjekten nicht gibt: Habits nach ihrem Anlegedatum, Einheiten nach
+ * Datum UND Startzeit. Ohne die Startzeit wäre bei zwei Einheiten am selben Tag
+ * offen, welche die jüngere ist — und genau darauf stützt sich die Progression,
+ * wenn sie die zuletzt protokollierten Sätze einer Übung sucht.
  */
 export type SyncSnapshot = {
   cursor: string;
@@ -72,16 +92,14 @@ export type SyncSnapshot = {
   sessions: WorkoutSession[];
   emom: EmomTemplate[];
   bodyProfile: StoredBodyProfile | null;
-  removed: {
-    entries: string[];
-    goals: string[];
-    habits: string[];
-    exercises: string[];
-    plans: string[];
-    sessions: string[];
-    emom: string[];
-  };
+  removed: Record<Collection, string[]>;
+  sortKeys: Record<Collection, Record<string, string>>;
 };
+
+/** Zahlen als Text sortieren nur richtig, wenn sie gleich lang sind. */
+function pad(value: number): string {
+  return String(Math.max(0, Math.round(value))).padStart(6, "0");
+}
 
 /** Der Schlüssel, unter dem ein Eintrag liegt: ein Habit an einem Tag. */
 export function entryKey(habit: string, date: string): string {
@@ -156,15 +174,21 @@ function safeParse(value: string): unknown {
 function split<T>(
   rows: Row[],
   key: (row: Row) => string,
-  map: (row: Row) => T
-): { live: T[]; removed: string[] } {
+  map: (row: Row) => T,
+  sort: (row: Row) => string
+): { live: T[]; removed: string[]; sortKeys: Record<string, string> } {
   const live: T[] = [];
   const removed: string[] = [];
+  const sortKeys: Record<string, string> = {};
   for (const row of rows) {
-    if (isDeleted(row)) removed.push(key(row));
-    else live.push(map(row));
+    if (isDeleted(row)) {
+      removed.push(key(row));
+      continue;
+    }
+    live.push(map(row));
+    sortKeys[key(row)] = sort(row);
   }
-  return { live, removed };
+  return { live, removed, sortKeys };
 }
 
 function toPlanExercise(row: Row): PlanExercise {
@@ -212,7 +236,9 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
   const entries = split(
     rows("entries"),
     (r) => entryKey(str(r.habit), str(r.date)),
-    (r): StoredEntry => ({ habit: str(r.habit), date: str(r.date), value: num(r.value) })
+    (r): StoredEntry => ({ habit: str(r.habit), date: str(r.date), value: num(r.value) }),
+    // Route: ORDER BY date ASC
+    (r) => str(r.date)
   );
 
   const goals = split(
@@ -222,7 +248,8 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
       habit: str(r.habit),
       target: num(r.target),
       weeklyTarget: numOrNull(r.weekly_target),
-    })
+    }),
+    (r) => str(r.habit)
   );
 
   const habits = split(
@@ -237,7 +264,9 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
       quickAdd: numberList(r.quick_add, [1]),
       step: num(r.step, 1),
       kind: r.kind === "toggle" ? "toggle" : "counter",
-    })
+    }),
+    // Route: ORDER BY created_at ASC
+    (r) => str(r.created_at)
   );
 
   const exercises = split(
@@ -254,7 +283,9 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
       bodyweightFactor: numOrNull(r.bodyweight_factor),
       loadFactor: numOrNull(r.load_factor),
       warmup: r.warmup === "always" || r.warmup === "never" ? r.warmup : null,
-    })
+    }),
+    // Route: ORDER BY name COLLATE NOCASE ASC
+    (r) => str(r.name).toLowerCase()
   );
 
   // Pläne sind Dokumente: Tage hängen am Plan, Übungen am Tag.
@@ -281,7 +312,9 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
       position: num(r.position),
       weeklyTarget: numOrNull(r.weekly_target),
       days: (daysByPlan.get(str(r.id)) ?? []).sort((a, b) => a.position - b.position),
-    })
+    }),
+    // Route: ORDER BY position ASC, created_at ASC
+    (r) => `${pad(num(r.position))}|${str(r.created_at)}`
   );
 
   const setsBySession = groupBy(rows("sets"), (r) => str(r.session_id), toWorkoutSet);
@@ -298,7 +331,11 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
       durationSeconds: numOrNull(r.duration_seconds),
       note: r.note === null || r.note === undefined ? null : str(r.note),
       sets: (setsBySession.get(str(r.id)) ?? []).sort((a, b) => a.setIndex - b.setIndex),
-    })
+    }),
+    // Route: ORDER BY date DESC, started_at DESC — gelesen wird absteigend.
+    // Die Startzeit entscheidet bei zwei Einheiten am selben Tag, welche die
+    // jüngere ist; die Progression hängt daran.
+    (r) => `${str(r.date)}|${str(r.started_at)}`
   );
 
   const emom = split(
@@ -312,7 +349,9 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
       steps: emomSteps(r.steps),
       restSeconds: num(r.rest_seconds),
       position: num(r.position),
-    })
+    }),
+    // Route: ORDER BY position ASC, created_at ASC
+    (r) => `${pad(num(r.position))}|${str(r.created_at)}`
   );
 
   const profileRow = (p.bodyProfile ?? null) as Row | null;
@@ -347,6 +386,15 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
       plans: plans.removed,
       sessions: sessions.removed,
       emom: emom.removed,
+    },
+    sortKeys: {
+      entries: entries.sortKeys,
+      goals: goals.sortKeys,
+      habits: habits.sortKeys,
+      exercises: exercises.sortKeys,
+      plans: plans.sortKeys,
+      sessions: sessions.sortKeys,
+      emom: emom.sortKeys,
     },
   };
 }

@@ -68,10 +68,76 @@ export async function syncOnce(): Promise<SyncResult> {
   }
 
   await applySnapshot(snapshot);
+  notifyLocalDataChanged();
   return {
     status: "ok",
     cursor: snapshot.cursor,
     full: snapshot.full,
     received: countRecords(snapshot),
   };
+}
+
+const listeners = new Set<() => void>();
+
+/** Wer aus dem lokalen Bestand liest, will es erfahren, wenn er sich ändert. */
+export function subscribeLocalData(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+export function notifyLocalDataChanged() {
+  for (const listener of listeners) listener();
+}
+
+let pendingSoon: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Nach einem Schreibvorgang den lokalen Bestand nachziehen.
+ *
+ * Kurz verzögert und zusammengefasst: wer einen Plan speichert, löst mehrere
+ * Schreibvorgänge kurz hintereinander aus, und jeder einzeln würde einen
+ * eigenen Abgleich anstoßen. Die Oberfläche wartet nicht darauf — sie zeigt
+ * die Änderung ohnehin schon optimistisch an; hier geht es nur darum, dass der
+ * lokale Bestand den echten Stand vom Server bekommt.
+ */
+export function syncSoon() {
+  if (pendingSoon) clearTimeout(pendingSoon);
+  pendingSoon = setTimeout(() => {
+    pendingSoon = null;
+    syncOnce().catch(() => {
+      // Ohne Netz normal — der nächste Auslöser holt es nach.
+    });
+  }, 400);
+}
+
+let firstSync: Promise<unknown> | null = null;
+
+/**
+ * Vor dem ersten Lesen sicherstellen, dass überhaupt etwas lokal liegt.
+ *
+ * Nur beim allerersten Start relevant — danach ist ein Cursor da und gelesen
+ * wird sofort aus dem lokalen Bestand, ohne auf das Netz zu warten. Genau das
+ * ist der Punkt der ganzen Übung.
+ *
+ * Mehrere gleichzeitige Aufrufer teilen sich einen Abgleich: beim Start fragen
+ * mehrere Hooks parallel, und ein vollständiger Abgleich je Hook wäre
+ * verschwendete Übertragung.
+ */
+export async function ensureLocalData(): Promise<void> {
+  if (!localDbAvailable()) return;
+
+  let cursor: string | null = null;
+  try {
+    cursor = await readCursor();
+  } catch {
+    cursor = null;
+  }
+  if (cursor) return;
+
+  if (!firstSync) {
+    firstSync = syncOnce().finally(() => {
+      firstSync = null;
+    });
+  }
+  await firstSync;
 }

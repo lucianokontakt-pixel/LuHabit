@@ -70,10 +70,25 @@ export function openDb(): Promise<IDBDatabase> {
 
   dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = (event) => {
       const db = req.result;
-      // Alle Sammlungen tragen ihren Schlüssel im Datensatz selbst — bei
-      // Einträgen ist das habit|datum, sonst die ID.
+
+      // Steigt die Version, hat sich die Form der abgelegten Datensätze
+      // geändert. Alte Datensätze in neuer Fassung zu lesen endet in Abstürzen,
+      // die aussehen wie Datenverlust — deshalb werden die Sammlungen verworfen
+      // und beim nächsten Start vollständig neu geholt. Es geht nichts
+      // verloren: der Server hat alles, und die Warteschlange bleibt stehen.
+      if (event.oldVersion > 0 && event.oldVersion < DB_VERSION) {
+        for (const name of [...DATA_STORES, META_STORE]) {
+          if (db.objectStoreNames.contains(name)) db.deleteObjectStore(name);
+        }
+      }
+      // Jeder Datensatz liegt in einem Umschlag: { key, sort, data }. Der
+      // Schlüssel ist habit|datum bzw. die ID, `sort` bildet die Reihenfolge
+      // nach, die sonst das ORDER BY der Route liefern würde, und `data` ist
+      // das unveränderte Objekt, das die App erwartet. Ohne den Umschlag
+      // müssten Sortierfelder wie die Startzeit einer Einheit in den
+      // Domänenobjekten mitgeschleppt werden, wo sie nicht hingehören.
       for (const name of DATA_STORES) {
         if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath: "key" });
       }
@@ -131,8 +146,10 @@ export async function applySnapshot(snapshot: SyncSnapshot): Promise<void> {
     // gelöscht wurden und von denen niemand mehr erzählt.
     if (snapshot.full) objectStore.clear();
 
+    const sortKeys = snapshot.sortKeys[store];
     for (const record of records[store]) {
-      objectStore.put({ ...record, key: keyOf(store, record) });
+      const key = keyOf(store, record);
+      objectStore.put({ key, sort: sortKeys[key] ?? key, data: record });
     }
     for (const key of snapshot.removed[store]) {
       objectStore.delete(key);
@@ -148,17 +165,33 @@ export async function applySnapshot(snapshot: SyncSnapshot): Promise<void> {
   await done(tx);
 }
 
-/** Alles aus einer Sammlung, ohne den internen Schlüssel. */
-export async function readAll<T>(store: DataStore): Promise<T[]> {
+type Envelope<T> = { key: string; sort: string; data: T };
+
+/**
+ * Alles aus einer Sammlung, in derselben Reihenfolge, die die Route liefern
+ * würde. IndexedDB gibt von sich aus nach Schlüssel sortiert zurück — also
+ * alphabetisch nach ID, was mit der fachlichen Ordnung nichts zu tun hat.
+ * Deshalb wird hier nach dem gespeicherten Sortierschlüssel geordnet.
+ */
+export async function readAll<T>(store: DataStore, desc = false): Promise<T[]> {
   const db = await openDb();
   const tx = db.transaction(store, "readonly");
-  const rows = await request(tx.objectStore(store).getAll());
-  return rows.map((row: Record<string, unknown>) => {
-    // Der Schlüssel ist Buchhaltung dieses Speichers, kein Teil des Datensatzes.
-    const rest = { ...row };
-    delete rest.key;
-    return rest as T;
-  });
+  const rows = (await request(tx.objectStore(store).getAll())) as Envelope<T>[];
+  // Ein Datensatz ohne Umschlag stammt aus einer älteren Fassung. Der
+  // Versionssprung oben räumt so etwas eigentlich weg; falls doch einer
+  // durchrutscht, soll er hinten einsortiert werden statt die ganze Liste
+  // mitzureißen — eine unsortierte Liste ist besser als eine leere Seite.
+  const sortOf = (row: Envelope<T>) => (typeof row?.sort === "string" ? row.sort : "￿");
+  rows.sort((a, b) => (desc ? sortOf(b).localeCompare(sortOf(a)) : sortOf(a).localeCompare(sortOf(b))));
+  return rows.filter((row) => row?.data !== undefined).map((row) => row.data);
+}
+
+/** Ein einzelner Datensatz, oder null. */
+export async function readOne<T>(store: DataStore, key: string): Promise<T | null> {
+  const db = await openDb();
+  const tx = db.transaction(store, "readonly");
+  const row = (await request(tx.objectStore(store).get(key))) as Envelope<T> | undefined;
+  return row?.data ?? null;
 }
 
 export async function readCursor(): Promise<string | null> {

@@ -1,11 +1,20 @@
 import type { Equipment, Exercise, Muscle, WorkoutPlan, WorkoutSession } from "@/lib/training";
+import { readAll } from "@/lib/local-db";
+import { ensureLocalData, syncSoon } from "@/lib/sync";
 
+/**
+ * Antwort eines Schreibvorgangs auswerten. Seit die Lesepfade lokal laufen,
+ * kommt hier nur noch Schreibendes durch — deshalb zieht ein Erfolg gleich den
+ * lokalen Bestand nach.
+ */
 async function json<T>(res: Response, fallback: string): Promise<T> {
   if (!res.ok) {
     const data = (await res.json().catch(() => null)) as { error?: string } | null;
     throw new Error(data?.error || fallback);
   }
-  return (await res.json()) as T;
+  const parsed = (await res.json()) as T;
+  syncSoon();
+  return parsed;
 }
 
 export type DayInput = {
@@ -23,8 +32,8 @@ export type DayInput = {
 };
 
 export async function fetchExercises(): Promise<Exercise[]> {
-  const res = await fetch("/api/training/exercises");
-  return (await json<{ exercises: Exercise[] }>(res, "Konnte Übungen nicht laden")).exercises;
+  await ensureLocalData();
+  return readAll<Exercise>("exercises");
 }
 
 export async function createExercise(params: {
@@ -70,8 +79,8 @@ export async function deleteExercise(id: string): Promise<void> {
 }
 
 export async function fetchPlans(): Promise<WorkoutPlan[]> {
-  const res = await fetch("/api/training/plans");
-  return (await json<{ plans: WorkoutPlan[] }>(res, "Konnte Pläne nicht laden")).plans;
+  await ensureLocalData();
+  return readAll<WorkoutPlan>("plans");
 }
 
 export async function createPlan(params: {
@@ -113,11 +122,13 @@ export async function deletePlan(id: string): Promise<WorkoutPlan[]> {
 export async function fetchSessions(params: { limit?: number; from?: string } = {}): Promise<
   WorkoutSession[]
 > {
-  const search = new URLSearchParams();
-  if (params.limit) search.set("limit", String(params.limit));
-  if (params.from) search.set("from", params.from);
-  const res = await fetch(`/api/training/sessions?${search.toString()}`);
-  return (await json<{ sessions: WorkoutSession[] }>(res, "Konnte Einheiten nicht laden")).sessions;
+  await ensureLocalData();
+  // Absteigend gelesen, wie es das ORDER BY date DESC, started_at DESC der
+  // Route tat — die Progression verlässt sich darauf, dass die jüngste Einheit
+  // vorne steht.
+  const all = await readAll<WorkoutSession>("sessions", true);
+  const gefiltert = params.from ? all.filter((s) => s.date >= params.from!) : all;
+  return params.limit ? gefiltert.slice(0, params.limit) : gefiltert;
 }
 
 export type SessionInput = {

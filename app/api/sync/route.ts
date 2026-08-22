@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
       [userId, since]
     ),
     d1Query<Row>(
-      `SELECT id, label, unit, icon, default_goal, quick_add, step, kind, deleted_at
+      `SELECT id, label, unit, icon, default_goal, quick_add, step, kind, created_at, deleted_at
          FROM custom_habits WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ? ORDER BY created_at ASC`,
       [userId, since]
     ),
@@ -102,17 +102,17 @@ export async function GET(req: NextRequest) {
       [userId, since]
     ),
     d1Query<Row>(
-      `SELECT id, name, is_active, position, weekly_target, deleted_at
+      `SELECT id, name, is_active, position, weekly_target, created_at, deleted_at
          FROM workout_plans WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ? ORDER BY position ASC`,
       [userId, since]
     ),
     d1Query<Row>(
-      `SELECT id, plan_id, day_id, day_name, date, duration_seconds, note, deleted_at
+      `SELECT id, plan_id, day_id, day_name, date, duration_seconds, note, started_at, deleted_at
          FROM workout_sessions WHERE user_id = ? AND COALESCE(updated_at, started_at, '0000-01-01 00:00:00') >= ? ORDER BY date DESC`,
       [userId, since]
     ),
     d1Query<Row>(
-      `SELECT id, name, prepare_seconds, rounds, steps, rest_seconds, position, deleted_at
+      `SELECT id, name, prepare_seconds, rounds, steps, rest_seconds, position, created_at, deleted_at
          FROM emom_templates WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ? ORDER BY position ASC`,
       [userId, since]
     ),

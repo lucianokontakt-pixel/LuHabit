@@ -1,11 +1,20 @@
 import type { EmomStep, EmomTemplate } from "@/lib/emom";
+import { readAll } from "@/lib/local-db";
+import { ensureLocalData, syncSoon } from "@/lib/sync";
 
+/**
+ * Antwort eines Schreibvorgangs auswerten. Seit die Lesepfade lokal laufen,
+ * kommt hier nur noch Schreibendes durch — deshalb zieht ein Erfolg gleich den
+ * lokalen Bestand nach.
+ */
 async function json<T>(res: Response, fallback: string): Promise<T> {
   if (!res.ok) {
     const data = (await res.json().catch(() => null)) as { error?: string } | null;
     throw new Error(data?.error || fallback);
   }
-  return (await res.json()) as T;
+  const parsed = (await res.json()) as T;
+  syncSoon();
+  return parsed;
 }
 
 export type EmomInput = {
@@ -17,8 +26,8 @@ export type EmomInput = {
 };
 
 export async function fetchEmomTemplates(): Promise<EmomTemplate[]> {
-  const res = await fetch("/api/training/emom");
-  return (await json<{ templates: EmomTemplate[] }>(res, "Konnte Vorlagen nicht laden")).templates;
+  await ensureLocalData();
+  return readAll<EmomTemplate>("emom");
 }
 
 export async function createEmomTemplate(params: EmomInput): Promise<EmomTemplate[]> {
