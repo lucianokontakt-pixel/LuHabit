@@ -53,6 +53,7 @@ import {
 } from "@/lib/training";
 import { deloadWeight, summarizeProgress } from "@/lib/progression";
 import { needsWarmup, warmupWeight, WARMUP_REPS } from "@/lib/warmup";
+import { useSignalSound } from "@/lib/use-signal-sound";
 import { cn } from "@/lib/utils";
 
 const DRAFT_KEY = "luhabit-active-session";
@@ -109,6 +110,7 @@ export function SessionClient() {
   const [elapsed, setElapsed] = useState(0);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
   const [restTotal, setRestTotal] = useState(0);
+  const { unlock: unlockSignalSound, play: playSignal } = useSignalSound();
   const [activeExercise, setActiveExercise] = useState<string | null>(null);
   const [confirmAbort, setConfirmAbort] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -408,6 +410,10 @@ export function SessionClient() {
           const pause = current.warmup ? Math.max(45, Math.round(restSeconds / 2)) : restSeconds;
           setRestTotal(pause);
           setRestEndsAt(Date.now() + pause * 1000);
+          // Muss aus diesem echten Tap heraus laufen — der Ton selbst kommt
+          // erst am Ende der Pause, aber der AudioContext lässt sich nur
+          // innerhalb einer Nutzergeste entsperren.
+          unlockSignalSound();
         }
         if (nextDone && typeof navigator !== "undefined" && navigator.vibrate) {
           navigator.vibrate(10);
@@ -435,7 +441,7 @@ export function SessionClient() {
         return next;
       });
     },
-    [advanceFrom, dismissed]
+    [advanceFrom, dismissed, unlockSignalSound]
   );
 
   // Die frisch aufgeklappte Übung in den Blick holen — sonst steht man nach dem
@@ -922,6 +928,7 @@ export function SessionClient() {
                 );
               }}
               onDismiss={() => setRestEndsAt(null)}
+              onFinish={() => playSignal("finish")}
             />
           </div>
         )}

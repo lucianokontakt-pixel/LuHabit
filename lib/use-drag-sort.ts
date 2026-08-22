@@ -86,6 +86,24 @@ export function useDragSort(order: string[], onReorder: (next: string[]) => void
     else itemRefs.current.delete(id);
   }, []);
 
+  /**
+   * Alle Slot-Positionen frisch messen. Nötig direkt beim Start jedes Zugs:
+   * rectsRef wird sonst nur nachgezogen, wenn sich displayOrder ändert — ein
+   * Layout-Sprung, der die Reihenfolge nicht betrifft (typischerweise das
+   * Einschalten des Bearbeiten-Modus selbst, das jede Karte um Knöpfe und
+   * Griff-Symbol größer macht), aktualisiert die gespeicherten Rechtecke
+   * nicht mit. Ein Zug, der auf diesen veralteten Koordinaten aufbaut, springt
+   * dann beim ersten Vergleich auf einen Slot, der mit der echten Position des
+   * Zeigers nichts zu tun hat — genau das sah aus wie zufälliges Herumspringen.
+   */
+  const remeasure = useCallback(() => {
+    const next = new Map<string, DOMRect>();
+    for (const [id, el] of itemRefs.current) {
+      next.set(id, id === draggingIdRef.current ? measureWithoutTransform(el) : el.getBoundingClientRect());
+    }
+    rectsRef.current = next;
+  }, []);
+
   const moveDraggedToPointer = useCallback(() => {
     const id = draggingIdRef.current;
     if (!id) return;
@@ -216,6 +234,7 @@ export function useDragSort(order: string[], onReorder: (next: string[]) => void
         if (Math.hypot(dx, dy) < 5) return;
 
         movedRef.current = true;
+        remeasure();
         setDraggingId(id);
         setPreviewOrder(orderRef.current);
         const el = itemRefs.current.get(id);
@@ -227,7 +246,7 @@ export function useDragSort(order: string[], onReorder: (next: string[]) => void
       moveDraggedToPointer();
       reorderToPointer();
     },
-    [moveDraggedToPointer, reorderToPointer, startAutoScroll]
+    [moveDraggedToPointer, reorderToPointer, remeasure, startAutoScroll]
   );
 
   const handleUp = useCallback(() => {

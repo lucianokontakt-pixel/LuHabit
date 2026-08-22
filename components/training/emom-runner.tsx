@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEmomSound } from "@/lib/use-emom-sound";
+import { useSignalSound } from "@/lib/use-signal-sound";
 import {
   COUNTDOWN_FROM,
   buildSegments,
@@ -61,7 +61,7 @@ export function EmomRunner({
   template: EmomTemplate;
   onClose: () => void;
 }) {
-  const { enabled: soundOn, toggle: toggleSound, unlock, play } = useEmomSound();
+  const { enabled: soundOn, toggle: toggleSound, unlock, play } = useSignalSound();
 
   const segments = useMemo(() => buildSegments(template), [template]);
   const total = useMemo(() => totalDuration(template, segments), [template, segments]);

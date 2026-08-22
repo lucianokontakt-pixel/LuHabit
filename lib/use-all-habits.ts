@@ -54,11 +54,13 @@ export function useAllHabitsData() {
 
   const addDelta = useCallback(
     async (habit: HabitType, delta: number) => {
-      const current = todayValueFor(habit);
-      const optimisticValue = Math.max(0, current + delta);
+      // Der Vorschauwert wird aus der vorigen Liste berechnet, nicht aus dem
+      // Closure — sonst rechnen mehrere schnelle Taps alle vom selben, schon
+      // veralteten Stand aus und die Anzeige bleibt hinter den Tipps zurück.
       setEntries((prev) => {
+        const current = prev.find((e) => e.habit === habit && e.date === today)?.value ?? 0;
         const others = prev.filter((e) => !(e.habit === habit && e.date === today));
-        return [...others, { habit, date: today, value: optimisticValue }];
+        return [...others, { habit, date: today, value: Math.max(0, current + delta) }];
       });
       try {
         const entry = await addEntry({ habit, date: today, delta });
@@ -70,7 +72,7 @@ export function useAllHabitsData() {
         load();
       }
     },
-    [today, todayValueFor, load]
+    [today, load]
   );
 
   const setValue = useCallback(

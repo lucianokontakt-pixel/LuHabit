@@ -15,11 +15,14 @@ export function RestTimer({
   total,
   onExtend,
   onDismiss,
+  onFinish,
 }: {
   endsAt: number;
   total: number;
   onExtend: (seconds: number) => void;
   onDismiss: () => void;
+  /** Läuft die Pause ab, nicht wenn sie übersprungen wird — derselbe Ton wie beim EMOM-Rundenende. */
+  onFinish?: () => void;
 }) {
   const [remaining, setRemaining] = useState(() => Math.max(0, (endsAt - Date.now()) / 1000));
   const firedRef = useRef(false);
@@ -36,7 +39,8 @@ export function RestTimer({
     if (remaining > 0 || firedRef.current) return;
     firedRef.current = true;
     if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([120, 60, 120]);
-  }, [remaining]);
+    onFinish?.();
+  }, [remaining, onFinish]);
 
   const done = remaining <= 0;
   const percent = total > 0 ? Math.max(0, Math.min(100, (remaining / total) * 100)) : 0;

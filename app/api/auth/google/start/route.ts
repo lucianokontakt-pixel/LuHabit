@@ -25,7 +25,12 @@ export async function GET(req: NextRequest) {
     // Kein Refresh Token nötig — die App spricht nach dem Login nicht mehr
     // mit Google, sie braucht nur die Identität.
     access_type: "online",
-    prompt: "select_account",
+    // Kein prompt-Parameter: ist am Gerät nur ein Google-Konto angemeldet,
+    // bestätigt Google das ohne Zwischenschritt. "select_account" hätte bei
+    // jeder erneuten Anmeldung erzwungen, das Konto extra anzutippen — bei
+    // iOS' 7-Tage-Speicherbereinigung, die die Sitzung öfter zurücksetzt als
+    // die 90 Tage des Cookies vorsehen, war das ein unnötiger Extra-Tap bei
+    // jedem Mal.
   });
 
   const res = NextResponse.redirect(`${GOOGLE_AUTH_URL}?${params.toString()}`);

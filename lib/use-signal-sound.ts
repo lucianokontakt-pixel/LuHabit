@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const STORAGE_KEY = "luhabit-emom-sound";
+const STORAGE_KEY = "luhabit-signal-sound";
 
 type Signal = "countdown" | "start" | "finish";
 
@@ -18,13 +18,15 @@ const TONES: Record<Signal, { frequency: number; duration: number }[]> = {
 };
 
 /**
- * Signaltöne für den EMOM-Timer, synthetisch über die Web Audio API.
+ * Signaltöne für Timer in der App — EMOM und die Trainingspause teilen sich
+ * denselben Klang und dieselbe An/Aus-Einstellung, synthetisch über die Web
+ * Audio API.
  *
  * Keine Audiodateien: die Töne sind zwei Sinusrampen lang, das lohnt keinen
  * Download und funktioniert offline. Der AudioContext wird erst beim ersten
  * Nutzer-Tap erzeugt und entsperrt — vorher blockieren Browser jede Tonausgabe.
  */
-export function useEmomSound() {
+export function useSignalSound() {
   const [enabled, setEnabled] = useState(true);
   const contextRef = useRef<AudioContext | null>(null);
 

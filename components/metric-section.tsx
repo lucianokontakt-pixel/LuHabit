@@ -132,11 +132,15 @@ export function MetricSection({
             >
               <Minus className="size-4" />
             </button>
+            {/* type="text" statt "number": die nudge()-Knöpfe schreiben den Wert
+                programmatisch ins Feld, während es oft noch den Fokus hält —
+                bei type="number" scrollt iOS Safari dabei gelegentlich
+                ungefragt, um das Feld "sichtbar" zu halten. Die Zifferntastatur
+                kommt weiterhin über inputMode, die Spinner-Pfeile waren ohnehin
+                per CSS ausgeblendet. */}
             <Input
-              type="number"
+              type="text"
               inputMode="decimal"
-              step={step}
-              min={0}
               placeholder={`Neuer Wert in ${unit}`}
               value={input}
               onChange={(e) => {
@@ -144,7 +148,7 @@ export function MetricSection({
                 setInput(e.target.value);
               }}
               aria-label={`${label} eintragen`}
-              className="border-transparent bg-transparent px-1 text-center focus-visible:border-transparent focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="border-transparent bg-transparent px-1 text-center focus-visible:border-transparent focus-visible:ring-0"
             />
             <button
               type="button"

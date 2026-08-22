@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
+import { SyncStatus } from "@/components/sync-status";
 import { NAV_LINKS, isActiveLink } from "@/lib/nav-links";
 
 export function Nav() {
@@ -15,7 +16,10 @@ export function Nav() {
 
   return (
     // steep's nav is whisper-quiet: no border, no shadow, just the logo and links.
-    <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-xl">
+    <header
+      className="sticky top-0 z-40 bg-background/85 backdrop-blur-xl"
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
       <div className="mx-auto flex h-16 max-w-4xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link href="/" className="font-display text-xl tracking-tight">
           LuHabit
@@ -43,6 +47,7 @@ export function Nav() {
         </nav>
 
         <div className="flex items-center gap-1.5">
+          <SyncStatus />
           <ThemeToggle />
           <UserMenu />
         </div>

@@ -8,6 +8,31 @@ import { ensureLocalData } from "@/lib/sync";
 export type Entry = { habit: HabitType; date: string; value: number };
 export type Goal = { habit: HabitType; target: number; weeklyTarget?: number | null };
 
+/**
+ * Lässt Aufrufe mit demselben Schlüssel nacheinander statt gleichzeitig
+ * laufen. addEntry liest den aktuellen Wert, bevor es den neuen schreibt —
+ * ohne diese Reihe würden mehrere schnelle Taps alle denselben, noch nicht
+ * aktualisierten Wert lesen (der erste "+250" wäre schon unterwegs, aber
+ * noch nicht in der lokalen Datenbank angekommen) und je den gleichen
+ * Zielwert berechnen. Sichtbar wurde das als Zahl, die bei schnellem Tippen
+ * nicht mitkommt und hinterher auf einen älteren Stand zurückspringt, weil
+ * die Anfragen außerdem in beliebiger Reihenfolge fertig werden konnten.
+ */
+const chains = new Map<string, Promise<unknown>>();
+
+function serialized<T>(key: string, run: () => Promise<T>): Promise<T> {
+  const previous = chains.get(key) ?? Promise.resolve();
+  const next = previous.then(run, run);
+  // Der Eintrag in der Map hält nur die Kette am Laufen, nicht die Werte —
+  // Fehler dürfen die nächste Operation nicht blockieren, deshalb der
+  // stille catch hier statt am Aufruf selbst.
+  chains.set(
+    key,
+    next.catch(() => undefined)
+  );
+  return next;
+}
+
 export async function fetchEntries(params: {
   habit?: HabitType;
   from?: string;
@@ -42,16 +67,18 @@ export async function addEntry(params: {
   delta?: number;
   value?: number;
 }): Promise<Entry> {
-  const current = await readOne<Entry>("entries", entryKey(params.habit, params.date));
-  const value =
-    params.value !== undefined
-      ? params.value
-      : Math.max(0, (current?.value ?? 0) + (params.delta ?? 0));
+  return serialized(`entry:${entryKey(params.habit, params.date)}`, async () => {
+    const current = await readOne<Entry>("entries", entryKey(params.habit, params.date));
+    const value =
+      params.value !== undefined
+        ? params.value
+        : Math.max(0, (current?.value ?? 0) + (params.delta ?? 0));
 
-  const entry: Entry = { habit: params.habit, date: params.date, value };
-  await enqueue({ kind: "entry.set", entry });
-  void flushQueue();
-  return entry;
+    const entry: Entry = { habit: params.habit, date: params.date, value };
+    await enqueue({ kind: "entry.set", entry });
+    void flushQueue();
+    return entry;
+  });
 }
 
 export async function fetchGoals(): Promise<Goal[]> {

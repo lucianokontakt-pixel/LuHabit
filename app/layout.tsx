@@ -44,6 +44,11 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#101113" },
   ],
+  // Ohne das bleibt die Safe-Area der PWA leer (env(safe-area-inset-*) liefert
+  // dann überall 0px) — die App füllt den Bildschirm nicht bis zum Rand, und
+  // die untere Navigation sitzt direkt über der Wisch-Zone, in der iOS den
+  // App-Wechsler und (in Safari) die Tab-Leiste erwartet.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -71,7 +76,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <HabitRegistryProvider>
             <Nav />
-            <main className="mx-auto w-full max-w-4xl flex-1 px-4 pb-28 pt-5 sm:px-6 sm:pb-12 sm:pt-8">
+            {/* pb-28 reicht als fester Abstand nicht mehr: die untere
+                Navigation wächst um die Safe-Area-Höhe des Geräts nach unten,
+                sonst würde der letzte Inhalt darunter verschwinden. */}
+            <main className="mx-auto w-full max-w-4xl flex-1 px-4 pt-5 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-12 sm:pt-8">
               {children}
             </main>
             <BottomNav />

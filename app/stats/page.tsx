@@ -67,10 +67,22 @@ export default function StatsPage() {
                 {range === "week" ? "Letzte 7 Tage" : range === "month" ? "Letzte 30 Tage" : "Letzte 12 Monate"}
               </CardDescription>
             </div>
-            <Tabs value={selectedId ?? ""} onValueChange={setSelected}>
+            {/* w-full + min-w-0 sind hier Pflicht, nicht Kosmetik: ohne w-full
+                nimmt sich dieses Flex-Kind (items-start, kein stretch) auf
+                Mobile einfach seine natürliche Breite — bei vielen Habit-Namen
+                breiter als der Bildschirm. Ohne min-w-0 verhindert dasselbe ab
+                sm: in der Zeilen-Anordnung, dass es unter seine Inhaltsbreite
+                schrumpft. In beiden Fällen kommt TabsLists eigenes
+                overflow-x-auto nie zum Zug, weil der Rahmen nie eingeengt
+                wird — die ganze Seite scrollt horizontal statt nur die Leiste. */}
+            <Tabs
+              value={selectedId ?? ""}
+              onValueChange={setSelected}
+              className="w-full min-w-0 sm:w-auto"
+            >
               <TabsList className="max-w-full overflow-x-auto">
                 {validOrder.map((h) => (
-                  <TabsTrigger key={h} value={h}>
+                  <TabsTrigger key={h} value={h} className="shrink-0">
                     {habits[h]?.label ?? h}
                   </TabsTrigger>
                 ))}

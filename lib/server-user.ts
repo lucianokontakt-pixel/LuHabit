@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { d1Query, d1InsertMany } from "@/lib/d1";
+import { d1Query, d1InsertMany, d1UpsertMany } from "@/lib/d1";
 import { AUTH_COOKIE, OWNER_USER_ID, authConfigured, readSessionCookie } from "@/lib/auth";
 import { DEFAULT_HABIT_SUGGESTIONS } from "@/lib/habits";
 import { SEED_EXERCISES, STARTER_PLAN } from "@/lib/exercise-seed";
@@ -96,13 +96,25 @@ export async function provisionNewUser(userId: string): Promise<void> {
   await seedStarterPlan(userId);
 }
 
-/** Die sechs Standard-Habits samt Zielen. Setzt leere Tabellen voraus. */
+/**
+ * Die sechs Standard-Habits samt Zielen.
+ *
+ * Als Upsert statt reinem Insert: beim Zurücksetzen (app/api/reset/route.ts)
+ * werden vorher bestehende Zeilen weich gelöscht, nicht entfernt — sonst
+ * bliebe der Reset für den Abgleich mit dem Handy unsichtbar. Ein Standard-
+ * Habit trägt danach also schon wieder genau die ID, die hier neu geschrieben
+ * wird; ein einfaches INSERT würde am Primärschlüssel scheitern. Für ein
+ * frisches Konto ohne bestehende Zeilen verhält sich der Upsert identisch zu
+ * einem Insert.
+ */
 export async function seedHabits(userId: string): Promise<void> {
   const now = new Date();
+  const updatedAt = now.toISOString().replace("T", " ").slice(0, 19);
 
-  await d1InsertMany(
+  await d1UpsertMany(
     "custom_habits",
-    ["user_id", "id", "label", "unit", "icon", "default_goal", "quick_add", "step", "kind", "created_at"],
+    ["user_id", "id", "label", "unit", "icon", "default_goal", "quick_add", "step", "kind", "created_at", "updated_at"],
+    ["user_id", "id"],
     DEFAULT_HABIT_SUGGESTIONS.map((habit, index) => [
       userId,
       habit.type,
@@ -115,22 +127,27 @@ export async function seedHabits(userId: string): Promise<void> {
       habit.kind,
       // Reihenfolge der Karten ergibt sich aus created_at.
       new Date(now.getTime() + index * 1000).toISOString().replace("T", " ").slice(0, 19),
+      updatedAt,
     ])
   );
 
-  await d1InsertMany(
+  await d1UpsertMany(
     "goals",
-    ["user_id", "habit", "target"],
-    DEFAULT_HABIT_SUGGESTIONS.map((habit) => [userId, habit.type, habit.defaultGoal])
+    ["user_id", "habit", "target", "updated_at"],
+    ["user_id", "habit"],
+    DEFAULT_HABIT_SUGGESTIONS.map((habit) => [userId, habit.type, habit.defaultGoal, updatedAt])
   );
 }
 
 /**
  * Jedes Konto bekommt eine eigene Kopie der Bibliothek, damit Ausblenden
- * und eigene Anpassungen niemanden sonst betreffen.
+ * und eigene Anpassungen niemanden sonst betreffen. Upsert aus demselben
+ * Grund wie bei seedHabits — siehe dort.
  */
 export async function seedExercises(userId: string): Promise<void> {
-  await d1InsertMany(
+  const updatedAt = new Date().toISOString().replace("T", " ").slice(0, 19);
+
+  await d1UpsertMany(
     "exercises",
     [
       "user_id",
@@ -142,7 +159,9 @@ export async function seedExercises(userId: string): Promise<void> {
       "hidden",
       "bodyweight_factor",
       "load_factor",
+      "updated_at",
     ],
+    ["user_id", "id"],
     SEED_EXERCISES.map((e) => [
       userId,
       e.id,
@@ -153,6 +172,7 @@ export async function seedExercises(userId: string): Promise<void> {
       0,
       e.factor,
       e.load ?? null,
+      updatedAt,
     ])
   );
 }

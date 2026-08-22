@@ -115,14 +115,23 @@ export function HabitSummaryCard({
       )}
 
       {isToggle && (
-        <div className="flex items-center justify-between gap-2 px-(--card-spacing)">
-          <span className="nums text-heading-sm leading-none">{reached ? "✓" : "–"}</span>
-          {streak > 1 && (
-            <span className="flex shrink-0 items-center gap-1 rounded-pill bg-blush px-2 py-0.5 text-[11px] font-medium text-blush-foreground">
-              <Flame className="size-3" />
-              {streak}
-            </span>
-          )}
+        // Dieselbe Zeilenstruktur wie beim Zähler (Wert, Bildunterschrift,
+        // Balken) — sonst ist die Karte spürbar niedriger als ihre Nachbarn
+        // im Grid und die Reihe wirkt schief.
+        <div className="flex flex-col gap-2 px-(--card-spacing)">
+          <div className="flex items-end justify-between gap-2">
+            <span className="nums text-heading-sm leading-none">{reached ? "✓" : "–"}</span>
+            {streak > 1 && (
+              <span className="flex shrink-0 items-center gap-1 rounded-pill bg-blush px-2 py-0.5 text-[11px] font-medium text-blush-foreground">
+                <Flame className="size-3" />
+                {streak}
+              </span>
+            )}
+          </div>
+          <p className="truncate text-xs text-muted-foreground">
+            {reached ? "Heute erledigt" : "Heute noch offen"}
+          </p>
+          <Progress value={reached ? 100 : 0} className="h-1" />
         </div>
       )}
 
