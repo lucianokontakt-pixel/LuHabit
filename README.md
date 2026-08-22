@@ -81,6 +81,21 @@ prüft ein Skript, damit kein vergessener Filter fremde Daten zeigt:
 node scripts/audit-user-scope.mjs
 ```
 
+Dasselbe Skript prüft seit dem Sync-Umbau mit: dass jedes `SELECT` auf einer
+weich gelöschten Tabelle `deleted_at` filtert. Ohne diesen Filter tauchen
+gelöschte Zeilen wieder auf und kommen beim nächsten Abgleich aufs Handy zurück.
+
+### SQL gegen das Schema prüfen
+
+TypeScript, ESLint und die Tests sehen kein SQL — ein falscher Spaltenname oder
+ein `ON CONFLICT`, das zu keinem Schlüssel passt, fällt sonst erst beim
+Schreiben in Produktion auf. Dieses Skript spielt Schema und Migrationen in eine
+Wegwerf-Datenbank und lässt jedes Statement der API mit `EXPLAIN` vorbereiten:
+
+```bash
+node scripts/audit-sql.mjs
+```
+
 ## 3. Schritte automatisch aus der iOS Health-App
 
 Browser können Health-Daten nicht direkt lesen. Lösung: ein iOS-Shortcut, das die Schritte automatisch täglich an die App schickt.
@@ -173,6 +188,20 @@ LuHabit hat ein Web-App-Manifest (`app/manifest.ts`) und ist damit installierbar
 - **iOS Safari:** Teilen-Icon → „Zum Home-Bildschirm“
 - **Android Chrome:** Menü → „App installieren“ (oder ein automatischer Install-Banner)
 
-Läuft danach im eigenen Fenster ohne Browser-Adressleiste. Kein Service Worker,
-also kein Offline-Zugriff — das ist bewusst so, die App braucht ohnehin eine
-Verbindung zu D1.
+Läuft danach im eigenen Fenster ohne Browser-Adressleiste. Kein Apple-Developer-Konto,
+kein Zertifikat, kein Ablaufdatum — das betrifft nur nativ signierte Apps.
+
+### Offline im Gym
+
+`public/sw.js` legt Seiten, Build-Dateien und die zuletzt geladenen API-Antworten
+in den Cache, angemeldet wird er von `components/service-worker.tsx` (nur im
+fertigen Build, siehe Kommentar dort). Die App startet damit auch ohne Empfang,
+mit dem letzten bekannten Stand.
+
+Eine Einheit, die ohne Netz beendet wird, landet in `lib/outbox.ts` im
+localStorage statt verloren zu gehen. `components/outbox-sync.tsx` schickt sie
+nach, sobald die Verbindung zurück ist oder die App wieder in den Vordergrund
+kommt; der Trainings-Store führt sie bis dahin wie eine gespeicherte Einheit mit.
+
+Ändert sich die Cache-Strategie, muss `VERSION` in `public/sw.js` hochgezählt
+werden — sonst behalten installierte Geräte die alten Regeln.

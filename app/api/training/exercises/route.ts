@@ -12,6 +12,8 @@ type ExerciseRow = {
   hidden: number;
   increment: number | null;
   bodyweight_factor: number | null;
+  load_factor: number | null;
+  warmup: string | null;
 };
 
 function toExercise(row: ExerciseRow): Exercise {
@@ -24,10 +26,15 @@ function toExercise(row: ExerciseRow): Exercise {
     hidden: row.hidden === 1,
     increment: row.increment,
     bodyweightFactor: row.bodyweight_factor,
+    loadFactor: row.load_factor,
+    warmup: row.warmup as Exercise["warmup"],
   };
 }
 
 const UNAUTHORIZED = { error: "Nicht angemeldet" };
+
+/** Faustwert für eigene Eigengewichtsübungen — grob ein Liegestütz. */
+const DEFAULT_BODYWEIGHT_LOAD = 0.65;
 
 function slugify(label: string): string {
   return (
@@ -49,8 +56,8 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
 
   const rows = await d1Query<ExerciseRow>(
-    `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor
-       FROM exercises WHERE user_id = ? ORDER BY name COLLATE NOCASE ASC`,
+    `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor, load_factor, warmup
+       FROM exercises WHERE user_id = ? AND deleted_at IS NULL ORDER BY name COLLATE NOCASE ASC`,
     [userId]
   );
   return NextResponse.json({ exercises: rows.map(toExercise) });
@@ -66,6 +73,8 @@ export async function POST(req: NextRequest) {
     equipment?: string;
     increment?: number | null;
     bodyweightFactor?: number | null;
+    loadFactor?: number | null;
+    warmup?: string | null;
   };
 
   const name = body.name?.trim();
@@ -78,7 +87,7 @@ export async function POST(req: NextRequest) {
 
   const base = slugify(name);
   const existing = await d1Query<{ id: string }>(
-    `SELECT id FROM exercises WHERE user_id = ? AND id LIKE ?`,
+    `SELECT id FROM exercises WHERE user_id = ? AND deleted_at IS NULL AND id LIKE ?`,
     [userId, `${base}%`]
   );
   let id = base;
@@ -88,15 +97,36 @@ export async function POST(req: NextRequest) {
     id = `${base}-${n}`;
   }
 
+  // Eigengewichtsübungen bewegen den Körper, nicht die Hantel — ohne einen
+  // Standardwert stünden sie im Volumen wieder bei null. Anpassbar in der
+  // Übungsliste.
+  const loadFactor =
+    body.loadFactor ?? (body.equipment === "bodyweight" ? DEFAULT_BODYWEIGHT_LOAD : null);
+
   await d1Query(
-    `INSERT INTO exercises (user_id, id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor)
-     VALUES (?, ?, ?, ?, ?, 1, 0, ?, ?)`,
-    [userId, id, name, body.muscle, body.equipment, body.increment ?? null, body.bodyweightFactor ?? null]
+    `INSERT INTO exercises (user_id, id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor, load_factor, warmup, updated_at)
+     VALUES (?, ?, ?, ?, ?, 1, 0, ?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(user_id, id) DO UPDATE
+       SET name = excluded.name, muscle = excluded.muscle, equipment = excluded.equipment,
+           increment = excluded.increment, bodyweight_factor = excluded.bodyweight_factor,
+           load_factor = excluded.load_factor, warmup = excluded.warmup,
+           hidden = 0, deleted_at = NULL, updated_at = datetime('now')`,
+    [
+      userId,
+      id,
+      name,
+      body.muscle,
+      body.equipment,
+      body.increment ?? null,
+      body.bodyweightFactor ?? null,
+      loadFactor,
+      body.warmup ?? null,
+    ]
   );
 
   const rows = await d1Query<ExerciseRow>(
-    `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor
-       FROM exercises WHERE user_id = ? AND id = ?`,
+    `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor, load_factor, warmup
+       FROM exercises WHERE user_id = ? AND deleted_at IS NULL AND id = ?`,
     [userId, id]
   );
   return NextResponse.json({ exercise: toExercise(rows[0]) });
@@ -113,6 +143,8 @@ export async function PUT(req: NextRequest) {
     equipment?: string;
     increment?: number | null;
     bodyweightFactor?: number | null;
+    loadFactor?: number | null;
+    warmup?: string | null;
     hidden?: boolean;
   };
 
@@ -121,8 +153,8 @@ export async function PUT(req: NextRequest) {
   }
 
   const current = await d1Query<ExerciseRow>(
-    `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor
-       FROM exercises WHERE user_id = ? AND id = ?`,
+    `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor, load_factor, warmup
+       FROM exercises WHERE user_id = ? AND deleted_at IS NULL AND id = ?`,
     [userId, body.id]
   );
   if (current.length === 0) {
@@ -132,7 +164,8 @@ export async function PUT(req: NextRequest) {
   const before = current[0];
   await d1Query(
     `UPDATE exercises
-        SET name = ?, muscle = ?, equipment = ?, increment = ?, bodyweight_factor = ?, hidden = ?
+        SET name = ?, muscle = ?, equipment = ?, increment = ?, bodyweight_factor = ?,
+            load_factor = ?, warmup = ?, hidden = ?, updated_at = datetime('now')
       WHERE user_id = ? AND id = ?`,
     [
       body.name?.trim() || before.name,
@@ -140,6 +173,8 @@ export async function PUT(req: NextRequest) {
       body.equipment ?? before.equipment,
       body.increment === undefined ? before.increment : body.increment,
       body.bodyweightFactor === undefined ? before.bodyweight_factor : body.bodyweightFactor,
+      body.loadFactor === undefined ? before.load_factor : body.loadFactor,
+      body.warmup === undefined ? before.warmup : body.warmup,
       body.hidden === undefined ? before.hidden : body.hidden ? 1 : 0,
       userId,
       body.id,
@@ -147,8 +182,8 @@ export async function PUT(req: NextRequest) {
   );
 
   const rows = await d1Query<ExerciseRow>(
-    `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor
-       FROM exercises WHERE user_id = ? AND id = ?`,
+    `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor, load_factor, warmup
+       FROM exercises WHERE user_id = ? AND deleted_at IS NULL AND id = ?`,
     [userId, body.id]
   );
   return NextResponse.json({ exercise: toExercise(rows[0]) });
@@ -172,10 +207,18 @@ export async function DELETE(req: NextRequest) {
   );
 
   if ((used[0]?.count ?? 0) > 0 || (inPlans[0]?.count ?? 0) > 0) {
-    await d1Query(`UPDATE exercises SET hidden = 1 WHERE user_id = ? AND id = ?`, [userId, id]);
+    await d1Query(
+      `UPDATE exercises SET hidden = 1, updated_at = datetime('now')
+        WHERE user_id = ? AND id = ?`,
+      [userId, id]
+    );
     return NextResponse.json({ ok: true, hidden: true });
   }
 
-  await d1Query(`DELETE FROM exercises WHERE user_id = ? AND id = ?`, [userId, id]);
+  await d1Query(
+    `UPDATE exercises SET deleted_at = datetime('now'), updated_at = datetime('now')
+      WHERE user_id = ? AND id = ?`,
+    [userId, id]
+  );
   return NextResponse.json({ ok: true, hidden: false });
 }

@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   const filters = conditions.length ? ` AND ${conditions.join(" AND ")}` : "";
   const rows = await d1Query<EntryRow>(
-    `SELECT habit, date, value FROM entries WHERE user_id = ?${filters} ORDER BY date ASC`,
+    `SELECT habit, date, value FROM entries WHERE user_id = ? AND deleted_at IS NULL${filters} ORDER BY date ASC`,
     params
   );
 
@@ -63,22 +63,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "delta oder value erforderlich" }, { status: 400 });
   }
 
+  // updated_at wird überall mitgeschrieben: darauf steht der Abgleich mit dem
+  // Handy ("gib mir alles seit X"). deleted_at bleibt hier unberührt — ein
+  // Eintrag wird nicht gelöscht, sondern auf 0 gesetzt.
+  //
+  // delta ist bewusst nicht wiederholbar (zweimal +250 sind 500). Der Weg für
+  // das Handy ist deshalb value: absolute Werte darf die Warteschlange beliebig
+  // oft senden. delta bleibt für die Shortcut-Webhooks, die serverseitig genau
+  // einmal feuern.
   if (delta !== undefined) {
     await d1Query(
-      `INSERT INTO entries (user_id, habit, date, value) VALUES (?, ?, ?, ?)
-       ON CONFLICT(user_id, habit, date) DO UPDATE SET value = MAX(0, value + excluded.value)`,
+      `INSERT INTO entries (user_id, habit, date, value, updated_at)
+       VALUES (?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(user_id, habit, date) DO UPDATE
+         SET value = MAX(0, value + excluded.value), updated_at = datetime('now')`,
       [userId, habit, date, delta]
     );
   } else {
     await d1Query(
-      `INSERT INTO entries (user_id, habit, date, value) VALUES (?, ?, ?, ?)
-       ON CONFLICT(user_id, habit, date) DO UPDATE SET value = excluded.value`,
+      `INSERT INTO entries (user_id, habit, date, value, updated_at)
+       VALUES (?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(user_id, habit, date) DO UPDATE
+         SET value = excluded.value, updated_at = datetime('now')`,
       [userId, habit, date, value!]
     );
   }
 
   const rows = await d1Query<EntryRow>(
-    `SELECT habit, date, value FROM entries WHERE user_id = ? AND habit = ? AND date = ?`,
+    `SELECT habit, date, value FROM entries WHERE user_id = ? AND deleted_at IS NULL AND habit = ? AND date = ?`,
     [userId, habit, date]
   );
 

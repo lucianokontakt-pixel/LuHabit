@@ -37,15 +37,15 @@ async function collect(userId: string) {
     d1Query<Row>(`SELECT email, name, created_at FROM users WHERE id = ?`, [userId]),
     d1Query<Row>(
       `SELECT id, label, unit, icon, default_goal, quick_add, step, kind, created_at
-         FROM custom_habits WHERE user_id = ? ORDER BY created_at ASC`,
+         FROM custom_habits WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at ASC`,
       [userId]
     ),
     d1Query<Row>(
-      `SELECT habit, target, weekly_target FROM goals WHERE user_id = ? ORDER BY habit ASC`,
+      `SELECT habit, target, weekly_target FROM goals WHERE user_id = ? AND deleted_at IS NULL ORDER BY habit ASC`,
       [userId]
     ),
     d1Query<Row>(
-      `SELECT habit, date, value, created_at FROM entries WHERE user_id = ?
+      `SELECT habit, date, value, created_at FROM entries WHERE user_id = ? AND deleted_at IS NULL
         ORDER BY date ASC, habit ASC`,
       [userId]
     ),
@@ -55,12 +55,12 @@ async function collect(userId: string) {
     ),
     d1Query<Row>(
       `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor
-         FROM exercises WHERE user_id = ? ORDER BY name ASC`,
+         FROM exercises WHERE user_id = ? AND deleted_at IS NULL ORDER BY name ASC`,
       [userId]
     ),
     d1Query<Row>(
       `SELECT id, name, is_active, position, weekly_target, created_at
-         FROM workout_plans WHERE user_id = ? ORDER BY position ASC`,
+         FROM workout_plans WHERE user_id = ? AND deleted_at IS NULL ORDER BY position ASC`,
       [userId]
     ),
     d1Query<Row>(
@@ -77,11 +77,11 @@ async function collect(userId: string) {
     d1Query<Row>(
       `SELECT id, plan_id, day_id, day_name, date, started_at, finished_at,
               duration_seconds, note
-         FROM workout_sessions WHERE user_id = ? ORDER BY date ASC, started_at ASC`,
+         FROM workout_sessions WHERE user_id = ? AND deleted_at IS NULL ORDER BY date ASC, started_at ASC`,
       [userId]
     ),
     d1Query<Row>(
-      `SELECT id, session_id, exercise_id, set_index, weight, reps, done
+      `SELECT id, session_id, exercise_id, set_index, weight, reps, done, warmup
          FROM workout_sets WHERE user_id = ? ORDER BY session_id ASC, set_index ASC`,
       [userId]
     ),
@@ -143,7 +143,17 @@ export async function GET(req: NextRequest) {
 
     return download(
       toCsv(
-        ["datum", "tag", "uebung", "muskel", "satz", "gewicht_kg", "wiederholungen", "erledigt"],
+        [
+          "datum",
+          "tag",
+          "uebung",
+          "muskel",
+          "satz",
+          "gewicht_kg",
+          "wiederholungen",
+          "erledigt",
+          "aufwaermsatz",
+        ],
         data.sets.map((set) => {
           const session = sessionById.get(set.session_id);
           const exercise = exerciseById.get(set.exercise_id);
@@ -156,6 +166,7 @@ export async function GET(req: NextRequest) {
             set.weight,
             set.reps,
             set.done ? "ja" : "nein",
+            set.warmup ? "ja" : "nein",
           ];
         })
       ),

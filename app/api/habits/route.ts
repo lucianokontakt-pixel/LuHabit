@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   const rows = await d1Query<CustomHabitRow>(
     `SELECT id, label, unit, icon, default_goal, quick_add, step, kind
-       FROM custom_habits WHERE user_id = ? ORDER BY created_at ASC`,
+       FROM custom_habits WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at ASC`,
     [userId]
   );
   const habits = rows.map((r) => ({
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
   const baseId = slugify(label);
   let id = baseId;
   const existing = await d1Query<{ id: string }>(
-    `SELECT id FROM custom_habits WHERE user_id = ? AND id LIKE ?`,
+    `SELECT id FROM custom_habits WHERE user_id = ? AND deleted_at IS NULL AND id LIKE ?`,
     [userId, `${baseId}%`]
   );
   if (existing.some((e) => e.id === id)) {
@@ -88,14 +88,24 @@ export async function POST(req: NextRequest) {
   const cleanKind = kind === "toggle" ? "toggle" : "counter";
 
   await d1Query(
-    `INSERT INTO custom_habits (user_id, id, label, unit, icon, default_goal, quick_add, step, kind)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO custom_habits
+       (user_id, id, label, unit, icon, default_goal, quick_add, step, kind, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(user_id, id) DO UPDATE
+       SET label = excluded.label, unit = excluded.unit, icon = excluded.icon,
+           default_goal = excluded.default_goal, quick_add = excluded.quick_add,
+           step = excluded.step, kind = excluded.kind,
+           deleted_at = NULL, updated_at = datetime('now')`,
     [userId, id, label.trim(), unit.trim(), icon || "Target", defaultGoal, JSON.stringify(cleanQuickAdd), cleanStep, cleanKind]
   );
   await d1Query(
-    `INSERT INTO goals (user_id, habit, target, weekly_target) VALUES (?, ?, ?, ?)
+    `INSERT INTO goals (user_id, habit, target, weekly_target, updated_at)
+     VALUES (?, ?, ?, ?, datetime('now'))
      ON CONFLICT(user_id, habit)
-     DO UPDATE SET target = excluded.target, weekly_target = excluded.weekly_target`,
+     DO UPDATE SET target = excluded.target,
+                   weekly_target = excluded.weekly_target,
+                   deleted_at = NULL,
+                   updated_at = datetime('now')`,
     [userId, id, defaultGoal, weeklyGoal ?? null]
   );
 
@@ -143,14 +153,18 @@ export async function PUT(req: NextRequest) {
 
   await d1Query(
     `UPDATE custom_habits
-        SET label = ?, unit = ?, icon = ?, default_goal = ?, quick_add = ?, step = ?, kind = ?
+        SET label = ?, unit = ?, icon = ?, default_goal = ?, quick_add = ?, step = ?, kind = ?,
+            updated_at = datetime('now')
       WHERE user_id = ? AND id = ?`,
     [label.trim(), unit.trim(), icon || "Target", defaultGoal, JSON.stringify(cleanQuickAdd), cleanStep, cleanKind, userId, id]
   );
   await d1Query(
-    `INSERT INTO goals (user_id, habit, target, weekly_target) VALUES (?, ?, ?, ?)
+    `INSERT INTO goals (user_id, habit, target, weekly_target, updated_at)
+     VALUES (?, ?, ?, ?, datetime('now'))
      ON CONFLICT(user_id, habit)
-     DO UPDATE SET target = excluded.target, weekly_target = excluded.weekly_target`,
+     DO UPDATE SET target = excluded.target,
+                   weekly_target = excluded.weekly_target,
+                   updated_at = datetime('now')`,
     [userId, id, defaultGoal, weeklyGoal ?? null]
   );
 
@@ -176,9 +190,24 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id erforderlich" }, { status: 400 });
 
-  await d1Query(`DELETE FROM custom_habits WHERE user_id = ? AND id = ?`, [userId, id]);
-  await d1Query(`DELETE FROM entries WHERE user_id = ? AND habit = ?`, [userId, id]);
-  await d1Query(`DELETE FROM goals WHERE user_id = ? AND habit = ?`, [userId, id]);
+  // Grabstein statt echtem Löschen: eine Zeile, die einfach verschwindet, ist
+  // vom Handy aus nicht von einer zu unterscheiden, die es nie gab — sie käme
+  // beim nächsten Abgleich zurück. Wer die Zeile liest, filtert deleted_at.
+  await d1Query(
+    `UPDATE custom_habits SET deleted_at = datetime('now'), updated_at = datetime('now')
+      WHERE user_id = ? AND id = ?`,
+    [userId, id]
+  );
+  await d1Query(
+    `UPDATE entries SET deleted_at = datetime('now'), updated_at = datetime('now')
+      WHERE user_id = ? AND habit = ?`,
+    [userId, id]
+  );
+  await d1Query(
+    `UPDATE goals SET deleted_at = datetime('now'), updated_at = datetime('now')
+      WHERE user_id = ? AND habit = ?`,
+    [userId, id]
+  );
 
   return NextResponse.json({ ok: true });
 }

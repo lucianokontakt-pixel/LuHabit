@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query, d1InsertMany } from "@/lib/d1";
+import { newId, resolveNewId } from "@/lib/ids";
 import { currentUserId } from "@/lib/server-user";
 import type { PlanDay, WorkoutPlan } from "@/lib/training";
 
@@ -46,14 +47,10 @@ type DayInput = {
 
 const UNAUTHORIZED = { error: "Nicht angemeldet" };
 
-function newId(prefix: string): string {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
 async function loadPlans(userId: string): Promise<WorkoutPlan[]> {
   const plans = await d1Query<PlanRow>(
     `SELECT id, name, is_active, position, weekly_target
-       FROM workout_plans WHERE user_id = ? ORDER BY position ASC, created_at ASC`,
+       FROM workout_plans WHERE user_id = ? AND deleted_at IS NULL ORDER BY position ASC, created_at ASC`,
     [userId]
   );
   if (plans.length === 0) return [];
@@ -191,6 +188,7 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
 
   const body = (await req.json()) as {
+    id?: string;
     name?: string;
     days?: DayInput[];
     duplicateOf?: string;
@@ -198,7 +196,7 @@ export async function POST(req: NextRequest) {
   };
 
   const countRow = await d1Query<{ count: number }>(
-    `SELECT COUNT(*) AS count FROM workout_plans WHERE user_id = ?`,
+    `SELECT COUNT(*) AS count FROM workout_plans WHERE user_id = ? AND deleted_at IS NULL`,
     [userId]
   );
   const position = countRow[0]?.count ?? 0;
@@ -233,10 +231,22 @@ export async function POST(req: NextRequest) {
 
   if (!name) return NextResponse.json({ error: "name ist erforderlich" }, { status: 400 });
 
-  const id = newId("plan");
+  const id = resolveNewId("plan", body.id);
+  if (!id) return NextResponse.json({ error: "Ungültige id" }, { status: 400 });
+
   await d1Query(
-    `INSERT INTO workout_plans (user_id, id, name, is_active, position, weekly_target)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO workout_plans (user_id, id, name, is_active, position, weekly_target, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+     -- Der Schlüssel ist hier die ID allein (nicht user_id + id wie bei den
+     -- anderen Tabellen). Ohne die WHERE-Bedingung könnte ein fremdes Konto
+     -- mit einer geratenen ID diese Zeile überschreiben — sobald die IDS vom
+     -- Client kommen, wäre das eine offene Tür. Passt der Besitzer nicht,
+     -- passiert schlicht nichts.
+     ON CONFLICT(id) DO UPDATE
+       SET name = excluded.name, is_active = excluded.is_active,
+           position = excluded.position, weekly_target = excluded.weekly_target,
+           deleted_at = NULL, updated_at = datetime('now')
+     WHERE workout_plans.user_id = excluded.user_id`,
     [userId, id, name, position === 0 ? 1 : 0, position, weeklyTarget]
   );
   await writeDays(userId, id, days);
@@ -261,7 +271,7 @@ export async function PUT(req: NextRequest) {
 
   const current = await d1Query<PlanRow>(
     `SELECT id, name, is_active, position, weekly_target
-       FROM workout_plans WHERE user_id = ? AND id = ?`,
+       FROM workout_plans WHERE user_id = ? AND deleted_at IS NULL AND id = ?`,
     [userId, body.id]
   );
   if (current.length === 0) {
@@ -270,14 +280,15 @@ export async function PUT(req: NextRequest) {
 
   if (body.isActive) {
     // Genau ein Plan ist aktiv — der bestimmt, was "Training starten" vorschlägt.
-    await d1Query(`UPDATE workout_plans SET is_active = 0 WHERE user_id = ? AND id != ?`, [
+    await d1Query(`UPDATE workout_plans SET is_active = 0, updated_at = datetime('now') WHERE user_id = ? AND id != ?`, [
       userId,
       body.id,
     ]);
   }
 
   await d1Query(
-    `UPDATE workout_plans SET name = ?, is_active = ?, weekly_target = ?
+    `UPDATE workout_plans SET name = ?, is_active = ?, weekly_target = ?,
+            updated_at = datetime('now')
       WHERE user_id = ? AND id = ?`,
     [
       body.name?.trim() || current[0].name,
@@ -309,12 +320,13 @@ export async function DELETE(req: NextRequest) {
     await d1Query(`DELETE FROM plan_exercises WHERE user_id = ? AND day_id = ?`, [userId, day.id]);
   }
   await d1Query(`DELETE FROM plan_days WHERE user_id = ? AND plan_id = ?`, [userId, id]);
-  await d1Query(`DELETE FROM workout_plans WHERE user_id = ? AND id = ?`, [userId, id]);
+  await d1Query(`UPDATE workout_plans SET deleted_at = datetime('now'), updated_at = datetime('now')
+      WHERE user_id = ? AND id = ?`, [userId, id]);
 
   // Absolvierte Einheiten bleiben erhalten — sie sind der Verlauf, nicht der Plan.
   const remaining = await loadPlans(userId);
   if (remaining.length > 0 && !remaining.some((p) => p.isActive)) {
-    await d1Query(`UPDATE workout_plans SET is_active = 1 WHERE user_id = ? AND id = ?`, [
+    await d1Query(`UPDATE workout_plans SET is_active = 1, updated_at = datetime('now') WHERE user_id = ? AND id = ?`, [
       userId,
       remaining[0].id,
     ]);
