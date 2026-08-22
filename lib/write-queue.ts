@@ -16,7 +16,7 @@
 
 import { applyEffects, queueAll, queuePush, queueRemove } from "@/lib/local-db";
 import { collapse, localEffect, targetOf, type WriteOp } from "@/lib/write-ops";
-import { notifyLocalDataChanged } from "@/lib/local-events";
+import { notifyLocalDataChanged, notifyFlushSucceeded } from "@/lib/local-events";
 
 const listeners = new Set<(pendingTargets: Set<string>) => void>();
 
@@ -237,6 +237,11 @@ async function runFlush(): Promise<number> {
   if (doneSeqs.length > 0) {
     await queueRemove([...doneSeqs, ...superseded]);
     await announce();
+    // Der Abgleich soll den echten Serverstand jetzt holen, nicht erst beim
+    // nächsten Sichtbarkeits- oder Online-Ereignis — sonst zeigt das Gerät bis
+    // dahin nur die eigene, grob geschätzte Fassung der gerade gesendeten
+    // Zeilen (z.B. ohne den exakten Zeitstempel, den erst der Server vergibt).
+    notifyFlushSucceeded();
   }
   return doneSeqs.length;
 }

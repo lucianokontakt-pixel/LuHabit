@@ -7,7 +7,7 @@
 
 import { readCursor, applySnapshot, localDbAvailable } from "@/lib/local-db";
 import { readSyncPayload } from "@/lib/sync-payload";
-import { notifyLocalDataChanged } from "@/lib/local-events";
+import { notifyLocalDataChanged, subscribeFlushSucceeded } from "@/lib/local-events";
 import { reapplyPending } from "@/lib/write-queue";
 
 export type SyncResult =
@@ -103,6 +103,12 @@ export function syncSoon() {
     });
   }, 400);
 }
+
+// Nach jedem erfolgreichen Senden aus der Warteschlange kurz danach abgleichen
+// — siehe die Begründung bei notifyFlushSucceeded in lib/local-events.ts.
+// Modulweite Registrierung statt eines Hooks: der Auslöser (ein Schreibvorgang
+// irgendwo in der App) hat mit React nichts zu tun.
+subscribeFlushSucceeded(syncSoon);
 
 let firstSync: Promise<unknown> | null = null;
 
