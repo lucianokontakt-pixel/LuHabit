@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Minus, Plus, SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatClock } from "@/lib/format";
 
@@ -49,23 +49,39 @@ export function RestTimer({
           <p className="nums text-heading-sm leading-none">{formatClock(remaining)}</p>
         </div>
 
+        {/* Minus und Plus rahmen die Pause ein — verkürzen ist genauso normal
+            wie verlängern, wenn ein Satz leichter lief als gedacht. */}
+        <div className="flex shrink-0 items-center rounded-pill bg-current/10">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => onExtend(-30)}
+            disabled={done}
+            aria-label="Pause um 30 Sekunden verkürzen"
+            className="text-blush-foreground hover:bg-current/10"
+          >
+            <Minus />
+          </Button>
+          <span className="px-0.5 text-xs opacity-75">30s</span>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => onExtend(30)}
+            aria-label="Pause um 30 Sekunden verlängern"
+            className="text-blush-foreground hover:bg-current/10"
+          >
+            <Plus />
+          </Button>
+        </div>
+
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => onExtend(30)}
-          className="shrink-0 text-blush-foreground hover:bg-current/10"
-        >
-          <Plus />
-          30s
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
           onClick={onDismiss}
-          aria-label="Pause überspringen"
           className="shrink-0 text-blush-foreground hover:bg-current/10"
         >
-          <X />
+          <SkipForward />
+          {done ? "Weiter" : "Überspringen"}
         </Button>
       </div>
 

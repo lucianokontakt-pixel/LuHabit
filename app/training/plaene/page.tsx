@@ -139,27 +139,16 @@ export default function PlansPage() {
                     {plan.weeklyTarget ? ` · ${plan.weeklyTarget}× pro Woche` : ""}
                   </p>
                 </div>
-                <div className="flex shrink-0 gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => handleDuplicate(plan.id)}
-                    disabled={busy}
-                    aria-label={`${plan.name} duplizieren`}
-                  >
-                    <Copy />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => setDeleting(plan.id)}
-                    disabled={busy}
-                    aria-label={`${plan.name} löschen`}
-                    className="hover:text-destructive"
-                  >
-                    <Trash2 />
-                  </Button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setDeleting(plan.id)}
+                  disabled={busy}
+                  aria-label={`${plan.name} löschen`}
+                  className="shrink-0 hover:text-destructive"
+                >
+                  <Trash2 />
+                </Button>
               </div>
 
               {plan.days.length > 0 && (
@@ -176,18 +165,33 @@ export default function PlansPage() {
                 </div>
               )}
 
-              <div className="flex gap-2 px-(--card-spacing)">
+              {/* Duplizieren steht bewusst als Text neben dem Bearbeiten:
+                  ein Plan als Kopie weiterbauen ist der übliche Weg zu einer
+                  Variante, kein versteckter Sonderfall. */}
+              <div className="flex flex-wrap gap-2 px-(--card-spacing)">
                 <Link
                   href={`/training/plaene/${plan.id}`}
-                  className={buttonVariants({ variant: "outline", className: "flex-1" })}
+                  className={buttonVariants({
+                    variant: "outline",
+                    className: "min-w-[9rem] flex-1",
+                  })}
                 >
                   <Pencil className="size-4" />
                   Bearbeiten
                 </Link>
+                <Button
+                  variant="outline"
+                  className="min-w-[9rem] flex-1"
+                  onClick={() => handleDuplicate(plan.id)}
+                  disabled={busy}
+                >
+                  <Copy />
+                  Duplizieren
+                </Button>
                 {!plan.isActive && (
                   <Button
                     variant="secondary"
-                    className="flex-1"
+                    className="min-w-[9rem] flex-1"
                     onClick={() => handleActivate(plan.id)}
                     disabled={busy}
                   >

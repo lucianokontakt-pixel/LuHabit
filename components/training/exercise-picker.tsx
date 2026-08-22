@@ -23,6 +23,7 @@ import {
   type Exercise,
   type Muscle,
 } from "@/lib/training";
+import { WARMUP_OPTIONS } from "@/lib/warmup";
 
 const EQUIPMENT_KEYS = Object.keys(EQUIPMENT_LABELS) as Equipment[];
 
@@ -47,6 +48,7 @@ export function ExercisePicker({
   const [newName, setNewName] = useState("");
   const [newMuscle, setNewMuscle] = useState<Muscle>("chest");
   const [newEquipment, setNewEquipment] = useState<Equipment>("barbell");
+  const [newWarmup, setNewWarmup] = useState<"always" | "never" | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,10 +87,12 @@ export function ExercisePicker({
         name,
         muscle: newMuscle,
         equipment: newEquipment,
+        warmup: newWarmup,
       });
       upsertExercise(exercise);
       onPick(exercise);
       setNewName("");
+      setNewWarmup(null);
       setCreating(false);
       onOpenChange(false);
     } catch (e) {
@@ -172,6 +176,32 @@ export function ExercisePicker({
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">Aufwärmsatz</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {WARMUP_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value ?? "auto"}
+                    type="button"
+                    onClick={() => setNewWarmup(opt.value)}
+                    className={cn(
+                      "rounded-pill px-3 py-1.5 text-xs transition-colors",
+                      newWarmup === opt.value
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-card text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {newEquipment === "bodyweight" && newWarmup === "always"
+                  ? "Wirkt nur mit eingetragenem Zusatzgewicht — bei 0 kg gibt es nichts abzustufen."
+                  : "Automatisch: die erste Übung des Tages immer, sonst ab 40 kg Arbeitsgewicht."}
+              </p>
             </div>
 
             {error && <p className="text-xs text-destructive">{error}</p>}

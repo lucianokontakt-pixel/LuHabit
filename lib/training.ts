@@ -57,6 +57,17 @@ export type Exercise = {
   increment: number | null;
   /** Startgewicht-Vorschlag = Körpergewicht × Faktor. */
   bodyweightFactor: number | null;
+  /**
+   * Anteil des Körpergewichts, den die Übung tatsächlich bewegt — für das
+   * Volumen. null heißt: kein Körpergewicht im Spiel, es zählt nur die Hantel.
+   * Nicht zu verwechseln mit bodyweightFactor, der das Startgewicht schätzt.
+   */
+  loadFactor: number | null;
+  /**
+   * Wie die Übung zu Aufwärmsätzen steht. null heißt: die Automatik
+   * entscheidet (siehe lib/warmup.ts) — 'always'/'never' überschreiben das.
+   */
+  warmup: "always" | "never" | null;
 };
 
 export type PlanExercise = {
@@ -97,6 +108,8 @@ export type WorkoutSet = {
   weight: number;
   reps: number;
   done: boolean;
+  /** Aufwärmsatz: wird protokolliert, zählt aber nirgends mit. */
+  warmup: boolean;
 };
 
 export type WorkoutSession = {
@@ -134,6 +147,17 @@ export function incrementFor(exercise: Exercise, planExercise?: PlanExercise | n
 
 export type SetTarget = { weight: number; reps: number };
 
+/**
+ * Die Sätze, die zählen: abgehakt und kein Aufwärmsatz.
+ *
+ * Ein Begriff für alle Auswertungen — Progression, Volumen, Sätze pro Woche,
+ * Bestleistungen. Aufwärmsätze bleiben im Protokoll der Einheit sichtbar,
+ * tauchen aber in keiner Kennzahl auf.
+ */
+export function workingSets<T extends { done: boolean; warmup: boolean }>(sets: T[]): T[] {
+  return sets.filter((s) => s.done && !s.warmup);
+}
+
 export type ProgressionResult = {
   targets: SetTarget[];
   /** true, wenn die letzte Einheit die Obergrenze in allen Sätzen erreicht hat. */
@@ -146,6 +170,27 @@ export type ProgressionResult = {
   /** Kein Verlauf vorhanden — Vorschlag stammt aus dem Körpergewicht. */
   isFirstTime: boolean;
 };
+
+/**
+ * Das Gewicht, auf dem tatsächlich gearbeitet wurde.
+ *
+ * Normalerweise das schwerste — leichtere Sätze davor sind Aufwärmsätze und
+ * sollen die Progression nicht blockieren. Erreicht auf dem schwersten Gewicht
+ * aber kein einziger Satz die Untergrenze, war es kein Arbeitsgewicht, sondern
+ * ein gescheiterter Versuch: dann zählt das nächstniedrigere Gewicht, auf dem
+ * wirklich gearbeitet wurde. Sonst schlüge die App nach einem Fehlversuch samt
+ * Reduktion beim nächsten Mal stur wieder das gescheiterte Gewicht vor.
+ *
+ * Hat kein Gewicht die Untergrenze erreicht, bleibt es beim schwersten — dann
+ * gibt es nichts Besseres abzuleiten.
+ */
+function workingWeight(working: WorkoutSet[], repMin: number): number {
+  const weights = [...new Set(working.map((s) => s.weight))].sort((a, b) => b - a);
+  const reached = weights.find((w) =>
+    working.some((s) => s.weight === w && s.reps >= repMin)
+  );
+  return reached ?? weights[0];
+}
 
 /**
  * Double Progression: erst wenn ALLE Arbeitssätze die Obergrenze des
@@ -167,7 +212,7 @@ export function computeTargets({
   const increment = incrementFor(exercise, planExercise);
   const { sets, repMin, repMax } = planExercise;
 
-  const working = lastSets.filter((s) => s.done).sort((a, b) => a.setIndex - b.setIndex);
+  const working = workingSets(lastSets).sort((a, b) => a.setIndex - b.setIndex);
 
   if (working.length === 0) {
     const start = suggestStartWeight({ exercise, planExercise, bodyweight, increment });
@@ -179,8 +224,8 @@ export function computeTargets({
     };
   }
 
-  const topWeight = Math.max(...working.map((s) => s.weight));
-  // Nur die Sätze auf dem schwersten Gewicht zählen als Arbeitssätze —
+  const topWeight = workingWeight(working, repMin);
+  // Nur die Sätze auf dem Arbeitsgewicht zählen —
   // Aufwärmsätze mit weniger Gewicht sollen die Progression nicht blockieren.
   const workingAtTop = working.filter((s) => s.weight === topWeight);
   // Erst wenn die volle geplante Satzzahl auf dem Topgewicht die Obergrenze
@@ -206,7 +251,16 @@ export function computeTargets({
       };
     }
 
-    const next = roundToIncrement(topWeight + increment, increment);
+    // Die Sprunghöhe richtet sich danach, wie deutlich die Obergrenze
+    // überschritten wurde. Der schwächste Satz auf dem Topgewicht gibt den
+    // Takt vor — dieselbe konservative Regel wie im Zweig darüber.
+    const achieved = Math.min(...workingAtTop.map((s) => s.reps));
+    const next = retargetWeight({
+      weight: topWeight,
+      reps: achieved,
+      targetReps: repMax,
+      increment,
+    });
     return {
       targets: Array.from({ length: sets }, () => ({ weight: next, reps: repMin })),
       progressed: true,
@@ -227,6 +281,34 @@ export function computeTargets({
     progressionKind: null,
     isFirstTime: false,
   };
+}
+
+/**
+ * Beschriftung der Satz-Ziffern: Aufwärmsätze heißen „W", die Arbeitssätze
+ * zählen davon unabhängig bei 1 los. Aus W, W, 1, 2, 3 wird also nicht
+ * 1, 2, 3, 4, 5 — sonst wüsste niemand mehr, wie viele Arbeitssätze anstehen.
+ */
+export function setLabels(sets: { warmup: boolean }[]): string[] {
+  let working = 0;
+  return sets.map((s) => (s.warmup ? "W" : String(++working)));
+}
+
+/**
+ * Zielwerte auf die geplante Satzzahl ausrollen.
+ *
+ * Existiert, damit die Live-Session die Liste aus computeTargets vollständig
+ * übernimmt statt nur ihren ersten Eintrag: nach 8/9/10 Wiederholungen muss
+ * auch 8/9/10 vorgeschlagen werden. Dreimal die Acht wäre ein Rückschritt, den
+ * ein abgehaktes Abnicken protokolliert — und der die Doppelprogression
+ * dauerhaft festnageln würde, weil das nächste Ziel wieder von unten zählt.
+ */
+export function expandTargets(targets: SetTarget[], sets: number): SetTarget[] {
+  if (targets.length === 0) return [];
+  return Array.from(
+    { length: Math.max(0, sets) },
+    // Reicht die Liste nicht, gilt für die übrigen Sätze der letzte Eintrag.
+    (_, i) => targets[i] ?? targets[targets.length - 1]
+  );
 }
 
 function suggestStartWeight({
@@ -254,12 +336,259 @@ export function estimateOneRepMax(weight: number, reps: number): number {
   return weight * (1 + reps / 30);
 }
 
-export function setVolume(set: WorkoutSet): number {
-  return set.weight * set.reps;
+/**
+ * Höchstens so viele Gewichtssprünge auf einmal. Epley überschätzt bei sehr
+ * hohen Wiederholungszahlen deutlich — ohne Deckel käme aus einem einzigen
+ * versehentlich viel zu leichten Satz ein absurder Vorschlag.
+ */
+export const MAX_RETARGET_STEPS = 4;
+
+/**
+ * Das Gewicht, das zur gezeigten Leistung passt.
+ *
+ * Rechnet über Epley aus Gewicht und Wiederholungen das geschätzte Maximum und
+ * daraus zurück, welches Gewicht auf `targetReps` Wiederholungen führen würde.
+ * Wer die Obergrenze um eine Wiederholung überschreitet, steigt einen Sprung;
+ * wer sie um zehn überschreitet, springt weiter, statt dem passenden Gewicht
+ * über viele Einheiten hinterherzulaufen.
+ *
+ * Immer mindestens ein Sprung in die Richtung der Abweichung — bei genau
+ * getroffener Obergrenze ergäbe die Formel sonst das Ausgangsgewicht und die
+ * Progression stünde still.
+ */
+export function retargetWeight({
+  weight,
+  reps,
+  targetReps,
+  increment,
+  maxSteps = MAX_RETARGET_STEPS,
+}: {
+  weight: number;
+  reps: number;
+  targetReps: number;
+  increment: number;
+  maxSteps?: number;
+}): number {
+  // Ohne Zusatzgewicht gibt es nichts zu verstellen — dort ist die
+  // Wiederholung der einzige Hebel.
+  if (weight <= 0 || reps <= 0 || targetReps <= 0 || increment <= 0) return weight;
+
+  const ideal = estimateOneRepMax(weight, reps) / (1 + targetReps / 30);
+  const rounded = roundToIncrement(ideal, increment);
+  const up = reps >= targetReps;
+
+  const lower = up ? weight + increment : Math.max(increment, weight - maxSteps * increment);
+  const upper = up ? weight + maxSteps * increment : weight - increment;
+  // Bei sehr kleinen Gewichten kann die Untergrenze über die Obergrenze
+  // rutschen; dann gilt die Untergrenze.
+  if (lower > upper) return lower;
+  return Math.min(Math.max(rounded, lower), upper);
 }
 
-export function sessionVolume(session: WorkoutSession): number {
-  return session.sets.filter((s) => s.done).reduce((sum, s) => sum + setVolume(s), 0);
+/** Ein Satz, wie er während der Einheit im Kopf des Nutzers steht. */
+export type LoggedSet = { weight: number; reps: number; done: boolean; warmup?: boolean };
+
+export type SetAdjustment = {
+  /**
+   * Woran geschraubt wird. Mit Zusatzgewicht am Gewicht, bei Eigengewicht an
+   * den Wiederholungen — dort gibt es nichts anzuheben außer dem Ziel.
+   */
+  axis: "weight" | "reps";
+  /** Nach oben, weil zu leicht — oder nach unten, weil zu schwer. */
+  direction: "up" | "down";
+  /** Der abgehakte Satz, der den Vorschlag ausgelöst hat (0-basiert). */
+  index: number;
+  /** Was in diesem Satz stand. */
+  reps: number;
+  weight: number;
+  /** Der Wert, an dem gemessen wurde: die Grenze bzw. das Ziel der offenen Sätze. */
+  targetReps: number;
+  /** Was den restlichen Sätzen vorgeschlagen wird. */
+  nextWeight: number;
+  nextReps: number;
+  /** Es gibt noch offene Sätze — sonst ginge es um einen zusätzlichen. */
+  hasRemaining: boolean;
+};
+
+/**
+ * Ab welchem Abstand zum anstehenden Ziel ein Wiederholungs-Vorschlag kommt.
+ * Eine Wiederholung Unterschied ist normal — die Ziele wandern von Satz zu
+ * Satz ohnehin (8/9/10). Erst ab zwei lohnt der Hinweis.
+ */
+export const REPS_SUGGESTION_GAP = 2;
+
+/**
+ * Reagiert auf den zuletzt abgehakten Satz einer Übung.
+ *
+ * Mit Zusatzgewicht: lag er über der Obergrenze, war das Gewicht zu leicht;
+ * lag er unter der Untergrenze, zu schwer. Ohne Zusatzgewicht gibt es kein
+ * Gewicht zu verstellen — dort wird das Wiederholungsziel der restlichen Sätze
+ * an das angeglichen, was gerade tatsächlich ging.
+ *
+ * Beides betrifft nur die *restlichen* Sätze; ein abgehakter Satz bleibt immer
+ * stehen, wie er protokolliert wurde. Gibt null zurück, wenn nichts zu raten ist.
+ */
+export function suggestAdjustment({
+  sets,
+  repMin,
+  repMax,
+  increment,
+}: {
+  sets: LoggedSet[];
+  repMin: number;
+  repMax: number;
+  increment: number;
+}): SetAdjustment | null {
+  // Der jüngste abgehakte Satz zählt, nicht der erste — wer mittendrin
+  // nachjustiert, bekommt den Vorschlag zum aktuellen Stand.
+  // Aufwärmsätze bleiben außen vor: dass die Rampe leicht war, ist der Sinn
+  // der Rampe und kein Grund, am Arbeitsgewicht zu drehen.
+  let index = -1;
+  for (let i = sets.length - 1; i >= 0; i--) {
+    if (sets[i].done && !sets[i].warmup) {
+      index = i;
+      break;
+    }
+  }
+  if (index === -1) return null;
+
+  const set = sets[index];
+  if (set.reps <= 0) return null;
+
+  const open = sets.filter((s, i) => i > index && !s.done && !s.warmup);
+  const hasRemaining = open.length > 0;
+
+  if (set.weight <= 0) {
+    return repsSuggestion({ set, index, open, hasRemaining, repMax });
+  }
+
+  const direction: "up" | "down" | null =
+    set.reps > repMax ? "up" : set.reps < repMin ? "down" : null;
+  if (!direction) return null;
+
+  const targetReps = direction === "up" ? repMax : repMin;
+  const nextWeight = retargetWeight({ weight: set.weight, reps: set.reps, targetReps, increment });
+  if (nextWeight === set.weight) return null;
+
+  // Nach unten ohne offene Sätze gäbe es nichts zu tun — einen zusätzlichen
+  // Satz mit weniger Gewicht will niemand angeboten bekommen.
+  if (!hasRemaining && direction === "down") return null;
+
+  return {
+    axis: "weight",
+    direction,
+    index,
+    reps: set.reps,
+    weight: set.weight,
+    targetReps,
+    nextWeight,
+    // Nach einem Gewichtssprung beginnt der Wiederholungsbereich wieder unten.
+    nextReps: repMin,
+    hasRemaining,
+  };
+}
+
+/**
+ * Eigengewicht: gemessen wird nicht an der Planobergrenze, sondern am Ziel der
+ * Sätze, die noch anstehen. Bei Klimmzügen darf dieses Ziel über die
+ * Obergrenze hinausgewachsen sein — dann ist repMax kein Maßstab mehr.
+ */
+function repsSuggestion({
+  set,
+  index,
+  open,
+  hasRemaining,
+  repMax,
+}: {
+  set: LoggedSet;
+  index: number;
+  open: LoggedSet[];
+  hasRemaining: boolean;
+  repMax: number;
+}): SetAdjustment | null {
+  // Ohne offene Sätze lohnt nur der starke Fall: einen Satz dranhängen, wenn
+  // die Obergrenze klar gefallen ist.
+  if (!hasRemaining) {
+    if (set.reps <= repMax) return null;
+    return {
+      axis: "reps",
+      direction: "up",
+      index,
+      reps: set.reps,
+      weight: 0,
+      targetReps: repMax,
+      nextWeight: 0,
+      nextReps: set.reps,
+      hasRemaining: false,
+    };
+  }
+
+  const queued = open[0].reps;
+  const gap = set.reps - queued;
+  if (Math.abs(gap) < REPS_SUGGESTION_GAP) return null;
+
+  return {
+    axis: "reps",
+    direction: gap > 0 ? "up" : "down",
+    index,
+    reps: set.reps,
+    weight: 0,
+    targetReps: queued,
+    nextWeight: 0,
+    nextReps: set.reps,
+    hasRemaining: true,
+  };
+}
+
+/**
+ * Was ein Satz wirklich bewegt: Zusatzgewicht plus den Anteil des
+ * Körpergewichts, den die Übung trägt. Ohne bekanntes Körpergewicht oder ohne
+ * Faktor bleibt es beim Zusatzgewicht — so wie es vorher überall war.
+ *
+ * Nur fürs Volumen. Die Progression rechnet weiter mit dem Zusatzgewicht,
+ * sonst verlören Klimmzüge ihre Wiederholungsprogression.
+ */
+export function effectiveLoad(
+  set: { weight: number },
+  exercise: Exercise | undefined,
+  bodyweight: number | null
+): number {
+  const factor = exercise?.loadFactor;
+  if (!factor || !bodyweight || bodyweight <= 0) return set.weight;
+  return set.weight + factor * bodyweight;
+}
+
+/** Der zuletzt an oder vor diesem Tag gemessene Wert. */
+export function measuredOn(
+  date: string,
+  entries: { date: string; value: number }[]
+): number | null {
+  let found: number | null = null;
+  for (const entry of entries) {
+    if (entry.date > date) continue;
+    // entries kommen aufsteigend; der letzte passende gewinnt.
+    found = entry.value;
+  }
+  return found;
+}
+
+export function setVolume(
+  set: WorkoutSet,
+  exercise?: Exercise,
+  bodyweight: number | null = null
+): number {
+  return effectiveLoad(set, exercise, bodyweight) * set.reps;
+}
+
+export function sessionVolume(
+  session: WorkoutSession,
+  exerciseById: Record<string, Exercise> = {},
+  bodyweight: number | null = null
+): number {
+  return workingSets(session.sets).reduce(
+    (sum, s) => sum + setVolume(s, exerciseById[s.exerciseId], bodyweight),
+    0
+  );
 }
 
 /**

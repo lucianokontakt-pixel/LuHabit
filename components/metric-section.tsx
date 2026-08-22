@@ -97,24 +97,25 @@ export function MetricSection({
         </span>
       </div>
 
-      <div className="px-(--card-spacing)">
+      <div className="flex flex-col gap-1 px-(--card-spacing)">
         {loading ? (
           <div className="h-[180px] animate-pulse rounded-panel bg-elevated" />
-        ) : entries.length > 1 ? (
-          <TrendChart entries={entries} unit={unit} />
         ) : (
-          <div className="flex h-[180px] items-center justify-center rounded-panel bg-elevated/60 text-center text-sm text-muted-foreground">
-            {/* Pro Tag zählt nur ein Wert — ein zweiter Eintrag von heute
-                ersetzt den ersten und ergibt noch keinen Verlauf. */}
-            {entries.length === 0 ? (
-              <>Noch kein Wert eingetragen.</>
-            ) : (
-              <>
-                Ein Messtag reicht noch nicht —<br />
-                ab dem nächsten Tag siehst du hier den Verlauf.
-              </>
+          <>
+            {/* Das Diagramm steht von Anfang an da, auch ohne Werte. Die Achse
+                zeigt dann die letzten zwei Wochen — man sieht, wohin die Kurve
+                wächst, statt auf einen leeren Kasten zu schauen. */}
+            <TrendChart entries={entries} unit={unit} />
+            {entries.length < 2 && (
+              <p className="text-center text-xs text-muted-foreground">
+                {/* Pro Tag zählt nur ein Wert — ein zweiter Eintrag von heute
+                    ersetzt den ersten und ergibt noch keinen Verlauf. */}
+                {entries.length === 0
+                  ? "Noch kein Wert eingetragen — der erste setzt den Startpunkt."
+                  : "Ein Messtag steht — ab dem nächsten wird eine Kurve daraus."}
+              </p>
             )}
-          </div>
+          </>
         )}
       </div>
 

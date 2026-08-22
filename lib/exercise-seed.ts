@@ -7,6 +7,11 @@ export type SeedExercise = {
   equipment: Equipment;
   /** Startgewicht-Vorschlag = Körpergewicht × Faktor (null = kein Vorschlag). */
   factor: number | null;
+  /**
+   * Anteil des Körpergewichts, den die Übung bewegt — fürs Volumen.
+   * null = keiner im Spiel, 0 = kein sinnvoller kg-Wert (Plank).
+   */
+  load?: number | null;
 };
 
 /**
@@ -25,8 +30,8 @@ export const SEED_EXERCISES: SeedExercise[] = [
   { id: "butterfly", name: "Butterfly (Maschine)", muscle: "chest", equipment: "machine", factor: 0.35 },
   { id: "brustpresse", name: "Brustpresse (Maschine)", muscle: "chest", equipment: "machine", factor: 0.5 },
   { id: "kabelzug-fliegende", name: "Kabelzug-Fliegende", muscle: "chest", equipment: "cable", factor: 0.12 },
-  { id: "dips-brust", name: "Dips (brustbetont)", muscle: "chest", equipment: "bodyweight", factor: null },
-  { id: "liegestuetze", name: "Liegestütze", muscle: "chest", equipment: "bodyweight", factor: null },
+  { id: "dips-brust", name: "Dips (brustbetont)", muscle: "chest", equipment: "bodyweight", factor: null , load: 0.95 },
+  { id: "liegestuetze", name: "Liegestütze", muscle: "chest", equipment: "bodyweight", factor: null , load: 0.65 },
   { id: "schraegbank-multipresse", name: "Schrägbankdrücken (Multipresse)", muscle: "chest", equipment: "machine", factor: 0.45 },
 
   // Rücken
@@ -35,13 +40,13 @@ export const SEED_EXERCISES: SeedExercise[] = [
   { id: "langhantelrudern", name: "Langhantelrudern", muscle: "back", equipment: "barbell", factor: 0.5 },
   { id: "t-bar-rudern", name: "T-Bar-Rudern", muscle: "back", equipment: "barbell", factor: 0.45 },
   { id: "kurzhantelrudern", name: "Kurzhantelrudern (einarmig)", muscle: "back", equipment: "dumbbell", factor: 0.25 },
-  { id: "klimmzuege", name: "Klimmzüge", muscle: "back", equipment: "bodyweight", factor: null },
+  { id: "klimmzuege", name: "Klimmzüge", muscle: "back", equipment: "bodyweight", factor: null , load: 1.0 },
   { id: "latzug-breit", name: "Latzug (breit)", muscle: "back", equipment: "cable", factor: 0.55 },
   { id: "latzug-eng", name: "Latzug (eng, Untergriff)", muscle: "back", equipment: "cable", factor: 0.55 },
   { id: "rudern-kabel", name: "Rudern am Kabel (sitzend)", muscle: "back", equipment: "cable", factor: 0.55 },
   { id: "rudermaschine", name: "Rudermaschine", muscle: "back", equipment: "machine", factor: 0.55 },
   { id: "ueberzuege-kabel", name: "Überzüge (Kabel)", muscle: "back", equipment: "cable", factor: 0.3 },
-  { id: "hyperextensions", name: "Hyperextensions", muscle: "back", equipment: "bodyweight", factor: null },
+  { id: "hyperextensions", name: "Hyperextensions", muscle: "back", equipment: "bodyweight", factor: null , load: 0.5 },
   { id: "shrugs-kh", name: "Shrugs (Kurzhantel)", muscle: "back", equipment: "dumbbell", factor: 0.3 },
   { id: "shrugs-lh", name: "Shrugs (Langhantel)", muscle: "back", equipment: "barbell", factor: 0.5 },
 
@@ -71,8 +76,8 @@ export const SEED_EXERCISES: SeedExercise[] = [
 
   // Trizeps
   { id: "engbankdruecken", name: "Enges Bankdrücken", muscle: "triceps", equipment: "barbell", factor: 0.45 },
-  { id: "dips-trizeps", name: "Dips (trizepsbetont)", muscle: "triceps", equipment: "bodyweight", factor: null },
-  { id: "bankdips", name: "Bankdips", muscle: "triceps", equipment: "bodyweight", factor: null },
+  { id: "dips-trizeps", name: "Dips (trizepsbetont)", muscle: "triceps", equipment: "bodyweight", factor: null , load: 0.95 },
+  { id: "bankdips", name: "Bankdips", muscle: "triceps", equipment: "bodyweight", factor: null , load: 0.4 },
   { id: "trizepsdruecken-kabel", name: "Trizepsdrücken am Kabel", muscle: "triceps", equipment: "cable", factor: 0.3 },
   { id: "trizepsdruecken-seil", name: "Trizepsdrücken (Seil)", muscle: "triceps", equipment: "cable", factor: 0.25 },
   { id: "french-press", name: "French Press (SZ)", muscle: "triceps", equipment: "barbell", factor: 0.2 },
@@ -91,7 +96,7 @@ export const SEED_EXERCISES: SeedExercise[] = [
   { id: "bulgarian-split-squat", name: "Bulgarian Split Squat", muscle: "quads", equipment: "dumbbell", factor: 0.2 },
   { id: "goblet-squat", name: "Goblet Squat", muscle: "quads", equipment: "dumbbell", factor: 0.3 },
   { id: "step-ups", name: "Step-Ups", muscle: "quads", equipment: "dumbbell", factor: 0.15 },
-  { id: "sissy-squat", name: "Sissy Squat", muscle: "quads", equipment: "bodyweight", factor: null },
+  { id: "sissy-squat", name: "Sissy Squat", muscle: "quads", equipment: "bodyweight", factor: null , load: 0.6 },
 
   // Beinbeuger
   { id: "rumaenisches-kreuzheben", name: "Rumänisches Kreuzheben", muscle: "hamstrings", equipment: "barbell", factor: 0.7 },
@@ -99,7 +104,7 @@ export const SEED_EXERCISES: SeedExercise[] = [
   { id: "beinbeuger-liegend", name: "Beinbeuger (liegend)", muscle: "hamstrings", equipment: "machine", factor: 0.35 },
   { id: "beinbeuger-sitzend", name: "Beinbeuger (sitzend)", muscle: "hamstrings", equipment: "machine", factor: 0.4 },
   { id: "good-mornings", name: "Good Mornings", muscle: "hamstrings", equipment: "barbell", factor: 0.4 },
-  { id: "nordic-curls", name: "Nordic Curls", muscle: "hamstrings", equipment: "bodyweight", factor: null },
+  { id: "nordic-curls", name: "Nordic Curls", muscle: "hamstrings", equipment: "bodyweight", factor: null , load: 0.6 },
 
   // Gesäß
   { id: "hip-thrust", name: "Hip Thrust", muscle: "glutes", equipment: "barbell", factor: 0.9 },
@@ -115,13 +120,13 @@ export const SEED_EXERCISES: SeedExercise[] = [
   { id: "wadenheben-kh", name: "Wadenheben (Kurzhantel)", muscle: "calves", equipment: "dumbbell", factor: 0.3 },
 
   // Rumpf
-  { id: "crunches", name: "Crunches", muscle: "core", equipment: "bodyweight", factor: null },
-  { id: "beinheben-haengend", name: "Hängendes Beinheben", muscle: "core", equipment: "bodyweight", factor: null },
-  { id: "plank", name: "Plank", muscle: "core", equipment: "bodyweight", factor: null },
-  { id: "side-plank", name: "Side Plank", muscle: "core", equipment: "bodyweight", factor: null },
+  { id: "crunches", name: "Crunches", muscle: "core", equipment: "bodyweight", factor: null , load: 0.3 },
+  { id: "beinheben-haengend", name: "Hängendes Beinheben", muscle: "core", equipment: "bodyweight", factor: null , load: 0.45 },
+  { id: "plank", name: "Plank", muscle: "core", equipment: "bodyweight", factor: null , load: 0 },
+  { id: "side-plank", name: "Side Plank", muscle: "core", equipment: "bodyweight", factor: null , load: 0 },
   { id: "russian-twists", name: "Russian Twists", muscle: "core", equipment: "dumbbell", factor: 0.1 },
   { id: "kabel-crunches", name: "Kabel-Crunches", muscle: "core", equipment: "cable", factor: 0.3 },
-  { id: "ab-wheel", name: "Ab Wheel", muscle: "core", equipment: "bodyweight", factor: null },
+  { id: "ab-wheel", name: "Ab Wheel", muscle: "core", equipment: "bodyweight", factor: null , load: 0.4 },
   { id: "bauchmaschine", name: "Bauchmaschine", muscle: "core", equipment: "machine", factor: 0.35 },
 ];
 

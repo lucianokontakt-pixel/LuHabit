@@ -9,7 +9,7 @@ import { TrainingTabs } from "@/components/training/training-tabs";
 import { ExerciseTrendChart } from "@/components/training/exercise-trend-chart";
 import { useTraining } from "@/lib/training-store";
 import { summarizeProgress, type ProgressSummary } from "@/lib/progression";
-import { MUSCLES, type Muscle } from "@/lib/training";
+import { MUSCLES, workingSets, type Muscle } from "@/lib/training";
 import { formatNumber, formatSigned, formatDateLong } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -119,7 +119,7 @@ export default function ProgressionPage() {
   const summaries = useMemo(() => {
     const trainedIds = new Set<string>();
     for (const session of sessions) {
-      for (const set of session.sets) if (set.done) trainedIds.add(set.exerciseId);
+      for (const set of workingSets(session.sets)) trainedIds.add(set.exerciseId);
     }
     return exercises
       .filter((e) => trainedIds.has(e.id))

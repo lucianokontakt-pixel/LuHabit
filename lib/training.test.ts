@@ -23,6 +23,8 @@ const exercise: Exercise = {
   hidden: false,
   increment: null,
   bodyweightFactor: null,
+  loadFactor: null,
+  warmup: null,
 };
 
 describe("defaultIncrement", () => {

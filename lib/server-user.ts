@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { d1Query, d1InsertMany } from "@/lib/d1";
 import { AUTH_COOKIE, OWNER_USER_ID, authConfigured, readSessionCookie } from "@/lib/auth";
 import { DEFAULT_HABIT_SUGGESTIONS } from "@/lib/habits";
-import { SEED_EXERCISES } from "@/lib/exercise-seed";
+import { SEED_EXERCISES, STARTER_PLAN } from "@/lib/exercise-seed";
 import { nameForIcon } from "@/lib/habits";
 
 export type DbUser = {
@@ -81,8 +81,23 @@ export async function upsertGoogleUser(profile: {
   return { id, email, name: profile.name ?? null, picture: profile.picture ?? null };
 }
 
-/** Standard-Habits, Ziele und die Übungsbibliothek für ein frisches Konto. */
+function newId(prefix: string): string {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * Standard-Habits, Ziele, Übungsbibliothek und Starterplan für ein frisches
+ * Konto. Die Bausteine sind einzeln aufrufbar, weil /api/reset genau denselben
+ * Zustand wiederherstellt — nur eben für ein Konto, das schon existiert.
+ */
 export async function provisionNewUser(userId: string): Promise<void> {
+  await seedHabits(userId);
+  await seedExercises(userId);
+  await seedStarterPlan(userId);
+}
+
+/** Die sechs Standard-Habits samt Zielen. Setzt leere Tabellen voraus. */
+export async function seedHabits(userId: string): Promise<void> {
   const now = new Date();
 
   await d1InsertMany(
@@ -108,13 +123,82 @@ export async function provisionNewUser(userId: string): Promise<void> {
     ["user_id", "habit", "target"],
     DEFAULT_HABIT_SUGGESTIONS.map((habit) => [userId, habit.type, habit.defaultGoal])
   );
+}
 
-  // Jedes Konto bekommt eine eigene Kopie der Bibliothek, damit Ausblenden
-  // und eigene Anpassungen niemanden sonst betreffen.
+/**
+ * Jedes Konto bekommt eine eigene Kopie der Bibliothek, damit Ausblenden
+ * und eigene Anpassungen niemanden sonst betreffen.
+ */
+export async function seedExercises(userId: string): Promise<void> {
   await d1InsertMany(
     "exercises",
-    ["user_id", "id", "name", "muscle", "equipment", "is_custom", "hidden", "bodyweight_factor"],
-    SEED_EXERCISES.map((e) => [userId, e.id, e.name, e.muscle, e.equipment, 0, 0, e.factor])
+    [
+      "user_id",
+      "id",
+      "name",
+      "muscle",
+      "equipment",
+      "is_custom",
+      "hidden",
+      "bodyweight_factor",
+      "load_factor",
+    ],
+    SEED_EXERCISES.map((e) => [
+      userId,
+      e.id,
+      e.name,
+      e.muscle,
+      e.equipment,
+      0,
+      0,
+      e.factor,
+      e.load ?? null,
+    ])
+  );
+}
+
+/**
+ * Push/Pull/Legs als aktiver Startplan. Ohne ihn stünde ein frisches Konto vor
+ * einem leeren Trainingsbereich — der Plan aus schema.sql gehört nur dem Owner.
+ */
+export async function seedStarterPlan(userId: string): Promise<void> {
+  const planId = newId("plan");
+  await d1Query(
+    `INSERT INTO workout_plans (user_id, id, name, is_active, position, weekly_target)
+     VALUES (?, ?, ?, 1, 0, ?)`,
+    [userId, planId, STARTER_PLAN.name, STARTER_PLAN.weeklyTarget]
+  );
+
+  const dayRows: (string | number | null)[][] = [];
+  const exerciseRows: (string | number | null)[][] = [];
+
+  STARTER_PLAN.days.forEach((day, dayIndex) => {
+    const dayId = newId("day");
+    dayRows.push([userId, dayId, planId, day.name, dayIndex, null]);
+    day.exercises.forEach((ex, exIndex) => {
+      exerciseRows.push([
+        userId,
+        newId("pe"),
+        dayId,
+        ex.exerciseId,
+        exIndex,
+        ex.sets,
+        ex.repMin,
+        ex.repMax,
+        ex.rest,
+      ]);
+    });
+  });
+
+  await d1InsertMany(
+    "plan_days",
+    ["user_id", "id", "plan_id", "name", "position", "weekday"],
+    dayRows
+  );
+  await d1InsertMany(
+    "plan_exercises",
+    ["user_id", "id", "day_id", "exercise_id", "position", "sets", "rep_min", "rep_max", "rest_seconds"],
+    exerciseRows
   );
 }
 

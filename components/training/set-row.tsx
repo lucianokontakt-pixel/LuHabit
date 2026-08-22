@@ -8,6 +8,8 @@ export type SessionSet = {
   weight: number;
   reps: number;
   done: boolean;
+  /** Aufwärmsatz: wird protokolliert, zählt aber in keiner Kennzahl mit. */
+  warmup: boolean;
 };
 
 function Stepper({
@@ -57,12 +59,15 @@ function Stepper({
 
 export function SetRow({
   index,
+  label,
   set,
   weightStep,
   onChange,
   onToggleDone,
 }: {
   index: number;
+  /** Was in der Ziffer steht: die Nummer des Arbeitssatzes oder „W". */
+  label: string;
   set: SessionSet;
   weightStep: number;
   onChange: (patch: Partial<SessionSet>) => void;
@@ -75,14 +80,26 @@ export function SetRow({
         set.done ? "bg-blush/40" : "bg-card"
       )}
     >
-      <span
+      {/* Die Ziffer ist zugleich der Schalter für den Aufwärmsatz — die Zeile
+          hat am Handy keinen Platz für einen weiteren Knopf, und die Ziffer
+          selbst hatte bisher keine Aufgabe. */}
+      <button
+        type="button"
+        onClick={() => onChange({ warmup: !set.warmup })}
+        aria-pressed={set.warmup}
+        aria-label={
+          set.warmup
+            ? `Satz ${index + 1} nicht mehr als Aufwärmsatz führen`
+            : `Satz ${index + 1} als Aufwärmsatz markieren`
+        }
         className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-pill text-xs font-medium",
+          "flex size-8 shrink-0 items-center justify-center rounded-pill text-xs font-medium transition-colors",
+          set.warmup && "ring-1 ring-foreground/25",
           set.done ? "bg-blush text-blush-foreground" : "bg-elevated text-muted-foreground"
         )}
       >
-        {index + 1}
-      </span>
+        {label}
+      </button>
 
       <Stepper
         label="Gewicht"

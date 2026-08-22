@@ -11,10 +11,21 @@ const exercise: Exercise = {
   hidden: false,
   increment: null,
   bodyweightFactor: null,
+  loadFactor: null,
+  warmup: null,
 };
 
 function set(overrides: Partial<WorkoutSet>): WorkoutSet {
-  return { id: "s", exerciseId: "bench", setIndex: 0, weight: 0, reps: 0, done: true, ...overrides };
+  return {
+    id: "s",
+    exerciseId: "bench",
+    setIndex: 0,
+    weight: 0,
+    reps: 0,
+    done: true,
+    warmup: false,
+    ...overrides,
+  };
 }
 
 function session(date: string, sets: WorkoutSet[]): WorkoutSession {

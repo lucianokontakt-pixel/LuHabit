@@ -10,6 +10,7 @@ const TABS = [
   { href: "/training/uebungen", label: "Übungen" },
   { href: "/training/progression", label: "Progression" },
   { href: "/training/statistik", label: "Statistik" },
+  { href: "/training/emom", label: "EMOM" },
 ];
 
 export function TrainingTabs() {

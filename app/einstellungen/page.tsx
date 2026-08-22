@@ -2,12 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { Moon, Sun, Laptop, User, Copy, RefreshCw, Download } from "lucide-react";
+import { Moon, Sun, Laptop, User, Copy, RefreshCw, Download, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { ACTIVITY_LEVELS, useBodyProfile } from "@/lib/body-profile";
 
@@ -31,6 +41,46 @@ const THEME_OPTIONS = [
   { value: "system", label: "System", icon: Laptop },
 ] as const;
 
+/**
+ * Die drei Zurücksetzen-Wege. Die Einrichtung steht bewusst getrennt von den
+ * Daten: sie lässt sich ohne Verlust wiederherstellen, ein gelöschter Verlauf
+ * nicht.
+ */
+const RESETS = [
+  {
+    scope: "setup",
+    label: "Einrichtung zurücksetzen",
+    hint: "Standard-Ziele, komplette Übungsbibliothek und der Push/Pull/Legs-Plan — so wie bei einem frisch angelegten Konto.",
+    title: "Einrichtung auf Werkszustand zurücksetzen?",
+    description:
+      "Deine Ziele, Übungen, Trainingspläne und dein Körperprofil gehen auf den Ausgangszustand zurück. Eigene Ziele, Pläne und Übungen verschwinden dabei. Alle Einträge und Trainingseinheiten bleiben vollständig erhalten — auch die zu eigenen Zielen: legst du so ein Ziel erneut an, ist sein Verlauf wieder da.",
+    confirm: "Zurücksetzen",
+    success: "Einrichtung zurückgesetzt",
+  },
+  {
+    scope: "habit-entries",
+    label: "Alle Habit-Einträge löschen",
+    hint: "Jeder eingetragene Wert für Schritte, Wasser, Gewicht, Körperfett und alle weiteren Ziele.",
+    title: "Alle Habit-Einträge löschen?",
+    description:
+      "Sämtliche Tageswerte werden gelöscht — Streaks, Verläufe und Körperkurven sind danach leer. Deine Ziele und Einstellungen bleiben, die Trainingseinheiten auch. Das lässt sich nicht rückgängig machen; exportiere vorher, wenn du sie behalten willst.",
+    confirm: "Einträge löschen",
+    success: "Alle Habit-Einträge gelöscht",
+  },
+  {
+    scope: "training-sessions",
+    label: "Alle Trainingseinheiten löschen",
+    hint: "Der gesamte Trainingsverlauf mit allen protokollierten Sätzen.",
+    title: "Alle Trainingseinheiten löschen?",
+    description:
+      "Jede protokollierte Einheit samt Sätzen wird gelöscht. Progression, Statistik und Bestleistungen fangen danach bei null an, und die Gewichtsvorschläge im Training auch. Deine Pläne und Übungen bleiben. Das lässt sich nicht rückgängig machen.",
+    confirm: "Einheiten löschen",
+    success: "Alle Trainingseinheiten gelöscht",
+  },
+] as const;
+
+type ResetScope = (typeof RESETS)[number]["scope"];
+
 export default function EinstellungenPage() {
   const [me, setMe] = useState<Me | null>(null);
   const { profile, update } = useBodyProfile();
@@ -39,6 +89,8 @@ export default function EinstellungenPage() {
   const [secret, setSecret] = useState<string | null>(null);
   const [secretLoading, setSecretLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [pendingReset, setPendingReset] = useState<ResetScope | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Standardmuster für next-themes Hydration-Fix
@@ -69,6 +121,28 @@ export default function EinstellungenPage() {
       setGenerating(false);
     }
   }
+
+  async function runReset(scope: ResetScope) {
+    const config = RESETS.find((r) => r.scope === scope)!;
+    setResetting(true);
+    try {
+      const res = await fetch("/api/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(config.success);
+      // Vieles hängt an geladenen Client-Zuständen (Habits, Pläne, Einträge) —
+      // ein voller Reload ist hier ehrlicher als ein halb aktualisierter Baum.
+      window.location.reload();
+    } catch {
+      toast.error("Zurücksetzen fehlgeschlagen");
+      setResetting(false);
+    }
+  }
+
+  const pending = RESETS.find((r) => r.scope === pendingReset);
 
   return (
     <div className="flex flex-col gap-7">
@@ -308,6 +382,64 @@ export default function EinstellungenPage() {
           </a>
         </div>
       </Card>
+
+      <Card className="gap-4">
+        <div className="px-(--card-spacing)">
+          <h2 className="text-sm font-medium">Zurücksetzen</h2>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Die Einrichtung und deine Daten sind getrennt. Der erste Knopf stellt den Auslieferungs­zustand
+            her, ohne dass ein einziger Wert verloren geht — die beiden anderen löschen wirklich.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2 px-(--card-spacing)">
+          {RESETS.map((reset) => (
+            <div
+              key={reset.scope}
+              className="flex flex-col gap-2.5 rounded-panel bg-elevated p-3.5 ring-1 ring-foreground/8 sm:flex-row sm:items-center sm:gap-4"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{reset.label}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{reset.hint}</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={resetting}
+                onClick={() => setPendingReset(reset.scope)}
+                className="shrink-0 sm:w-auto"
+              >
+                <RotateCcw className="size-3.5" />
+                {reset.scope === "setup" ? "Zurücksetzen" : "Löschen"}
+              </Button>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <AlertDialog
+        open={pendingReset !== null}
+        onOpenChange={(open) => !open && setPendingReset(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{pending?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{pending?.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const scope = pendingReset;
+                setPendingReset(null);
+                if (scope) runReset(scope);
+              }}
+            >
+              {pending?.confirm}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

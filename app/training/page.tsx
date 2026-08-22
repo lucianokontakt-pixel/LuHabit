@@ -8,13 +8,18 @@ import { buttonVariants } from "@/components/ui/button";
 import { StatValue } from "@/components/stat-value";
 import { TrainingTabs } from "@/components/training/training-tabs";
 import { useTraining } from "@/lib/training-store";
-import { nextDayFor, sessionVolume, MUSCLE_LABELS } from "@/lib/training";
+import { useMetricData } from "@/lib/use-metric-data";
+import { measuredOn, nextDayFor, sessionVolume, MUSCLE_LABELS } from "@/lib/training";
 import { formatCompact, formatDateLong, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { isoDateDaysAgo, todayISO } from "@/lib/habits";
 
 export default function TrainingOverviewPage() {
   const { activePlan, sessions, exerciseById, loading, error } = useTraining();
+  // Eigengewichtsübungen zählen mit dem Körpergewicht vom Tag der Einheit.
+  const { entries: weights } = useMetricData("weight");
+  const volumeOf = (s: (typeof sessions)[number]) =>
+    sessionVolume(s, exerciseById, measuredOn(s.date, weights));
 
   const lastSession = sessions[0];
   const nextDay = useMemo(
@@ -35,7 +40,7 @@ export default function TrainingOverviewPage() {
     sessions.filter((s) => s.date >= mondayISO).map((s) => s.date)
   ).size;
   const weeklyTarget = activePlan?.weeklyTarget ?? null;
-  const weekVolume = weekSessions.reduce((sum, s) => sum + sessionVolume(s), 0);
+  const weekVolume = weekSessions.reduce((sum, s) => sum + volumeOf(s), 0);
   const weekMinutes = weekSessions.reduce(
     (sum, s) => sum + Math.round((s.durationSeconds ?? 0) / 60),
     0
@@ -201,7 +206,10 @@ export default function TrainingOverviewPage() {
               );
               return (
                 <Card key={session.id} size="sm" className="gap-0">
-                  <div className="flex items-center gap-3 px-(--card-spacing)">
+                  <Link
+                    href={`/training/einheit/${session.id}`}
+                    className="flex items-center gap-3 px-(--card-spacing)"
+                  >
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-tile bg-elevated">
                       <Dumbbell className="size-4" />
                     </span>
@@ -214,7 +222,7 @@ export default function TrainingOverviewPage() {
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="nums text-sm">
-                        {formatNumber(Math.round(sessionVolume(session)))} kg
+                        {formatNumber(Math.round(volumeOf(session)))} kg
                       </p>
                       <p className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
                         {session.durationSeconds ? (
@@ -230,7 +238,7 @@ export default function TrainingOverviewPage() {
                         )}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 </Card>
               );
             })}

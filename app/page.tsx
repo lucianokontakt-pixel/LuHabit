@@ -22,6 +22,7 @@ import { AddHabitDialog } from "@/components/add-habit-dialog";
 import { HabitFormDialog, type HabitFormResult } from "@/components/habit-form-dialog";
 import { WeeklyReview } from "@/components/weekly-review";
 import { DayGoalHero } from "@/components/day-goal-hero";
+import { TrainingHabitCard } from "@/components/training-habit-card";
 
 export default function DashboardPage() {
   const { goals, loading, entriesFor, todayValueFor, addDelta, setValue, entries } =
@@ -40,7 +41,9 @@ export default function DashboardPage() {
   });
 
   const isLoading = loading || habitsLoading;
-  const validOrder = order.filter((id) => habits[id]);
+  // Training misst nach Wochen statt nach Tagen und bekommt eine eigene,
+  // größere Karte — es zählt deshalb nicht in die Tagesziele mit ein.
+  const validOrder = order.filter((id) => habits[id] && id !== "training");
   const { displayOrder, draggingId, setItemRef, dragHandlers } = useDragSort(validOrder, reorder);
 
   async function handleEditSubmit(result: HabitFormResult) {
@@ -80,6 +83,12 @@ export default function DashboardPage() {
       {!isLoading && (
         <WeeklyReview order={validOrder} habits={habits} goals={goals} entries={entries} />
       )}
+
+      <TrainingHabitCard
+        manageable={!!habits.training}
+        onEdit={() => setEditingHabit("training")}
+        onDelete={() => setDeletingHabit("training")}
+      />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -149,8 +158,9 @@ export default function DashboardPage() {
               &bdquo;{deletingHabit ? habits[deletingHabit]?.label : ""}&ldquo; löschen?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Die Karte verschwindet vom Dashboard. Bisherige Einträge und der Verlauf werden
-              ebenfalls gelöscht. Das lässt sich nicht rückgängig machen.
+              {deletingHabit === "training"
+                ? "Die Trainingskarte selbst bleibt — sie hängt nicht an diesem Ziel. Nur das zugrunde liegende Minuten-Ziel verschwindet, mit seinem bisherigen Verlauf. Das lässt sich nicht rückgängig machen."
+                : "Die Karte verschwindet vom Dashboard. Bisherige Einträge und der Verlauf werden ebenfalls gelöscht. Das lässt sich nicht rückgängig machen."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

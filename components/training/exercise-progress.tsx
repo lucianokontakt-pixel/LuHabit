@@ -11,7 +11,12 @@ import {
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatValue } from "@/components/stat-value";
-import { estimateOneRepMax, type Exercise, type WorkoutSession } from "@/lib/training";
+import {
+  estimateOneRepMax,
+  workingSets,
+  type Exercise,
+  type WorkoutSession,
+} from "@/lib/training";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +38,7 @@ export function ExerciseProgress({
   const trained = useMemo(() => {
     const ids = new Set<string>();
     for (const session of sessions) {
-      for (const set of session.sets) if (set.done) ids.add(set.exerciseId);
+      for (const set of workingSets(session.sets)) ids.add(set.exerciseId);
     }
     return [...ids]
       .map((id) => exerciseById[id])
@@ -54,10 +59,10 @@ export function ExerciseProgress({
     if (!activeId) return [];
     // sessions kommen absteigend — für den Verlauf brauchen wir sie aufsteigend.
     return [...sessions]
-      .filter((s) => s.sets.some((set) => set.done && set.exerciseId === activeId))
+      .filter((s) => workingSets(s.sets).some((set) => set.exerciseId === activeId))
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((session) => {
-        const sets = session.sets.filter((s) => s.done && s.exerciseId === activeId);
+        const sets = workingSets(session.sets).filter((s) => s.exerciseId === activeId);
         const topWeight = Math.max(...sets.map((s) => s.weight));
         const best = sets.reduce(
           (acc, s) => Math.max(acc, estimateOneRepMax(s.weight, s.reps)),
@@ -145,55 +150,56 @@ export function ExerciseProgress({
             <StatValue label="1RM ≈" value={formatNumber(bestOneRm)} unit="kg" size="sm" />
           </div>
 
-          {history.length > 1 ? (
-            <div className="px-(--card-spacing)">
-              <ChartContainer config={chartConfig} className="h-[200px] w-full">
-                <LineChart data={history} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
-                  <CartesianGrid vertical={false} strokeDasharray="2 4" stroke="var(--border)" />
-                  <XAxis
-                    dataKey="label"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={10}
-                    fontSize={11}
-                    minTickGap={24}
-                    stroke="var(--muted-foreground)"
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    fontSize={11}
-                    width={38}
-                    stroke="var(--muted-foreground)"
-                    domain={["dataMin - 5", "dataMax + 5"]}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent formatter={(v) => `${v} kg`} />} />
-                  <Line
-                    type="monotone"
-                    dataKey="weight"
-                    stroke="var(--color-weight)"
-                    strokeWidth={2}
-                    dot={{ r: 2.5, fill: "var(--background)", strokeWidth: 1.5 }}
-                    activeDot={{ r: 4 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="oneRm"
-                    stroke="var(--color-oneRm)"
-                    strokeWidth={1.5}
-                    strokeDasharray="4 4"
-                    dot={false}
-                  />
-                </LineChart>
-              </ChartContainer>
-            </div>
-          ) : (
-            <p className="px-(--card-spacing) text-sm text-muted-foreground">
-              Eine Einheit reicht noch nicht für einen Verlauf — beim nächsten Mal wird hier eine
-              Kurve daraus.
-            </p>
-          )}
+          {/* Auch mit einer einzigen Einheit stehen Achsen und Raster — der
+              Punkt markiert den Startwert, aus dem die Kurve wird. */}
+          <div className="flex flex-col gap-1 px-(--card-spacing)">
+            <ChartContainer config={chartConfig} className="h-[200px] w-full">
+              <LineChart data={history} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
+                <CartesianGrid vertical={false} strokeDasharray="2 4" stroke="var(--border)" />
+                <XAxis
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  fontSize={11}
+                  minTickGap={24}
+                  stroke="var(--muted-foreground)"
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  fontSize={11}
+                  width={38}
+                  stroke="var(--muted-foreground)"
+                  domain={["dataMin - 5", "dataMax + 5"]}
+                />
+                <ChartTooltip content={<ChartTooltipContent formatter={(v) => `${v} kg`} />} />
+                <Line
+                  type="monotone"
+                  dataKey="weight"
+                  stroke="var(--color-weight)"
+                  strokeWidth={2}
+                  dot={{ r: 2.5, fill: "var(--background)", strokeWidth: 1.5 }}
+                  activeDot={{ r: 4 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="oneRm"
+                  stroke="var(--color-oneRm)"
+                  strokeWidth={1.5}
+                  strokeDasharray="4 4"
+                  dot={false}
+                />
+              </LineChart>
+            </ChartContainer>
+            {history.length < 2 && (
+              <p className="text-center text-xs text-muted-foreground">
+                Eine Einheit reicht noch nicht für einen Verlauf — beim nächsten Mal wird hier eine
+                Kurve daraus.
+              </p>
+            )}
+          </div>
         </>
       )}
     </Card>

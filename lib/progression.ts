@@ -2,6 +2,7 @@ import {
   estimateOneRepMax,
   incrementFor,
   roundToIncrement,
+  workingSets,
   type Exercise,
   type PlanExercise,
   type WorkoutSession,
@@ -42,10 +43,10 @@ export function exerciseHistory(
   sessions: WorkoutSession[]
 ): ProgressPoint[] {
   return [...sessions]
-    .filter((s) => s.sets.some((set) => set.done && set.exerciseId === exerciseId))
+    .filter((s) => workingSets(s.sets).some((set) => set.exerciseId === exerciseId))
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((session) => {
-      const sets = session.sets.filter((s) => s.done && s.exerciseId === exerciseId);
+      const sets = workingSets(session.sets).filter((s) => s.exerciseId === exerciseId);
       const topWeight = Math.max(...sets.map((s) => s.weight));
       const atTop = sets.filter((s) => s.weight === topWeight);
       return {

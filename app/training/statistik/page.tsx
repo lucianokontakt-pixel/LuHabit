@@ -1,18 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { ChevronRight, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatValue } from "@/components/stat-value";
 import { TrainingTabs } from "@/components/training/training-tabs";
-import { MuscleVolume } from "@/components/training/muscle-volume";
+import { MuscleGrid } from "@/components/training/muscle-grid";
 import { TrainingCalendar } from "@/components/training/training-calendar";
 import { ExerciseProgress } from "@/components/training/exercise-progress";
 import { useTraining } from "@/lib/training-store";
-import { MUSCLES, sessionVolume, type Muscle } from "@/lib/training";
+import { useMetricData } from "@/lib/use-metric-data";
+import { measuredOn, sessionVolume, workingSets } from "@/lib/training";
+import { muscleProgress, weekStartISO } from "@/lib/muscle-stats";
+import { summarizeSession } from "@/lib/session-stats";
 import { formatCompact, formatDateLong, formatNumber } from "@/lib/format";
 import { isoDateDaysAgo } from "@/lib/habits";
 
@@ -25,8 +29,15 @@ const RANGES: { key: Range; label: string; days: number | null; caption: string 
   { key: "all", label: "Alles", days: null, caption: "Gesamter Verlauf" },
 ];
 
+/** Wie viele Kalenderwochen überhaupt Einheiten enthalten — für „Alles". */
+function uniqueWeeks(sessions: { date: string }[]): string[] {
+  return [...new Set(sessions.map((s) => weekStartISO(s.date)))];
+}
+
 export default function TrainingStatsPage() {
-  const { sessions, exerciseById, removeSession, loading } = useTraining();
+  const { sessions, exerciseById, activePlan, removeSession, loading } = useTraining();
+  // Eigengewichtsübungen zählen mit dem Körpergewicht vom Tag der Einheit.
+  const { entries: weights } = useMetricData("weight");
   const [range, setRange] = useState<Range>("month");
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -45,23 +56,57 @@ export default function TrainingStatsPage() {
     return sessions.filter((s) => s.date >= start && s.date <= end);
   }, [sessions, config.days]);
 
-  const volume = inRange.reduce((sum, s) => sum + sessionVolume(s), 0);
-  const previousVolume = previousWindow.reduce((sum, s) => sum + sessionVolume(s), 0);
-  const totalSets = inRange.reduce((sum, s) => sum + s.sets.filter((x) => x.done).length, 0);
+  const volumeOf = (s: (typeof sessions)[number]) =>
+    sessionVolume(s, exerciseById, measuredOn(s.date, weights));
+  const volume = inRange.reduce((sum, s) => sum + volumeOf(s), 0);
+  const previousVolume = previousWindow.reduce((sum, s) => sum + volumeOf(s), 0);
+  const totalSets = inRange.reduce((sum, s) => sum + workingSets(s.sets).length, 0);
   const minutes = inRange.reduce((sum, s) => sum + Math.round((s.durationSeconds ?? 0) / 60), 0);
+  const totalReps = inRange.reduce(
+    (sum, s) => sum + workingSets(s.sets).reduce((acc, x) => acc + x.reps, 0),
+    0
+  );
 
-  const volumeByMuscle = useMemo(() => {
-    const map = Object.fromEntries(MUSCLES.map((m) => [m.key, 0])) as Record<Muscle, number>;
+  // Wie viele Wochen der Zeitraum umfasst — Grundlage für alles "pro Woche".
+  const weeksInRange =
+    config.days === null
+      ? Math.max(1, uniqueWeeks(sessions).length)
+      : Math.max(1, config.days / 7);
+  const setsPerWeek = totalSets / weeksInRange;
+  const density = minutes > 0 ? volume / minutes : null;
+
+  // Bestleistungen im Zeitraum: jede Einheit gegen alles, was vor ihr liegt.
+  const recordCount = useMemo(
+    () =>
+      inRange.reduce(
+        (sum, session) =>
+          sum + summarizeSession(session, sessions, exerciseById, weights).records.length,
+        0
+      ),
+    [inRange, sessions, exerciseById, weights]
+  );
+
+  // Konsistenz: Wochen im Zeitraum, in denen das Wochenziel des aktiven Plans
+  // erreicht wurde. Ohne Ziel gibt es nichts zu messen.
+  const weeklyTarget = activePlan?.weeklyTarget ?? null;
+  const consistency = useMemo(() => {
+    if (!weeklyTarget) return null;
+    const perWeek = new Map<string, Set<string>>();
     for (const session of inRange) {
-      for (const set of session.sets) {
-        if (!set.done) continue;
-        const muscle = exerciseById[set.exerciseId]?.muscle;
-        if (!muscle) continue;
-        map[muscle] += set.weight * set.reps;
-      }
+      const week = weekStartISO(session.date);
+      const days = perWeek.get(week) ?? new Set<string>();
+      days.add(session.date);
+      perWeek.set(week, days);
     }
-    return map;
-  }, [inRange, exerciseById]);
+    const hit = [...perWeek.values()].filter((days) => days.size >= weeklyTarget).length;
+    return { hit, weeks: Math.round(weeksInRange) };
+  }, [inRange, weeklyTarget, weeksInRange]);
+
+  const progress = useMemo(
+    () =>
+      muscleProgress(sessions, exerciseById, config.days === 7 ? 8 : 12, new Date(), weights),
+    [sessions, exerciseById, config.days, weights]
+  );
 
   async function handleDelete(id: string) {
     setDeleting(id);
@@ -139,7 +184,52 @@ export default function TrainingStatsPage() {
             </Card>
           </div>
 
-          <MuscleVolume volumeByMuscle={volumeByMuscle} rangeLabel={config.caption} />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Card size="sm" className="gap-0">
+              <div className="px-(--card-spacing)">
+                <StatValue label="Wiederholungen" value={formatCompact(totalReps)} />
+                <p className="mt-1 text-[11px] text-muted-foreground">insgesamt</p>
+              </div>
+            </Card>
+            <Card size="sm" className="gap-0">
+              <div className="px-(--card-spacing)">
+                <StatValue
+                  label="Sätze pro Woche"
+                  value={formatNumber(Math.round(setsPerWeek * 10) / 10)}
+                />
+                <p className="mt-1 text-[11px] text-muted-foreground">über alle Muskeln</p>
+              </div>
+            </Card>
+            <Card size="sm" className="gap-0">
+              <div className="px-(--card-spacing)">
+                <StatValue
+                  label="Dichte"
+                  value={density !== null ? formatNumber(Math.round(density)) : "—"}
+                  unit={density !== null ? "kg/min" : undefined}
+                />
+                <p className="mt-1 text-[11px] text-muted-foreground">Volumen je Minute</p>
+              </div>
+            </Card>
+            <Card size="sm" className="gap-0">
+              <div className="px-(--card-spacing)">
+                <StatValue label="Bestleistungen" value={String(recordCount)} />
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {consistency
+                    ? `${consistency.hit}/${consistency.weeks} Wochen im Ziel`
+                    : "neue Rekorde"}
+                </p>
+              </div>
+            </Card>
+          </div>
+
+          {/* Ohne diesen Satz wirkt der Sprung im Volumen wie ein Fehler. */}
+          <p className="-mt-3 text-xs text-muted-foreground">
+            Gezählt werden Arbeitssätze — Aufwärmsätze bleiben außen vor. Übungen mit dem eigenen
+            Körper (Klimmzüge, Dips, Liegestütze) gehen mit dem Anteil deines Körpergewichts ins
+            Volumen ein, den sie tatsächlich bewegen.
+          </p>
+
+          <MuscleGrid progress={progress} />
 
           <TrainingCalendar sessions={sessions} months={3} />
 
@@ -160,18 +250,28 @@ export default function TrainingStatsPage() {
               <div className="flex flex-col gap-2">
                 {inRange.map((session) => (
                   <Card key={session.id} size="sm" className="gap-0">
-                    <div className="flex items-center gap-3 px-(--card-spacing)">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{session.dayName}</p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {formatDateLong(session.date)} ·{" "}
-                          {session.sets.filter((s) => s.done).length} Sätze ·{" "}
-                          {formatNumber(Math.round(sessionVolume(session)))} kg
-                          {session.durationSeconds
-                            ? ` · ${Math.round(session.durationSeconds / 60)} min`
-                            : ""}
-                        </p>
-                      </div>
+                    <div className="flex items-center gap-2 px-(--card-spacing)">
+                      {/* Die Zeile führt zur Einheit — dort steht dieselbe
+                          Übersicht wie direkt nach dem Training, samt Bearbeiten. */}
+                      <Link
+                        href={`/training/einheit/${session.id}`}
+                        className="group flex min-w-0 flex-1 items-center gap-2"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium">
+                            {session.dayName}
+                          </span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {formatDateLong(session.date)} ·{" "}
+                            {workingSets(session.sets).length} Sätze ·{" "}
+                            {formatNumber(Math.round(volumeOf(session)))} kg
+                            {session.durationSeconds
+                              ? ` · ${Math.round(session.durationSeconds / 60)} min`
+                              : ""}
+                          </span>
+                        </span>
+                        <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+                      </Link>
                       <Button
                         variant="ghost"
                         size="icon-sm"

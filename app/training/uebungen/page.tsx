@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Eye, EyeOff, Plus, Search, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TrainingTabs } from "@/components/training/training-tabs";
 import { ExercisePicker } from "@/components/training/exercise-picker";
+import { ExerciseEditor } from "@/components/training/exercise-editor";
 import { useTraining } from "@/lib/training-store";
 import { deleteExercise, updateExercise } from "@/lib/api-training";
 import {
@@ -15,6 +16,7 @@ import {
   MUSCLES,
   defaultIncrement,
   type Equipment,
+  type Exercise,
   type Muscle,
 } from "@/lib/training";
 import { cn } from "@/lib/utils";
@@ -28,6 +30,7 @@ export default function ExercisesPage() {
   const [equipment, setEquipment] = useState<Equipment | "all">("all");
   const [showHidden, setShowHidden] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<Exercise | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -212,10 +215,25 @@ export default function ExercisesPage() {
                       <p className="truncate text-sm">{exercise.name}</p>
                       <p className="truncate text-xs text-muted-foreground">
                         {EQUIPMENT_LABELS[exercise.equipment]}
+                        {exercise.increment !== null && ` · ${exercise.increment} kg Sprung`}
+                        {/* Der Lastanteil erklärt, warum eine Übung ohne Hantel
+                            überhaupt Volumen erzeugt. */}
+                        {exercise.loadFactor !== null &&
+                          exercise.loadFactor > 0 &&
+                          ` · ${Math.round(exercise.loadFactor * 100)} % Last`}
                         {exercise.isCustom && " · eigene"}
                         {exercise.hidden && " · ausgeblendet"}
                       </p>
                     </div>
+
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setEditing(exercise)}
+                      aria-label={`${exercise.name} bearbeiten`}
+                    >
+                      <Pencil />
+                    </Button>
 
                     <Button
                       variant="ghost"
@@ -256,6 +274,11 @@ export default function ExercisesPage() {
         onOpenChange={setCreating}
         onPick={() => setCreating(false)}
         initialCreate
+      />
+
+      <ExerciseEditor
+        exercise={editing}
+        onOpenChange={(open) => !open && setEditing(null)}
       />
     </div>
   );
