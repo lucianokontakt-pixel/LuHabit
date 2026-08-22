@@ -10,7 +10,7 @@
  * fliegen alle Caches mit anderem Namen raus.
  */
 
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC_CACHE = `luhabit-static-${VERSION}`;
 const PAGE_CACHE = `luhabit-pages-${VERSION}`;
 const KEEP = [STATIC_CACHE, PAGE_CACHE];
@@ -118,6 +118,13 @@ self.addEventListener("fetch", (event) => {
   // Der Anmeldefluss lebt von echten Weiterleitungen und Cookies — der darf
   // nie aus dem Cache kommen.
   if (url.pathname.startsWith("/api/auth/")) return;
+
+  // Der Abgleich erst recht nicht. Eine Antwort aus dem Cache brächte einen
+  // alten Cursor und einen alten Bestand — das Gerät würde einen längst
+  // überholten Stand übernehmen und im schlimmsten Fall neuere lokale Daten
+  // damit überschreiben. Ohne Netz soll dieser Aufruf ehrlich scheitern; die
+  // App arbeitet dann einfach mit dem weiter, was lokal liegt.
+  if (url.pathname === "/api/sync") return;
 
   if (isImmutable(url)) {
     event.respondWith(cacheFirst(request, STATIC_CACHE));
