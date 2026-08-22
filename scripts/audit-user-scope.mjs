@@ -27,6 +27,17 @@ const SOFT_DELETED = [
   "workout_plans", "workout_sessions", "emom_templates",
 ];
 
+/**
+ * Die eine Stelle, die Grabsteine lesen MUSS: der Abgleich teilt dem Handy
+ * damit mit, dass eine Zeile gelöscht wurde. Bliebe sie aus, hielte das Handy
+ * sie für unverändert und behielte sie für immer.
+ *
+ * Bewusst eine Datei-Ausnahme und keine Erkennung am SQL: "erwähnt deleted_at"
+ * wäre als Regel wertlos, weil jedes SELECT die Spalte einfach mitauswählen
+ * und die Prüfung so aushebeln könnte.
+ */
+const READS_TOMBSTONES = ["app/api/sync/route.ts"];
+
 const files = globSync("app/api/**/route.ts");
 const missingUser = [];
 const missingTombstone = [];
@@ -49,7 +60,8 @@ for (const file of files) {
     // ihn naturgemäß nicht ausfiltern.
     const reads = /\bSELECT\b/i.test(sql) && !/\b(INSERT|UPDATE|DELETE)\b/i.test(sql);
     const touchesSoftDeleted = SOFT_DELETED.some((t) => new RegExp(`\\bFROM\\s+${t}\\b`, "i").test(sql));
-    if (reads && touchesSoftDeleted && !sql.includes("deleted_at")) {
+    const exempt = READS_TOMBSTONES.includes(file.replaceAll("\\", "/"));
+    if (reads && touchesSoftDeleted && !exempt && !sql.includes("deleted_at IS NULL")) {
       missingTombstone.push(excerpt);
     }
   }
@@ -71,4 +83,6 @@ if (missingTombstone.length > 0) {
 if (failed) process.exit(1);
 
 console.log("alle tragen einen user_id-Filter");
-console.log("alle SELECTs auf weich gelöschten Tabellen filtern Grabsteine");
+console.log(
+  `alle SELECTs auf weich gelöschten Tabellen filtern Grabsteine (Ausnahme: ${READS_TOMBSTONES.join(", ")})`
+);
