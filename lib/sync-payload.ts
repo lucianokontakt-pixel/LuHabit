@@ -1,0 +1,352 @@
+/**
+ * Die Antwort von /api/sync in das übersetzen, was die App ohnehin benutzt.
+ *
+ * Bewusst ohne IndexedDB und ohne fetch: hier steckt die Logik, die still
+ * falsch sein kann — Kindzeilen dem richtigen Elternteil zuordnen, Grabsteine
+ * von echten Datensätzen trennen, kaputte JSON-Spalten überleben. Das gehört
+ * unter Tests. Der Speicher drumherum ist eine dünne Hülle.
+ *
+ * Grundsatz bei kaputten Daten: eine unlesbare Zeile darf niemals den ganzen
+ * Abgleich scheitern lassen. Ein Habit mit zerschossenem quick_add kommt lieber
+ * mit Standardwerten an, als dass 500 andere Datensätze nicht ankommen.
+ */
+
+import type { HabitKind } from "@/lib/habits";
+import type { EmomStep, EmomTemplate } from "@/lib/emom";
+import type {
+  Equipment,
+  Muscle,
+  PlanDay,
+  PlanExercise,
+  WorkoutPlan,
+  WorkoutSession,
+  WorkoutSet,
+} from "@/lib/training";
+
+type Row = Record<string, unknown>;
+
+export type StoredEntry = { habit: string; date: string; value: number };
+export type StoredGoal = { habit: string; target: number; weeklyTarget: number | null };
+export type StoredHabit = {
+  id: string;
+  label: string;
+  unit: string;
+  icon: string;
+  defaultGoal: number;
+  quickAdd: number[];
+  step: number;
+  kind: HabitKind;
+};
+export type StoredExercise = {
+  id: string;
+  name: string;
+  muscle: Muscle;
+  equipment: Equipment;
+  isCustom: boolean;
+  hidden: boolean;
+  increment: number | null;
+  bodyweightFactor: number | null;
+  loadFactor: number | null;
+  warmup: "always" | "never" | null;
+};
+export type StoredBodyProfile = {
+  age: number | null;
+  gender: string | null;
+  height: number | null;
+  activity: string | null;
+};
+
+/**
+ * Was der Abgleich geliefert hat, sortiert nach "einsortieren" und "entfernen".
+ * Die Schlüssel in `removed` sind dieselben, unter denen die Datensätze
+ * gespeichert liegen — bei Einträgen also habit|datum, sonst die ID.
+ */
+export type SyncSnapshot = {
+  cursor: string;
+  full: boolean;
+  entries: StoredEntry[];
+  goals: StoredGoal[];
+  habits: StoredHabit[];
+  exercises: StoredExercise[];
+  plans: WorkoutPlan[];
+  sessions: WorkoutSession[];
+  emom: EmomTemplate[];
+  bodyProfile: StoredBodyProfile | null;
+  removed: {
+    entries: string[];
+    goals: string[];
+    habits: string[];
+    exercises: string[];
+    plans: string[];
+    sessions: string[];
+    emom: string[];
+  };
+};
+
+/** Der Schlüssel, unter dem ein Eintrag liegt: ein Habit an einem Tag. */
+export function entryKey(habit: string, date: string): string {
+  return `${habit}|${date}`;
+}
+
+function str(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function num(value: unknown, fallback = 0): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function numOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function bool(value: unknown): boolean {
+  return value === 1 || value === true;
+}
+
+function isDeleted(row: Row): boolean {
+  return row.deleted_at !== null && row.deleted_at !== undefined;
+}
+
+/** Zahlenliste aus einer JSON-Spalte. Unlesbares ergibt die Rückfallliste. */
+function numberList(value: unknown, fallback: number[]): number[] {
+  if (Array.isArray(value)) {
+    const list = value.map((v) => Number(v)).filter((n) => Number.isFinite(n));
+    return list.length > 0 ? list : fallback;
+  }
+  if (typeof value !== "string") return fallback;
+  try {
+    return numberList(JSON.parse(value), fallback);
+  } catch {
+    return fallback;
+  }
+}
+
+function emomSteps(value: unknown): EmomStep[] {
+  const raw = typeof value === "string" ? safeParse(value) : value;
+  if (!Array.isArray(raw)) return [];
+  const steps: EmomStep[] = [];
+  for (const item of raw) {
+    if (typeof item !== "object" || item === null) continue;
+    const step = item as Row;
+    steps.push({
+      seconds: num(step.seconds, 60),
+      reps: numOrNull(step.reps),
+      label: str(step.label),
+    });
+  }
+  return steps;
+}
+
+function safeParse(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Teilt eine Liste Rohzeilen in lebende und gelöschte. `key` bestimmt, unter
+ * welchem Schlüssel ein gelöschter Datensatz zu entfernen ist.
+ */
+function split<T>(
+  rows: Row[],
+  key: (row: Row) => string,
+  map: (row: Row) => T
+): { live: T[]; removed: string[] } {
+  const live: T[] = [];
+  const removed: string[] = [];
+  for (const row of rows) {
+    if (isDeleted(row)) removed.push(key(row));
+    else live.push(map(row));
+  }
+  return { live, removed };
+}
+
+function toPlanExercise(row: Row): PlanExercise {
+  return {
+    id: str(row.id),
+    exerciseId: str(row.exercise_id),
+    position: num(row.position),
+    sets: num(row.sets, 3),
+    repMin: num(row.rep_min, 8),
+    repMax: num(row.rep_max, 12),
+    restSeconds: num(row.rest_seconds, 120),
+    increment: numOrNull(row.increment),
+    startWeight: numOrNull(row.start_weight),
+  };
+}
+
+function toWorkoutSet(row: Row): WorkoutSet {
+  return {
+    id: str(row.id),
+    exerciseId: str(row.exercise_id),
+    setIndex: num(row.set_index),
+    weight: num(row.weight),
+    reps: num(row.reps),
+    done: bool(row.done),
+    warmup: bool(row.warmup),
+  };
+}
+
+/** Die Kindzeilen nach ihrem Elternteil gruppieren. */
+function groupBy<T>(rows: Row[], parent: (row: Row) => string, map: (row: Row) => T) {
+  const byParent = new Map<string, T[]>();
+  for (const row of rows) {
+    const id = parent(row);
+    const list = byParent.get(id) ?? [];
+    list.push(map(row));
+    byParent.set(id, list);
+  }
+  return byParent;
+}
+
+export function readSyncPayload(payload: unknown): SyncSnapshot {
+  const p = (payload ?? {}) as Row;
+  const rows = (key: string): Row[] => (Array.isArray(p[key]) ? (p[key] as Row[]) : []);
+
+  const entries = split(
+    rows("entries"),
+    (r) => entryKey(str(r.habit), str(r.date)),
+    (r): StoredEntry => ({ habit: str(r.habit), date: str(r.date), value: num(r.value) })
+  );
+
+  const goals = split(
+    rows("goals"),
+    (r) => str(r.habit),
+    (r): StoredGoal => ({
+      habit: str(r.habit),
+      target: num(r.target),
+      weeklyTarget: numOrNull(r.weekly_target),
+    })
+  );
+
+  const habits = split(
+    rows("habits"),
+    (r) => str(r.id),
+    (r): StoredHabit => ({
+      id: str(r.id),
+      label: str(r.label),
+      unit: str(r.unit),
+      icon: str(r.icon, "Target"),
+      defaultGoal: num(r.default_goal, 1),
+      quickAdd: numberList(r.quick_add, [1]),
+      step: num(r.step, 1),
+      kind: r.kind === "toggle" ? "toggle" : "counter",
+    })
+  );
+
+  const exercises = split(
+    rows("exercises"),
+    (r) => str(r.id),
+    (r): StoredExercise => ({
+      id: str(r.id),
+      name: str(r.name),
+      muscle: str(r.muscle) as Muscle,
+      equipment: str(r.equipment) as Equipment,
+      isCustom: bool(r.is_custom),
+      hidden: bool(r.hidden),
+      increment: numOrNull(r.increment),
+      bodyweightFactor: numOrNull(r.bodyweight_factor),
+      loadFactor: numOrNull(r.load_factor),
+      warmup: r.warmup === "always" || r.warmup === "never" ? r.warmup : null,
+    })
+  );
+
+  // Pläne sind Dokumente: Tage hängen am Plan, Übungen am Tag.
+  const exercisesByDay = groupBy(rows("planExercises"), (r) => str(r.day_id), toPlanExercise);
+  const daysByPlan = groupBy(
+    rows("planDays"),
+    (r) => str(r.plan_id),
+    (r): PlanDay => ({
+      id: str(r.id),
+      name: str(r.name),
+      position: num(r.position),
+      weekday: numOrNull(r.weekday),
+      exercises: (exercisesByDay.get(str(r.id)) ?? []).sort((a, b) => a.position - b.position),
+    })
+  );
+
+  const plans = split(
+    rows("plans"),
+    (r) => str(r.id),
+    (r): WorkoutPlan => ({
+      id: str(r.id),
+      name: str(r.name),
+      isActive: bool(r.is_active),
+      position: num(r.position),
+      weeklyTarget: numOrNull(r.weekly_target),
+      days: (daysByPlan.get(str(r.id)) ?? []).sort((a, b) => a.position - b.position),
+    })
+  );
+
+  const setsBySession = groupBy(rows("sets"), (r) => str(r.session_id), toWorkoutSet);
+
+  const sessions = split(
+    rows("sessions"),
+    (r) => str(r.id),
+    (r): WorkoutSession => ({
+      id: str(r.id),
+      planId: r.plan_id === null || r.plan_id === undefined ? null : str(r.plan_id),
+      dayId: r.day_id === null || r.day_id === undefined ? null : str(r.day_id),
+      dayName: str(r.day_name, "Training"),
+      date: str(r.date),
+      durationSeconds: numOrNull(r.duration_seconds),
+      note: r.note === null || r.note === undefined ? null : str(r.note),
+      sets: (setsBySession.get(str(r.id)) ?? []).sort((a, b) => a.setIndex - b.setIndex),
+    })
+  );
+
+  const emom = split(
+    rows("emom"),
+    (r) => str(r.id),
+    (r): EmomTemplate => ({
+      id: str(r.id),
+      name: str(r.name),
+      prepareSeconds: num(r.prepare_seconds, 10),
+      rounds: num(r.rounds, 10),
+      steps: emomSteps(r.steps),
+      restSeconds: num(r.rest_seconds),
+      position: num(r.position),
+    })
+  );
+
+  const profileRow = (p.bodyProfile ?? null) as Row | null;
+
+  return {
+    cursor: str(p.now),
+    full: p.full === true,
+    entries: entries.live,
+    goals: goals.live,
+    habits: habits.live,
+    exercises: exercises.live,
+    plans: plans.live,
+    sessions: sessions.live,
+    emom: emom.live,
+    bodyProfile: profileRow
+      ? {
+          age: numOrNull(profileRow.age),
+          gender: profileRow.gender === null || profileRow.gender === undefined
+            ? null
+            : str(profileRow.gender),
+          height: numOrNull(profileRow.height),
+          activity: profileRow.activity === null || profileRow.activity === undefined
+            ? null
+            : str(profileRow.activity),
+        }
+      : null,
+    removed: {
+      entries: entries.removed,
+      goals: goals.removed,
+      habits: habits.removed,
+      exercises: exercises.removed,
+      plans: plans.removed,
+      sessions: sessions.removed,
+      emom: emom.removed,
+    },
+  };
+}

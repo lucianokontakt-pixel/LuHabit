@@ -11,6 +11,10 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // Die Skripte unter scripts/ laufen direkt in Node, das die Dateiendung
+    // beim Import braucht. Mit noEmit ist die Option unbedenklich — sie
+    // erlaubt nur die Schreibweise, an der Ausgabe ändert sich nichts.
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "incremental": true,
     "plugins": [

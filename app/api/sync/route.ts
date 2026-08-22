@@ -26,6 +26,13 @@ import { currentUserId } from "@/lib/server-user";
  *     Sekunde wie der Cursor wäre bei > für immer verloren. Bei >= kommt ein
  *     Datensatz gelegentlich doppelt — das ist folgenlos, weil das Handy ihn
  *     ohnehin nach ID einsortiert. Doppelt ist harmlos, fehlend nicht.
+ *
+ *  3. Ein leeres updated_at zählt als "uralt", nicht als "nie". In SQL ergibt
+ *     NULL >= irgendwas nämlich NULL, also unwahr — eine Zeile ohne Stempel
+ *     wäre unsichtbar, und zwar dauerhaft, auch beim vollständigen Abgleich.
+ *     Solche Zeilen entstehen, solange noch eine ältere Fassung der App auf
+ *     dieselbe Datenbank schreibt. Genau so ist beim Bauen ein Habit
+ *     verschwunden, das über die Live-App angelegt worden war.
  */
 
 const UNAUTHORIZED = { error: "Nicht angemeldet" };
@@ -75,43 +82,43 @@ export async function GET(req: NextRequest) {
   const [entries, goals, habits, exercises, plans, sessions, emom, bodyProfile] = await Promise.all([
     d1Query<Row>(
       `SELECT habit, date, value, deleted_at
-         FROM entries WHERE user_id = ? AND updated_at >= ? ORDER BY date ASC`,
+         FROM entries WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ? ORDER BY date ASC`,
       [userId, since]
     ),
     d1Query<Row>(
       `SELECT habit, target, weekly_target, deleted_at
-         FROM goals WHERE user_id = ? AND updated_at >= ?`,
+         FROM goals WHERE user_id = ? AND COALESCE(updated_at, '0000-01-01 00:00:00') >= ?`,
       [userId, since]
     ),
     d1Query<Row>(
       `SELECT id, label, unit, icon, default_goal, quick_add, step, kind, deleted_at
-         FROM custom_habits WHERE user_id = ? AND updated_at >= ? ORDER BY created_at ASC`,
+         FROM custom_habits WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ? ORDER BY created_at ASC`,
       [userId, since]
     ),
     d1Query<Row>(
       `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor,
               load_factor, warmup, deleted_at
-         FROM exercises WHERE user_id = ? AND updated_at >= ?`,
+         FROM exercises WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ?`,
       [userId, since]
     ),
     d1Query<Row>(
       `SELECT id, name, is_active, position, weekly_target, deleted_at
-         FROM workout_plans WHERE user_id = ? AND updated_at >= ? ORDER BY position ASC`,
+         FROM workout_plans WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ? ORDER BY position ASC`,
       [userId, since]
     ),
     d1Query<Row>(
       `SELECT id, plan_id, day_id, day_name, date, duration_seconds, note, deleted_at
-         FROM workout_sessions WHERE user_id = ? AND updated_at >= ? ORDER BY date DESC`,
+         FROM workout_sessions WHERE user_id = ? AND COALESCE(updated_at, started_at, '0000-01-01 00:00:00') >= ? ORDER BY date DESC`,
       [userId, since]
     ),
     d1Query<Row>(
       `SELECT id, name, prepare_seconds, rounds, steps, rest_seconds, position, deleted_at
-         FROM emom_templates WHERE user_id = ? AND updated_at >= ? ORDER BY position ASC`,
+         FROM emom_templates WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ? ORDER BY position ASC`,
       [userId, since]
     ),
     d1Query<Row>(
       `SELECT age, gender, height, activity, updated_at
-         FROM body_profile WHERE user_id = ? AND updated_at >= ?`,
+         FROM body_profile WHERE user_id = ? AND COALESCE(updated_at, '0000-01-01 00:00:00') >= ?`,
       [userId, since]
     ),
   ]);
