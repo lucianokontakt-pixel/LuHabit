@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -43,7 +43,17 @@ export default function DashboardPage() {
   const isLoading = loading || habitsLoading;
   // Training misst nach Wochen statt nach Tagen und bekommt eine eigene,
   // größere Karte — es zählt deshalb nicht in die Tagesziele mit ein.
-  const validOrder = order.filter((id) => habits[id] && id !== "training");
+  //
+  // useMemo statt eines einfachen .filter(): ohne das bekäme useDragSort bei
+  // jedem Tippen auf +5 (das nur den heutigen Wert ändert, nie die
+  // Reihenfolge) ein neues Array-Objekt mit identischem Inhalt — genug, um
+  // seinen internen Effekt auszulösen, der für jede Karte im Grid
+  // getBoundingClientRect() aufruft. Dieses erzwungene Neu-Layout des ganzen
+  // Grids bei jedem einzelnen Tap war das Flackern und leichte Verspringen.
+  const validOrder = useMemo(
+    () => order.filter((id) => habits[id] && id !== "training"),
+    [order, habits]
+  );
   const { displayOrder, draggingId, setItemRef, dragHandlers } = useDragSort(validOrder, reorder);
 
   async function handleEditSubmit(result: HabitFormResult) {
