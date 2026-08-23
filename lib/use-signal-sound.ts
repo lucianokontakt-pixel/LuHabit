@@ -26,21 +26,15 @@ const TONES: Record<Signal, { frequency: number; duration: number }[]> = {
  * Download und funktioniert offline. Der AudioContext wird erst beim ersten
  * Nutzer-Tap erzeugt und entsperrt — vorher blockieren Browser jede Tonausgabe.
  *
- * Der Ton läuft über ein unsichtbares <video>-Element statt direkt zum
- * Lautsprecher: iOS Safari hält sich bei reinem Web-Audio-Ton an den
- * Stummschalter am Gehäuse, bei einem Video mit Ton dagegen nicht (genauso
- * bei YouTube in Safari). Ein MediaStreamAudioDestinationNode nimmt das
- * Ergebnis der Sinusrampen ab und speist es als "Video" ein — der erzeugte
- * Ton bleibt exakt derselbe, nur der Ausgang ändert sich. Das ist ein
- * bekannter, nicht von Apple dokumentierter Kniff und kann mit einer
- * iOS-Version aufhören zu funktionieren; ohne ihn bliebe der Ton bei
- * aktiviertem Stummschalter aber so oder so aus.
+ * Ein Umweg über ein <video>-Element (um iOS' Stummschalter zu umgehen, wie
+ * bei YouTube) wurde ausprobiert, klang aber hörbar schlechter — der Ton lief
+ * dabei durch die Videowiedergabe-Pipeline statt direkt raus. Zurück auf den
+ * direkten Weg zu ctx.destination; der Ton respektiert dafür wieder den
+ * Stummschalter.
  */
 export function useSignalSound() {
   const [enabled, setEnabled] = useState(true);
   const contextRef = useRef<AudioContext | null>(null);
-  const destinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     try {
@@ -77,32 +71,9 @@ export function useSignalSound() {
           window.AudioContext ??
           (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
         if (!Ctor) return;
-        const ctx = new Ctor();
-        contextRef.current = ctx;
-        destinationRef.current = ctx.createMediaStreamDestination();
-
-        const video = document.createElement("video");
-        video.srcObject = destinationRef.current.stream;
-        video.muted = false;
-        video.playsInline = true;
-        video.setAttribute("playsinline", "true");
-        // Unsichtbar, aber nicht display:none — manche Browser pausieren
-        // Medien, die gar nicht gerendert werden.
-        Object.assign(video.style, {
-          position: "fixed",
-          width: "1px",
-          height: "1px",
-          opacity: "0",
-          pointerEvents: "none",
-        });
-        document.body.appendChild(video);
-        videoRef.current = video;
+        contextRef.current = new Ctor();
       }
       if (contextRef.current.state === "suspended") void contextRef.current.resume();
-      void videoRef.current?.play().catch(() => {
-        // Kein Video-Ton möglich — play() greift dann direkt auf den
-        // AudioContext zu, der Ton respektiert in dem Fall den Stummschalter.
-      });
     } catch {
       // Ohne Audio läuft der Timer trotzdem — die Vibration bleibt.
     }
@@ -113,7 +84,6 @@ export function useSignalSound() {
       if (!enabled) return;
       const ctx = contextRef.current;
       if (!ctx || ctx.state !== "running") return;
-      const output = destinationRef.current ?? ctx.destination;
 
       let offset = 0;
       for (const tone of TONES[signal]) {
@@ -129,7 +99,7 @@ export function useSignalSound() {
         gain.gain.setValueAtTime(0.28, startAt + tone.duration - 0.03);
         gain.gain.linearRampToValueAtTime(0, startAt + tone.duration);
 
-        oscillator.connect(gain).connect(output);
+        oscillator.connect(gain).connect(ctx.destination);
         oscillator.start(startAt);
         oscillator.stop(startAt + tone.duration);
         offset += tone.duration + 0.05;
@@ -142,9 +112,6 @@ export function useSignalSound() {
     return () => {
       void contextRef.current?.close();
       contextRef.current = null;
-      destinationRef.current = null;
-      videoRef.current?.remove();
-      videoRef.current = null;
     };
   }, []);
 
