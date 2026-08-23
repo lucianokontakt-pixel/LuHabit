@@ -96,24 +96,13 @@ export default function TrainingOverviewPage() {
             ))}
           </div>
 
-          <div className="flex flex-col gap-2 px-(--card-spacing)">
+          <div className="px-(--card-spacing)">
             <Link
               href={`/training/session?day=${encodeURIComponent(nextDay.id)}`}
               className={buttonVariants({ size: "lg", className: "w-full" })}
             >
               <Play className="size-4" />
               Training starten
-            </Link>
-            {/* Klein und unauffällig unter dem eigentlichen Training —
-                EMOM ist sonst nur über den letzten, oft nicht sichtbaren
-                Tab der Leiste darüber erreichbar. */}
-            <Link
-              href="/training/emom"
-              className="flex items-center justify-center gap-1.5 py-1 text-xs opacity-75 transition-opacity hover:opacity-100"
-            >
-              <Timer className="size-3.5" />
-              Oder EMOM starten
-              <ArrowRight className="size-3" />
             </Link>
           </div>
         </Card>
@@ -125,21 +114,26 @@ export default function TrainingOverviewPage() {
               Leg einen Trainingsplan an — oder starte mit dem fertigen Push/Pull/Legs-Plan.
             </p>
           </div>
-          <div className="flex flex-col gap-2 px-(--card-spacing)">
+          <div className="px-(--card-spacing)">
             <Link href="/training/plaene" className={buttonVariants({ size: "lg" })}>
               Zu den Plänen
-            </Link>
-            <Link
-              href="/training/emom"
-              className="flex items-center justify-center gap-1.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <Timer className="size-3.5" />
-              Oder EMOM starten
-              <ArrowRight className="size-3" />
             </Link>
           </div>
         </Card>
       )}
+
+      {/* Eigene, kleine Zeile statt in die Trainingskarte eingebettet — EMOM
+          ist eine eigenständige Sache, keine Variante des Plan-Trainings.
+          Sonst nur über den letzten, oft nicht sichtbaren Tab der Leiste
+          oben erreichbar. */}
+      <Link
+        href="/training/emom"
+        className="-mt-5 flex items-center justify-center gap-1.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <Timer className="size-3.5" />
+        Oder EMOM starten
+        <ArrowRight className="size-3" />
+      </Link>
 
       <div className="grid grid-cols-3 gap-3">
         <Card size="sm" className="gap-0">
