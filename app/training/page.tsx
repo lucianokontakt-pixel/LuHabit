@@ -122,17 +122,17 @@ export default function TrainingOverviewPage() {
         </Card>
       )}
 
-      {/* Eigene, kleine Zeile statt in die Trainingskarte eingebettet — EMOM
-          ist eine eigenständige Sache, keine Variante des Plan-Trainings.
-          Sonst nur über den letzten, oft nicht sichtbaren Tab der Leiste
-          oben erreichbar. */}
+      {/* Eigene Karte statt in die Trainingskarte eingebettet — EMOM ist
+          eine eigenständige Sache, keine Variante des Plan-Trainings. Sonst
+          nur über den letzten, oft nicht sichtbaren Tab der Leiste oben
+          erreichbar, deshalb als echter Knopf statt als schmaler Textlink. */}
       <Link
         href="/training/emom"
-        className="-mt-5 flex items-center justify-center gap-1.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        className={buttonVariants({ variant: "outline", size: "lg", className: "w-full" })}
       >
-        <Timer className="size-3.5" />
-        Oder EMOM starten
-        <ArrowRight className="size-3" />
+        <Timer className="size-4" />
+        EMOM starten
+        <ArrowRight className="size-4" />
       </Link>
 
       <div className="grid grid-cols-3 gap-3">
