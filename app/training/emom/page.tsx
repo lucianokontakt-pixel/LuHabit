@@ -20,8 +20,10 @@ import { EmomEditor } from "@/components/training/emom-editor";
 import { EmomRunner } from "@/components/training/emom-runner";
 import { createEmomTemplate, deleteEmomTemplate, fetchEmomTemplates } from "@/lib/api-emom";
 import { describeTemplate, formatSeconds, totalDuration, type EmomTemplate } from "@/lib/emom";
+import { useSignalSound } from "@/lib/use-signal-sound";
 
 export default function EmomPage() {
+  const sound = useSignalSound();
   const [templates, setTemplates] = useState<EmomTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +95,7 @@ export default function EmomPage() {
       <TrainingTabs />
 
       {active ? (
-        <EmomRunner template={active} onClose={() => setActive(null)} />
+        <EmomRunner template={active} onClose={() => setActive(null)} sound={sound} />
       ) : (
         <Card className="gap-3">
           <div className="px-(--card-spacing)">
@@ -185,7 +187,12 @@ export default function EmomPage() {
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => setActive(template)}
+                      onClick={() => {
+                        // Muss aus diesem echten Tap heraus laufen — siehe
+                        // Kommentar bei EmomRunners sound-Prop.
+                        sound.unlock();
+                        setActive(template);
+                      }}
                       disabled={template.steps.length === 0}
                     >
                       <Play />

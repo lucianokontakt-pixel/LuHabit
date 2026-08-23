@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSignalSound } from "@/lib/use-signal-sound";
+import type { useSignalSound } from "@/lib/use-signal-sound";
 import {
   COUNTDOWN_FROM,
   buildSegments,
@@ -57,11 +57,23 @@ function segmentText(segment: EmomSegment | null | undefined): string {
 export function EmomRunner({
   template,
   onClose,
+  sound,
 }: {
   template: EmomTemplate;
   onClose: () => void;
+  /**
+   * Von der Elternkomponente durchgereicht statt hier per useSignalSound()
+   * selbst erzeugt: der AudioContext lässt sich nur innerhalb eines echten
+   * Fingertipps entsperren (iOS-Vorgabe), und dieser Tipp ist der Klick auf
+   * "Start", der diese Komponente überhaupt erst einhängt. Ein unlock() in
+   * einem Mount-Effekt hier drin kommt für iOS zu spät — der Effekt läuft
+   * erst, nachdem React den Tipp längst abgearbeitet und übermalt hat, und
+   * zählt dann nicht mehr als Nutzergeste. Der Ton blieb deshalb die ganze
+   * Runde stumm, unabhängig vom Stummschalter.
+   */
+  sound: ReturnType<typeof useSignalSound>;
 }) {
-  const { enabled: soundOn, toggle: toggleSound, unlock, play } = useSignalSound();
+  const { enabled: soundOn, toggle: toggleSound, unlock, play } = sound;
 
   const segments = useMemo(() => buildSegments(template), [template]);
   const total = useMemo(() => totalDuration(template, segments), [template, segments]);
@@ -77,10 +89,6 @@ export function EmomRunner({
   const lastCountdownRef = useRef(-1);
   const finishedRef = useRef(false);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-
-  useEffect(() => {
-    unlock();
-  }, [unlock]);
 
   useEffect(() => {
     if (!running) return;
