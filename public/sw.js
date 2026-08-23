@@ -10,7 +10,7 @@
  * fliegen alle Caches mit anderem Namen raus.
  */
 
-const VERSION = "v4";
+const VERSION = "v5";
 const STATIC_CACHE = `luhabit-static-${VERSION}`;
 const PAGE_CACHE = `luhabit-pages-${VERSION}`;
 const KEEP = [STATIC_CACHE, PAGE_CACHE];
@@ -49,10 +49,40 @@ const WARMUP = [
   "/einstellungen",
 ];
 
+/** Stylesheet- und Skript-Adressen, auf die eine geladene Seite verweist. */
+const ASSET_REF = /(?:href|src)="(\/_next\/static\/[^"]+)"/g;
+
+/**
+ * Ohne dieses Nachladen läge zwar die HTML-Hülle einer Seite im Cache, aber
+ * nicht ihr Stylesheet und ihr Skript — offline käme dann eine Seite ohne
+ * jede Formatierung und ohne die Werte aus dem lokalen Bestand, weil React
+ * nie einhängt. Beide Dateien ändern sich mit jedem Build, deshalb lassen sie
+ * sich nicht vorab in WARMUP eintragen — nur aus der bereits geladenen Seite
+ * selbst herauslesen.
+ */
+async function cacheReferencedAssets(html, staticCache) {
+  const paths = new Set();
+  let match;
+  while ((match = ASSET_REF.exec(html))) paths.add(match[1]);
+
+  await Promise.all(
+    [...paths].map(async (path) => {
+      if (await staticCache.match(path)) return;
+      try {
+        const response = await fetch(path, { credentials: "same-origin" });
+        if (isCacheable(response)) await staticCache.put(path, response);
+      } catch {
+        // Kein Netz — beim nächsten Aufruf mit Netz holt cacheFirst das nach.
+      }
+    })
+  );
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
-      const cache = await caches.open(PAGE_CACHE);
+      const pageCache = await caches.open(PAGE_CACHE);
+      const staticCache = await caches.open(STATIC_CACHE);
       // Nacheinander, nicht alle auf einmal. Der Browser erlaubt nur eine
       // Handvoll gleichzeitiger Verbindungen zur selben Adresse; alles auf
       // einmal loszuschicken hat die Installation zuverlässig steckenbleiben
@@ -61,7 +91,11 @@ self.addEventListener("install", (event) => {
       for (const path of WARMUP) {
         try {
           const response = await fetch(path, { credentials: "same-origin" });
-          if (isCacheable(response)) await cache.put(path, response);
+          if (isCacheable(response)) {
+            const html = await response.clone().text();
+            await pageCache.put(path, response);
+            await cacheReferencedAssets(html, staticCache);
+          }
         } catch {
           // Kein Netz beim Installieren — die Seite landet beim ersten Besuch im Cache
         }
