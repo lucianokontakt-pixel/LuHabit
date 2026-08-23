@@ -151,16 +151,14 @@ export function useDragSort(order: string[], onReorder: (next: string[]) => void
   }, [displayOrder, moveDraggedToPointer]);
 
   /**
-   * Der Slot, dessen Mittelpunkt dem Zeiger am nächsten liegt, tauscht mit der
-   * gezogenen Karte den Platz.
-   *
-   * Vorher wurde die gezogene Karte an der Zielposition eingefügt (Splice) —
-   * in einer Liste unauffällig, aber in einem mehrspaltigen Grid verschob das
-   * jede Karte zwischen alter und neuer Position um einen Platz. Eine
-   * Reihenänderung ließ so plötzlich vier Karten gleichzeitig springen, ohne
-   * dass erkennbar war, was eigentlich mit was getauscht hat. Ein reiner
-   * Platztausch betrifft dagegen immer genau zwei Karten — unabhängig davon,
-   * wie weit man zieht.
+   * Der Slot, dessen Mittelpunkt dem Zeiger am nächsten liegt, gewinnt — die
+   * gezogene Karte rutscht dorthin, alle Karten dazwischen rücken um eine
+   * Stelle auf, genau wie beim Sortieren des iPhone-Homescreens. Eine reine
+   * Platztausch-Variante (nur zwei Karten wechseln) wurde kurz ausprobiert,
+   * fühlte sich aber fremd an, weil sie nicht dem vertrauten Verhalten
+   * entspricht. Klarheit kommt hier über die Geschwindigkeit: eine spürbare
+   * Mindestbewegung, bevor ein neuer Slot gewinnt, verhindert, dass der
+   * Zeiger an einer Slotgrenze zwischen zwei Positionen hin- und herkippt.
    */
   const reorderToPointer = useCallback(() => {
     const id = draggingIdRef.current;
@@ -183,9 +181,23 @@ export function useDragSort(order: string[], onReorder: (next: string[]) => void
       }
     }
 
+    // Kein Wechsel, solange der aktuelle Slot noch näher dran ist als
+    // ein Sechstel seiner eigenen Größe — sonst kippt die Reihenfolge an
+    // der Grenze zwischen zwei Slots bei jedem winzigen Zittern des
+    // Fingers hin und her, statt sich klar zu entscheiden.
     if (bestIndex === fromIndex) return;
+    const currentRect = rectsRef.current.get(id);
+    if (currentRect) {
+      const hysteresis = (currentRect.width / 6) ** 2;
+      const cx = currentRect.left + currentRect.width / 2;
+      const cy = currentRect.top + currentRect.height / 2;
+      const distanceToOwnSlot = (pointerRef.current.x - cx) ** 2 + (pointerRef.current.y - cy) ** 2;
+      if (distanceToOwnSlot - bestDistance < hysteresis) return;
+    }
+
     const next = [...current];
-    [next[fromIndex], next[bestIndex]] = [next[bestIndex], next[fromIndex]];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(bestIndex, 0, moved);
     setPreviewOrder(next);
   }, []);
 
