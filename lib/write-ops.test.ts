@@ -9,6 +9,46 @@ const eintrag = (habit: string, date: string, value: number): WriteOp => ({
 const queued = (ops: WriteOp[]): QueuedOp[] =>
   ops.map((op, i) => ({ seq: i + 1, op, createdAt: "2026-08-22 15:00:00" }));
 
+describe("localEffect — EMOM-Ergebnisse", () => {
+  const ergebnis: WriteOp = {
+    kind: "emomResult.save",
+    result: {
+      id: "emomr-1",
+      templateName: "Cindy",
+      date: "2026-08-23",
+      roundsPlanned: 20,
+      roundsCompleted: 14,
+      note: "Arme platt",
+    },
+  };
+
+  it("legt ein Ergebnis unter seiner ID in emomResults ab", () => {
+    const [effect] = localEffect(ergebnis);
+    expect(effect).toMatchObject({
+      collection: "emomResults",
+      key: "emomr-1",
+      action: "put",
+    });
+  });
+
+  it("sortiert nach Datum, damit der Verlauf sofort richtig steht", () => {
+    const [effect] = localEffect(ergebnis);
+    expect(effect.action === "put" && effect.sort.startsWith("2026-08-23")).toBe(true);
+  });
+
+  it("entfernt ein gelöschtes Ergebnis aus derselben Sammlung", () => {
+    expect(localEffect({ kind: "emomResult.delete", id: "emomr-1" })).toEqual([
+      { collection: "emomResults", key: "emomr-1", action: "delete" },
+    ]);
+  });
+
+  it("meint mit Speichern und Löschen denselben Datensatz", () => {
+    // Sonst könnten beide nebeneinander in der Schlange stehen bleiben und die
+    // Löschung käme vor dem Speichern beim Server an.
+    expect(targetOf(ergebnis)).toBe(targetOf({ kind: "emomResult.delete", id: "emomr-1" }));
+  });
+});
+
 describe("localEffect", () => {
   it("legt einen Eintrag unter habit|datum ab", () => {
     const [effect] = localEffect(eintrag("water", "2026-08-22", 750));
@@ -129,6 +169,25 @@ describe("collapse", () => {
     const übrig = collapse(ops);
     expect(übrig).toHaveLength(1);
     expect(übrig[0].op.kind).toBe("emom.save");
+  });
+
+  it("dampft mehrfaches Nachbessern eines Ergebnisses auf den letzten Stand ein", () => {
+    // Wer die Rundenzahl offline zweimal korrigiert, soll nicht zwei
+    // Schreibvorgänge senden — der letzte beschreibt den ganzen Zustand.
+    const ergebnis = (roundsCompleted: number): WriteOp => ({
+      kind: "emomResult.save",
+      result: {
+        id: "emomr-1",
+        templateName: "Cindy",
+        date: "2026-08-23",
+        roundsPlanned: 20,
+        roundsCompleted,
+        note: null,
+      },
+    });
+    const übrig = collapse(queued([ergebnis(12), ergebnis(14)]));
+    expect(übrig).toHaveLength(1);
+    expect((übrig[0].op as { result: { roundsCompleted: number } }).result.roundsCompleted).toBe(14);
   });
 
   it("behält die Reihenfolge nach dem letzten Auftreten", () => {

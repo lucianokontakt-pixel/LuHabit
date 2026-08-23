@@ -18,7 +18,6 @@ export function ThemeToggle() {
     <Button
       variant="outline"
       size="icon"
-      className="size-8"
       aria-label="Theme wechseln"
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
     >

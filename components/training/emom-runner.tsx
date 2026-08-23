@@ -13,6 +13,8 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NumberField } from "@/components/training/number-field";
 import type { useSignalSound } from "@/lib/use-signal-sound";
 import {
   COUNTDOWN_FROM,
@@ -22,6 +24,7 @@ import {
   phaseAt,
   roundStartElapsed,
   totalDuration,
+  workDuration,
   type EmomSegment,
   type EmomTemplate,
 } from "@/lib/emom";
@@ -57,10 +60,17 @@ function segmentText(segment: EmomSegment | null | undefined): string {
 export function EmomRunner({
   template,
   onClose,
+  onSaveResult,
   sound,
 }: {
   template: EmomTemplate;
   onClose: () => void;
+  /**
+   * Wird beim Schließen angeboten, sobald mindestens eine Runde begonnen
+   * wurde — auch beim Abbrechen, nicht nur beim regulären Durchlaufen. Fehlt
+   * die Prop, schließt der Timer direkt, ohne zu fragen.
+   */
+  onSaveResult?: (input: { roundsCompleted: number; note: string | null }) => Promise<void> | void;
   /**
    * Von der Elternkomponente durchgereicht statt hier per useSignalSound()
    * selbst erzeugt: der AudioContext lässt sich nur innerhalb eines echten
@@ -84,6 +94,11 @@ export function EmomRunner({
   const [startedAt, setStartedAt] = useState(() => Date.now());
   const [frozen, setFrozen] = useState(0);
   const [elapsed, setElapsed] = useState(0);
+
+  const [finishing, setFinishing] = useState(false);
+  const [roundsCompleted, setRoundsCompleted] = useState<number | null>(0);
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const lastSegmentRef = useRef(-1);
   const lastCountdownRef = useRef(-1);
@@ -141,6 +156,11 @@ export function EmomRunner({
   // Signale aus der Phase ableiten statt sie mitzuzählen — so kann nichts
   // auseinanderlaufen, wenn die Zeit einmal springt.
   useEffect(() => {
+    // Steht die Abschlusskarte offen, ist der Durchgang für den Nutzer vorbei
+    // — auch wenn die letzte Phase technisch noch anliegt. Kein Ton, keine
+    // Vibration mehr, während er sein Ergebnis einträgt.
+    if (finishing) return;
+
     if (phase.kind === "done") {
       if (finishedRef.current) return;
       finishedRef.current = true;
@@ -165,7 +185,7 @@ export function EmomRunner({
       play("countdown");
       vibrate(40);
     }
-  }, [phase, play]);
+  }, [phase, play, finishing]);
 
   /**
    * Bezugspunkt neu setzen, ohne die Wanduhr-Logik zu verlassen. Läuft der
@@ -202,6 +222,55 @@ export function EmomRunner({
   const canGoBack = currentRound > 1;
   const canGoForward = !done && currentRound < template.rounds;
 
+  // Wie viele Runden bei einem Abbruch schon wirklich durch sind: steckt die
+  // Phase gerade in der Pause NACH einer Runde, zählt die volle Runde mit —
+  // sonst nur die davor, die laufende ist ja noch nicht fertig.
+  const roundsCompletedGuess = done
+    ? template.rounds
+    : phase.kind !== "work"
+      ? 0
+      : phase.segment.kind === "rest"
+        ? phase.segment.round
+        : Math.max(0, phase.segment.round - 1);
+
+  /**
+   * X oder "Fertig": schließt direkt, wenn nichts protokollierbar ist (noch
+   * keine Runde begonnen, oder die Elternkomponente will gar nicht speichern)
+   * — sonst fragt erst die Abschlusskarte nach, wie weit es ging.
+   */
+  const requestClose = useCallback(() => {
+    if (!onSaveResult || (currentRound < 1 && !done)) {
+      onClose();
+      return;
+    }
+    // Die Uhr anhalten, bevor die Abschlusskarte aufgeht. Ohne das liefe der
+    // Durchgang weiter, während man die Notiz tippt — mit Countdown-Tönen und
+    // Vibration zu einem Training, das gerade beendet wird. Dieselbe
+    // Rückdatierung wie beim Pausieren, damit ein Abbrechen der Karte den
+    // Timer an genau derselben Stelle wieder aufnehmen könnte.
+    if (running) {
+      setFrozen((Date.now() - startedAt) / 1000);
+      setRunning(false);
+    }
+    setRoundsCompleted(roundsCompletedGuess);
+    setNote("");
+    setFinishing(true);
+  }, [onSaveResult, onClose, currentRound, done, roundsCompletedGuess, running, startedAt]);
+
+  const handleSaveResult = useCallback(async () => {
+    if (!onSaveResult) {
+      onClose();
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSaveResult({ roundsCompleted: roundsCompleted ?? 0, note: note.trim() || null });
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }, [onSaveResult, onClose, roundsCompleted, note]);
+
   const jumpRound = useCallback(
     (delta: 1 | -1) => {
       const target = Math.max(1, Math.min(template.rounds, currentRound + delta));
@@ -234,7 +303,14 @@ export function EmomRunner({
     setRunning(true);
   }, [unlock]);
 
-  const overallPercent = total > 0 ? Math.min(100, (Math.min(elapsed, total) / total) * 100) : 0;
+  // Der Fortschritt misst dieselbe Strecke, die in der Liste als Dauer steht:
+  // die reine Trainingszeit. Zählte die Vorbereitung mit, stünde schon vor der
+  // ersten Runde ein Prozent auf der Anzeige — und "20 Minuten" wären in
+  // Wahrheit 20:10.
+  const workTotal = workDuration(template, segments);
+  const workElapsed = elapsed - Math.max(0, template.prepareSeconds);
+  const overallPercent =
+    workTotal > 0 ? Math.min(100, (Math.max(0, Math.min(workElapsed, workTotal)) / workTotal) * 100) : 0;
   const phasePercent =
     phase.kind === "prepare"
       ? 100 - (phase.remaining / Math.max(1, phase.total)) * 100
@@ -287,7 +363,7 @@ export function EmomRunner({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={onClose}
+              onClick={requestClose}
               aria-label="Timer schließen"
               className="text-blush-foreground hover:bg-current/10"
             >
@@ -324,57 +400,94 @@ export function EmomRunner({
         </div>
       </div>
 
-      {!done && (
-        <div className="flex items-center rounded-pill bg-card p-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => jumpRound(-1)}
-            disabled={!canGoBack}
-            aria-label="Vorherige Runde"
-            className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-          >
-            <ChevronLeft />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={skip}
-            className="flex-1 text-muted-foreground hover:text-foreground"
-          >
-            <SkipForward />
-            Überspringen
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => jumpRound(1)}
-            disabled={!canGoForward}
-            aria-label="Nächste Runde"
-            className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-          >
-            <ChevronRight />
-          </Button>
+      {finishing ? (
+        <div className="flex flex-col gap-3 rounded-card bg-card p-4 shadow-float">
+          <div>
+            <p className="text-sm font-medium">Ergebnis speichern?</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {template.name} · {template.rounds} {template.rounds === 1 ? "Runde" : "Runden"}{" "}
+              geplant
+            </p>
+          </div>
+          <NumberField
+            id="emom-finish-rounds"
+            label="Runden geschafft"
+            value={roundsCompleted}
+            onChange={setRoundsCompleted}
+            min={0}
+            max={template.rounds}
+            stepper
+            className="w-44"
+          />
+          <Input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Notiz (optional)"
+          />
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={onClose} disabled={saving}>
+              Verwerfen
+            </Button>
+            <Button className="flex-1" onClick={handleSaveResult} disabled={saving}>
+              {saving ? "Speichert…" : "Speichern"}
+            </Button>
+          </div>
         </div>
-      )}
+      ) : (
+        <>
+          {!done && (
+            <div className="flex items-center rounded-pill bg-card p-1">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => jumpRound(-1)}
+                disabled={!canGoBack}
+                aria-label="Vorherige Runde"
+                className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+              >
+                <ChevronLeft />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={skip}
+                className="flex-1 text-muted-foreground hover:text-foreground"
+              >
+                <SkipForward />
+                Überspringen
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => jumpRound(1)}
+                disabled={!canGoForward}
+                aria-label="Nächste Runde"
+                className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+              >
+                <ChevronRight />
+              </Button>
+            </div>
+          )}
 
-      <div className="flex gap-2">
-        {done ? (
-          <Button size="lg" className="flex-1" onClick={restart}>
-            <RotateCcw />
-            Nochmal
-          </Button>
-        ) : (
-          <Button size="lg" className="flex-1" onClick={togglePause}>
-            {running ? <Pause /> : <Play />}
-            {running ? "Pause" : "Weiter"}
-          </Button>
-        )}
-        <Button size="lg" variant="outline" onClick={done ? onClose : restart}>
-          {done ? "Fertig" : <RotateCcw />}
-          {done ? "" : "Neu"}
-        </Button>
-      </div>
+          <div className="flex gap-2">
+            {done ? (
+              <Button size="lg" className="flex-1" onClick={restart}>
+                <RotateCcw />
+                Nochmal
+              </Button>
+            ) : (
+              <Button size="lg" className="flex-1" onClick={togglePause}>
+                {running ? <Pause /> : <Play />}
+                {running ? "Pause" : "Weiter"}
+              </Button>
+            )}
+            <Button size="lg" variant="outline" onClick={done ? requestClose : restart}>
+              {done ? "Fertig" : <RotateCcw />}
+              {done ? "" : "Neu"}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

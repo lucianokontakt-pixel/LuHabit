@@ -20,7 +20,7 @@ export function Nav() {
       className="sticky top-0 z-40 bg-background/85 backdrop-blur-xl"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
-      <div className="mx-auto flex h-16 max-w-4xl items-center justify-between gap-4 px-4 sm:px-6">
+      <div className="px-edge mx-auto flex h-16 max-w-4xl items-center justify-between gap-4 sm:[--edge:1.5rem]">
         <Link href="/" className="font-display text-xl tracking-tight">
           LuHabit
         </Link>

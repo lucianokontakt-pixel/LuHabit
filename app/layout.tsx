@@ -49,6 +49,19 @@ export const viewport: Viewport = {
   // die untere Navigation sitzt direkt über der Wisch-Zone, in der iOS den
   // App-Wechsler und (in Safari) die Tab-Leiste erwartet.
   viewportFit: "cover",
+  // Kein Zoom: die App soll sich wie eine installierte anfühlen und nicht
+  // verrutschen, wenn beim Training zwei Finger danebengreifen.
+  //
+  // Zwei Dinge dazu, die leicht falsch verstanden werden. Erstens greift das
+  // nur in der installierten PWA — Safari als Browser ignoriert es seit iOS 10
+  // absichtlich, damit niemand das Hineinzoomen aussperren kann. Zweitens ist
+  // es NICHT das Mittel gegen den Sprung beim Antippen eines Eingabefelds:
+  // dagegen hilft allein, dass jedes Feld mindestens 16px groß schreibt (siehe
+  // components/ui/input.tsx und components/training/number-field.tsx). Wer das
+  // hier später wieder herausnimmt, verliert also nur das Wischen — nicht die
+  // ruhigen Eingabefelder.
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -79,7 +92,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             {/* pb-28 reicht als fester Abstand nicht mehr: die untere
                 Navigation wächst um die Safe-Area-Höhe des Geräts nach unten,
                 sonst würde der letzte Inhalt darunter verschwinden. */}
-            <main className="mx-auto w-full max-w-4xl flex-1 px-4 pt-5 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-12 sm:pt-8">
+            <main className="px-edge mx-auto w-full max-w-4xl flex-1 pt-5 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:[--edge:1.5rem] sm:pb-12 sm:pt-8">
               {children}
             </main>
             <BottomNav />

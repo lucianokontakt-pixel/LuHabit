@@ -162,7 +162,10 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
             max={14}
             placeholder="kein Ziel"
             onChange={setWeeklyTarget}
-            className="w-40"
+            // shrink-0, sonst drückt die Erklärung daneben das Feld unter
+            // seine w-40 zusammen und die Beschriftung bricht zu
+            // "Wochenziel (Eir…" ab.
+            className="w-40 shrink-0"
           />
           <p className="pb-2.5 text-xs text-muted-foreground">
             Wie oft du pro Woche trainieren willst. Die Tage rotieren frei — das Ziel misst nur,

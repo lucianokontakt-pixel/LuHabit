@@ -12,7 +12,7 @@
  */
 
 import type { HabitKind } from "@/lib/habits";
-import type { EmomStep, EmomTemplate } from "@/lib/emom";
+import type { EmomResult, EmomStep, EmomTemplate } from "@/lib/emom";
 import type {
   Equipment,
   Muscle,
@@ -67,7 +67,8 @@ export type Collection =
   | "exercises"
   | "plans"
   | "sessions"
-  | "emom";
+  | "emom"
+  | "emomResults";
 
 /**
  * Was der Abgleich geliefert hat, sortiert nach "einsortieren" und "entfernen".
@@ -91,6 +92,7 @@ export type SyncSnapshot = {
   plans: WorkoutPlan[];
   sessions: WorkoutSession[];
   emom: EmomTemplate[];
+  emomResults: EmomResult[];
   bodyProfile: StoredBodyProfile | null;
   removed: Record<Collection, string[]>;
   sortKeys: Record<Collection, Record<string, string>>;
@@ -354,6 +356,21 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
     (r) => `${pad(num(r.position))}|${str(r.created_at)}`
   );
 
+  const emomResults = split(
+    rows("emomResults"),
+    (r) => str(r.id),
+    (r): EmomResult => ({
+      id: str(r.id),
+      templateName: str(r.template_name, "EMOM"),
+      date: str(r.date),
+      roundsPlanned: num(r.rounds_planned),
+      roundsCompleted: num(r.rounds_completed),
+      note: r.note === null || r.note === undefined ? null : str(r.note),
+    }),
+    // Route: ORDER BY date DESC, created_at DESC — gelesen wird absteigend.
+    (r) => `${str(r.date)}|${str(r.created_at)}`
+  );
+
   const profileRow = (p.bodyProfile ?? null) as Row | null;
 
   return {
@@ -366,6 +383,7 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
     plans: plans.live,
     sessions: sessions.live,
     emom: emom.live,
+    emomResults: emomResults.live,
     bodyProfile: profileRow
       ? {
           age: numOrNull(profileRow.age),
@@ -386,6 +404,7 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
       plans: plans.removed,
       sessions: sessions.removed,
       emom: emom.removed,
+      emomResults: emomResults.removed,
     },
     sortKeys: {
       entries: entries.sortKeys,
@@ -395,6 +414,7 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
       plans: plans.sortKeys,
       sessions: sessions.sortKeys,
       emom: emom.sortKeys,
+      emomResults: emomResults.sortKeys,
     },
   };
 }

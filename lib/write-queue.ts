@@ -123,6 +123,10 @@ async function send(op: WriteOp): Promise<Response> {
       return post("/api/training/emom", op.template, op.isNew ? "POST" : "PUT");
     case "emom.delete":
       return remove(`/api/training/emom?id=${encodeURIComponent(op.id)}`);
+    case "emomResult.save":
+      return post("/api/training/emom-results", op.result);
+    case "emomResult.delete":
+      return remove(`/api/training/emom-results?id=${encodeURIComponent(op.id)}`);
   }
 }
 

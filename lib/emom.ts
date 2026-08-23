@@ -51,6 +51,21 @@ export const MAX_STEP_REPS = 999;
 export const MAX_ROUNDS = 99;
 export const MAX_PREPARE_SECONDS = 300;
 export const MAX_REST_SECONDS = 600;
+export const MAX_NOTE_LENGTH = 200;
+
+/**
+ * Ein abgeschlossener Durchgang, für den Verlauf. templateName ist eine
+ * Momentaufnahme — die Vorlage selbst kann inzwischen geändert oder gelöscht
+ * sein, das Ergebnis soll trotzdem noch zeigen, was damals lief.
+ */
+export type EmomResult = {
+  id: string;
+  templateName: string;
+  date: string;
+  roundsPlanned: number;
+  roundsCompleted: number;
+  note: string | null;
+};
 
 /** Ab wann die Countdown-Töne laufen: die letzten drei Sekunden eines Abschnitts. */
 export const COUNTDOWN_FROM = 3;
@@ -62,6 +77,61 @@ export const DEFAULT_TEMPLATE: Omit<EmomTemplate, "id" | "position"> = {
   steps: [{ seconds: 60, reps: null, label: "" }],
   restSeconds: 0,
 };
+
+export type EmomPreset = Omit<EmomTemplate, "id" | "position"> & {
+  presetId: string;
+  description: string;
+};
+
+/**
+ * Fertige Vorlagen zum Ein-Tipp-Übernehmen, analog zu SPLIT_TEMPLATES bei den
+ * Trainingsplänen. Cindy und Chelsea sind bekannte CrossFit-Benchmarks — eine
+ * Runde pro Minute, was übrig bleibt ist Pause; die Bewegungen laufen deshalb
+ * als ein einzelner 60s-Schritt statt als drei separate Schritte.
+ */
+export const EMOM_PRESETS: EmomPreset[] = [
+  {
+    presetId: "cindy",
+    name: "Tom Holland Challenge",
+    description: "Der Klassiker: jede Minute eine Runde, 20 Minuten lang.",
+    prepareSeconds: 10,
+    rounds: 20,
+    steps: [{ seconds: 60, reps: null, label: "5 Pull-ups · 10 Push-ups · 15 Air Squats" }],
+    restSeconds: 0,
+  },
+  {
+    presetId: "chelsea",
+    name: "Chelsea",
+    description: "Cindys große Schwester: dieselbe Runde, 30 Minuten lang.",
+    prepareSeconds: 10,
+    rounds: 30,
+    steps: [{ seconds: 60, reps: null, label: "5 Pull-ups · 10 Push-ups · 15 Air Squats" }],
+    restSeconds: 0,
+  },
+  {
+    presetId: "cindy-light",
+    name: "Cindy Light",
+    description: "Eingestiegen: skalierte Wiederholungen, 12 Minuten.",
+    prepareSeconds: 10,
+    rounds: 12,
+    steps: [{ seconds: 60, reps: null, label: "3 Pull-ups · 6 Push-ups · 9 Air Squats" }],
+    restSeconds: 0,
+  },
+  {
+    presetId: "bodyweight-blast",
+    name: "Bodyweight Blast",
+    description: "Vier Übungen im Wechsel, rund 16 Minuten.",
+    prepareSeconds: 10,
+    rounds: 4,
+    steps: [
+      { seconds: 45, reps: null, label: "Burpees" },
+      { seconds: 45, reps: null, label: "Mountain Climbers" },
+      { seconds: 45, reps: null, label: "Squat Jumps" },
+      { seconds: 45, reps: null, label: "Push-ups" },
+    ],
+    restSeconds: 15,
+  },
+];
 
 /**
  * Die Sequenz auf alle Runden ausgerollt, samt Pausen nach jeder Übung.
@@ -127,8 +197,20 @@ export function totalDuration(
   template: EmomTemplate,
   segments = buildSegments(template)
 ): number {
-  const work = segments.length > 0 ? segments[segments.length - 1].endsAt : 0;
-  return Math.max(0, template.prepareSeconds) + work;
+  return Math.max(0, template.prepareSeconds) + workDuration(template, segments);
+}
+
+/**
+ * Reine Trainingszeit ohne Vorbereitung, in Sekunden — die Zahl, die als
+ * "20 Minuten" wahrgenommen wird. Die Vorbereitung zählt beim Anzeigen nicht
+ * mit, auch wenn der Timer sie mitläuft: sonst würde ein klassisches 20-Min-
+ * EMOM als "20:10" in der Liste stehen.
+ */
+export function workDuration(
+  template: EmomTemplate,
+  segments = buildSegments(template)
+): number {
+  return segments.length > 0 ? segments[segments.length - 1].endsAt : 0;
 }
 
 export type EmomPhase =

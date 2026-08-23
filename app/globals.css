@@ -211,4 +211,81 @@
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
   }
+
+  /* Seitlicher Grundabstand, der im Querformat vor der Dynamic Island
+     ausweicht. Hochkant sind die Insets 0, dann bleibt es beim Grundwert —
+     quer liegen sie bei rund 59px, und ohne das verschwände die linke
+     Bildschirmkante unter der Insel. Der Grundwert kommt aus --edge, damit
+     größere Bildschirme ihn per `sm:[--edge:1.5rem]` anheben können. */
+  .px-edge {
+    padding-left: max(var(--edge, 1rem), env(safe-area-inset-left));
+    padding-right: max(var(--edge, 1rem), env(safe-area-inset-right));
+  }
+}
+
+/* Seitwärts scrollende Reihen (Muskel- und Gerätefilter, die Tab-Leiste, der
+   Trainingskalender …) scrollen weiter, kündigen es am Finger aber nicht mehr
+   mit einer Leiste an — die angeschnittene Pille am Rand sagt schon, dass es
+   weitergeht.
+
+   Bewusst nur auf Zeigegeräten ohne Feinsteuerung, also am Touchscreen. Mit
+   Maus ist die Leiste kein Beiwerk, sondern der einzige Hinweis, dass etwas
+   seitlich weitergeht: dort verschwindet sie nicht, sie wird nur schlank.
+
+   Ungelayert, damit sie Tailwinds Utility-Layer schlägt, ohne `!important`. */
+@media (pointer: coarse) {
+  .overflow-x-auto,
+  .overflow-auto {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .overflow-x-auto::-webkit-scrollbar,
+  .overflow-auto::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (pointer: fine) {
+  .overflow-x-auto,
+  .overflow-auto {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--foreground) 20%, transparent) transparent;
+  }
+}
+
+/* Das Wischen in einer solchen Reihe soll dort enden. Ohne das reicht iOS die
+   Bewegung am Ende der Reihe an die Seite weiter und löst die Zurück-Geste
+   aus — man scrollt durch die Muskelgruppen und landet auf der vorigen Seite. */
+.overflow-x-auto,
+.overflow-auto {
+  overscroll-behavior-x: contain;
+}
+
+/* Ein Menüeintrag ist am Daumen ein Ziel wie jedes andere. Die Voreinstellung
+   der Komponente ist für den Mauszeiger gedacht (28px hoch) — am Touchscreen
+   bekommt sie die volle Trefferhöhe, mit Maus bleibt sie kompakt. Hier statt in
+   components/ui/dropdown-menu.tsx, weil die Datei generiert ist und beim
+   nächsten Erzeugen wieder überschrieben würde. */
+@media (pointer: coarse) {
+  [data-slot="dropdown-menu-item"],
+  [data-slot="dropdown-menu-checkbox-item"],
+  [data-slot="dropdown-menu-radio-item"] {
+    min-height: 44px;
+    padding-inline: 0.625rem;
+  }
+}
+
+/* Ein Tippen ist ein Tippen. Ohne das wartet der Browser auf ein mögliches
+   zweites Antippen (Doppeltipp-Zoom), bevor er den Knopf auslöst — das ist die
+   Verzögerung, die eine Web-App im Vergleich zu einer nativen träge wirken
+   lässt, und ein zweiter Tipp auf „+" zoomt statt zu zählen. */
+button,
+a,
+[role="button"],
+label,
+summary,
+input,
+select,
+textarea {
+  touch-action: manipulation;
 }

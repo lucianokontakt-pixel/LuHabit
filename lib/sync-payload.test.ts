@@ -52,6 +52,7 @@ describe("readSyncPayload — Grabsteine", () => {
       plans: ["plan-alt"],
       sessions: ["ws-alt"],
       emom: ["emom-alt"],
+      emomResults: [],
     });
     expect(snap.habits).toEqual([]);
     expect(snap.plans).toEqual([]);
@@ -229,5 +230,73 @@ describe("readSyncPayload — kaputte Daten dürfen den Abgleich nicht kippen", 
       })
     );
     expect(snap.entries[0].value).toBe(0);
+  });
+});
+
+describe("readSyncPayload — EMOM-Ergebnisse", () => {
+  const zeile = (overrides: Record<string, unknown> = {}) => ({
+    id: "emomr-1",
+    template_name: "Tom Holland Challenge",
+    date: "2026-08-23",
+    rounds_planned: 20,
+    rounds_completed: 14,
+    note: "Arme platt",
+    created_at: "2026-08-23 12:00:00",
+    deleted_at: null,
+    ...overrides,
+  });
+
+  it("übersetzt eine Zeile in das, was die App benutzt", () => {
+    const snap = readSyncPayload(payload({ emomResults: [zeile()] }));
+    expect(snap.emomResults).toEqual([
+      {
+        id: "emomr-1",
+        templateName: "Tom Holland Challenge",
+        date: "2026-08-23",
+        roundsPlanned: 20,
+        roundsCompleted: 14,
+        note: "Arme platt",
+      },
+    ]);
+  });
+
+  it("hält eine fehlende Notiz als null fest, nicht als leeren Text", () => {
+    const snap = readSyncPayload(payload({ emomResults: [zeile({ note: null })] }));
+    expect(snap.emomResults[0].note).toBeNull();
+  });
+
+  it("entfernt gelöschte Ergebnisse unter ihrer ID", () => {
+    const snap = readSyncPayload(
+      payload({ emomResults: [zeile({ deleted_at: "2026-08-23 13:00:00" })] })
+    );
+    expect(snap.emomResults).toEqual([]);
+    expect(snap.removed.emomResults).toEqual(["emomr-1"]);
+  });
+
+  it("sortiert nach Datum und Anlegezeit — jüngstes zuerst gelesen", () => {
+    // Die Liste wird absteigend gelesen; ohne die Anlegezeit wäre bei zwei
+    // Durchgängen am selben Tag offen, welcher der spätere war.
+    const snap = readSyncPayload(
+      payload({
+        emomResults: [
+          zeile({ id: "a", date: "2026-08-23", created_at: "2026-08-23 08:00:00" }),
+          zeile({ id: "b", date: "2026-08-23", created_at: "2026-08-23 19:00:00" }),
+        ],
+      })
+    );
+    expect(snap.sortKeys.emomResults.a < snap.sortKeys.emomResults.b).toBe(true);
+  });
+
+  it("überlebt eine Zeile ohne Namen und ohne Zahlen", () => {
+    const snap = readSyncPayload(
+      payload({
+        emomResults: [
+          zeile({ template_name: undefined, rounds_planned: null, rounds_completed: "x" }),
+        ],
+      })
+    );
+    expect(snap.emomResults[0].templateName).toBe("EMOM");
+    expect(snap.emomResults[0].roundsPlanned).toBe(0);
+    expect(snap.emomResults[0].roundsCompleted).toBe(0);
   });
 });

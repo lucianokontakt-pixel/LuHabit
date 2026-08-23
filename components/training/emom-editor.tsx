@@ -25,7 +25,7 @@ import {
   MAX_STEP_SECONDS,
   MIN_STEP_SECONDS,
   formatSeconds,
-  totalDuration,
+  workDuration,
   type EmomStep,
   type EmomTemplate,
 } from "@/lib/emom";
@@ -83,14 +83,14 @@ function ToggleSeconds({
         {!enabled && <span className="truncate text-[11px] text-muted-foreground">{hint}</span>}
       </label>
       {enabled && (
-        <div className="flex h-8 shrink-0 items-stretch overflow-hidden rounded-pill bg-elevated ring-1 ring-foreground/8">
+        <div className="flex h-10 shrink-0 items-stretch overflow-hidden rounded-pill bg-elevated ring-1 ring-foreground/8">
           <button
             type="button"
             onClick={() => adjust(-step)}
             aria-label={`${label} verringern`}
-            className="flex w-7 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:bg-foreground/5"
+            className="flex w-9 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:bg-foreground/5"
           >
-            <Minus className="size-3" />
+            <Minus className="size-3.5" />
           </button>
           <input
             id={`${idPrefix}-seconds`}
@@ -107,15 +107,15 @@ function ToggleSeconds({
               const parsed = Number(raw);
               if (Number.isFinite(parsed)) onChange(parsed);
             }}
-            className="nums w-10 min-w-0 bg-transparent text-center text-sm outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="nums w-12 min-w-0 bg-transparent text-center text-base outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
           <button
             type="button"
             onClick={() => adjust(step)}
             aria-label={`${label} erhöhen`}
-            className="flex w-7 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:bg-foreground/5"
+            className="flex w-9 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:bg-foreground/5"
           >
-            <Plus className="size-3" />
+            <Plus className="size-3.5" />
           </button>
         </div>
       )}
@@ -242,7 +242,7 @@ export function EmomEditor({
     }
   }
 
-  const preview = totalDuration({
+  const preview = workDuration({
     id: "preview",
     position: 0,
     name,

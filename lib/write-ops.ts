@@ -20,7 +20,7 @@
  *     Abgleich nirgends referenzieren.
  */
 
-import type { EmomTemplate } from "@/lib/emom";
+import type { EmomResult, EmomTemplate } from "@/lib/emom";
 import type { WorkoutPlan, WorkoutSession } from "@/lib/training";
 import type {
   Collection,
@@ -49,7 +49,9 @@ export type WriteOp =
   | { kind: "session.save"; session: WorkoutSession; isNew: boolean }
   | { kind: "session.delete"; id: string }
   | { kind: "emom.save"; template: EmomTemplate; isNew: boolean }
-  | { kind: "emom.delete"; id: string };
+  | { kind: "emom.delete"; id: string }
+  | { kind: "emomResult.save"; result: EmomResult }
+  | { kind: "emomResult.delete"; id: string };
 
 /** Eine Operation mit ihrem Platz in der Schlange. */
 export type QueuedOp = { seq: number; op: WriteOp; createdAt: string };
@@ -190,6 +192,18 @@ export function localEffect(op: WriteOp): LocalEffect[] {
       ];
     case "emom.delete":
       return [{ collection: "emom", key: op.id, action: "delete" }];
+    case "emomResult.save":
+      return [
+        {
+          collection: "emomResults",
+          key: op.result.id,
+          action: "put",
+          data: op.result,
+          sort: `${op.result.date}|${nowStamp()}`,
+        },
+      ];
+    case "emomResult.delete":
+      return [{ collection: "emomResults", key: op.id, action: "delete" }];
   }
 }
 

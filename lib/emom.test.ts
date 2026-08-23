@@ -2,11 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
   buildSegments,
   describeTemplate,
+  EMOM_PRESETS,
   formatSeconds,
+  MAX_PREPARE_SECONDS,
+  MAX_REST_SECONDS,
+  MAX_ROUNDS,
+  MAX_STEP_SECONDS,
+  MIN_STEP_SECONDS,
   nextBoundaryElapsed,
   phaseAt,
   roundStartElapsed,
   totalDuration,
+  workDuration,
   type EmomTemplate,
 } from "@/lib/emom";
 
@@ -123,6 +130,68 @@ describe("totalDuration", () => {
 
   it("kommt ohne Vorbereitung aus", () => {
     expect(totalDuration(template({ prepareSeconds: 0, rounds: 2 }))).toBe(120);
+  });
+});
+
+describe("workDuration", () => {
+  // Das ist die Zahl, die in der Liste und im Editor als Dauer steht. Zählte
+  // sie die Vorbereitung mit, stünde bei einem klassischen 20-Minuten-EMOM
+  // "20:10" — genau daran ist es beim Bauen aufgefallen.
+  it("lässt die Vorbereitung außen vor", () => {
+    expect(workDuration(template({ prepareSeconds: 10, rounds: 20 }))).toBe(1200);
+  });
+
+  it("stimmt mit totalDuration überein, wenn es keine Vorbereitung gibt", () => {
+    const t = template({ prepareSeconds: 0, rounds: 4 });
+    expect(workDuration(t)).toBe(totalDuration(t));
+  });
+
+  it("zählt Pausen zwischen den Übungen mit — die gehören zum Training", () => {
+    // 3 Runden à 60s plus 2 Pausen à 20s (nach der letzten Runde keine mehr).
+    expect(workDuration(template({ prepareSeconds: 10, rounds: 3, restSeconds: 20 }))).toBe(220);
+  });
+
+  it("ist 0, wenn es nichts zu tun gibt", () => {
+    expect(workDuration(template({ steps: [] }))).toBe(0);
+  });
+});
+
+describe("EMOM_PRESETS", () => {
+  // Die Vorlagen werden per Tipp zu echten Datensätzen. Läge eine außerhalb
+  // der Grenzen, würde sie beim Speichern still zurechtgestutzt und wäre
+  // hinterher etwas anderes als das, was in der Auswahl stand.
+  it("vergibt jede presetId nur einmal", () => {
+    const ids = EMOM_PRESETS.map((p) => p.presetId);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("trägt überall einen Namen und eine Beschreibung", () => {
+    for (const p of EMOM_PRESETS) {
+      expect(p.name.trim(), p.presetId).not.toBe("");
+      expect(p.description.trim(), p.presetId).not.toBe("");
+    }
+  });
+
+  it("hält sich an die Grenzen, die Editor und Route erzwingen", () => {
+    for (const p of EMOM_PRESETS) {
+      expect(p.rounds, p.presetId).toBeGreaterThanOrEqual(1);
+      expect(p.rounds, p.presetId).toBeLessThanOrEqual(MAX_ROUNDS);
+      expect(p.prepareSeconds, p.presetId).toBeGreaterThanOrEqual(0);
+      expect(p.prepareSeconds, p.presetId).toBeLessThanOrEqual(MAX_PREPARE_SECONDS);
+      expect(p.restSeconds, p.presetId).toBeGreaterThanOrEqual(0);
+      expect(p.restSeconds, p.presetId).toBeLessThanOrEqual(MAX_REST_SECONDS);
+      expect(p.steps.length, p.presetId).toBeGreaterThan(0);
+      for (const step of p.steps) {
+        expect(step.seconds, p.presetId).toBeGreaterThanOrEqual(MIN_STEP_SECONDS);
+        expect(step.seconds, p.presetId).toBeLessThanOrEqual(MAX_STEP_SECONDS);
+      }
+    }
+  });
+
+  it("beschreibt Cindy als das, was sie ist: 20 Runden zu je einer Minute", () => {
+    const cindy = EMOM_PRESETS.find((p) => p.presetId === "cindy");
+    expect(cindy).toBeDefined();
+    expect(workDuration({ ...cindy!, id: "x", position: 0 })).toBe(20 * 60);
   });
 });
 

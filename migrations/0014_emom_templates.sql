@@ -10,8 +10,9 @@
 -- vollständig gelesen und vollständig ersetzt — eine Kindtabelle brächte hier
 -- nur Joins ohne Gegenwert.
 --
--- Es wird bewusst nichts protokolliert: der Timer ist ein Werkzeug, kein
--- Trainingstagebuch. Deshalb gibt es nur Vorlagen und keine Durchgänge.
+-- Ursprünglich wurde hier bewusst nichts protokolliert: der Timer war als
+-- reines Werkzeug gedacht, kein Trainingstagebuch. Abgeschlossene Durchgänge
+-- landen inzwischen trotzdem im Verlauf — siehe 0017_emom_results.sql.
 --
 -- Anwenden mit: npx wrangler d1 execute luhabit --remote --file=./migrations/0014_emom_templates.sql
 

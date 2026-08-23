@@ -18,7 +18,38 @@ import { entryKey } from "@/lib/sync-payload";
 import type { LocalEffect, QueuedOp, WriteOp } from "@/lib/write-ops";
 
 const DB_NAME = "luhabit";
-const DB_VERSION = 1;
+// 2: "emomResults" als neue Sammlung dazugekommen.
+const DB_VERSION = 2;
+
+/**
+ * Ab welcher Fassung der bestehende Bestand noch lesbar ist.
+ *
+ * Nur eine geänderte FORM der abgelegten Datensätze macht das Wegwerfen nötig
+ * — eine bloß hinzugekommene Sammlung nicht: die alten Datensätze bleiben
+ * gültig, die neue Sammlung startet ohnehin leer. Das ist kein Feinschliff.
+ * Wer beim ersten Start nach einem Update kein Netz hat, säße sonst vor einer
+ * leeren App, weil mit den Sammlungen auch der Cursor verschwindet und der
+ * Abgleich, der alles zurückholen müsste, gerade nicht laufen kann.
+ *
+ * Also: nur anheben, wenn sich die Form der Datensätze wirklich ändert.
+ */
+const WIPE_BELOW_VERSION = 1;
+
+/**
+ * Was beim Öffnen einer vorhandenen Datenbank zu tun ist.
+ *
+ * Steht hier als eigene Funktion, weil das die eine Entscheidung im ganzen
+ * Modul ist, die still Daten kosten kann — und weil IndexedDB im Testlauf
+ * nicht existiert, das Drumherum sich also nicht prüfen lässt. Die
+ * Entscheidung selbst schon.
+ *
+ * `oldVersion === 0` heißt: frisch angelegt, es gibt nichts zu retten und
+ * nichts nachzuholen.
+ */
+export function upgradePlan(oldVersion: number): { wipe: boolean; dropCursor: boolean } {
+  if (oldVersion <= 0) return { wipe: false, dropCursor: false };
+  return { wipe: oldVersion < WIPE_BELOW_VERSION, dropCursor: true };
+}
 
 /** Die Sammlungen, die der Abgleich füllt. Werden bei einem vollständigen
  *  Abgleich geleert und neu geschrieben. */
@@ -30,6 +61,7 @@ export const DATA_STORES = [
   "plans",
   "sessions",
   "emom",
+  "emomResults",
 ] as const;
 
 export type DataStore = (typeof DATA_STORES)[number];
@@ -73,13 +105,15 @@ export function openDb(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = (event) => {
       const db = req.result;
+      const plan = upgradePlan(event.oldVersion);
 
-      // Steigt die Version, hat sich die Form der abgelegten Datensätze
-      // geändert. Alte Datensätze in neuer Fassung zu lesen endet in Abstürzen,
-      // die aussehen wie Datenverlust — deshalb werden die Sammlungen verworfen
-      // und beim nächsten Start vollständig neu geholt. Es geht nichts
-      // verloren: der Server hat alles, und die Warteschlange bleibt stehen.
-      if (event.oldVersion > 0 && event.oldVersion < DB_VERSION) {
+      // Hat sich die Form der abgelegten Datensätze geändert, sind die alten
+      // nicht mehr lesbar — sie in neuer Fassung zu lesen endet in Abstürzen,
+      // die aussehen wie Datenverlust. Dann werden die Sammlungen verworfen
+      // und beim nächsten Abgleich vollständig neu geholt; der Server hat
+      // alles, und die Warteschlange bleibt stehen. Kam bloß eine Sammlung
+      // hinzu, bleibt der Bestand liegen — siehe WIPE_BELOW_VERSION.
+      if (plan.wipe) {
         for (const name of [...DATA_STORES, META_STORE]) {
           if (db.objectStoreNames.contains(name)) db.deleteObjectStore(name);
         }
@@ -94,6 +128,17 @@ export function openDb(): Promise<IDBDatabase> {
         if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath: "key" });
       }
       if (!db.objectStoreNames.contains(META_STORE)) db.createObjectStore(META_STORE);
+
+      // Bei jedem Upgrade den Cursor fallen lassen, damit der nächste Abgleich
+      // einmal ALLES holt. Eine neu hinzugekommene Sammlung bekäme sonst nur
+      // das mit, was sich seit dem letzten Abgleich geändert hat — was schon
+      // vorher auf dem Server lag, fehlte in ihr dauerhaft. Die Daten selbst
+      // bleiben liegen: ohne Netz zeigt die App weiter den vorhandenen Stand,
+      // statt bis zum nächsten Empfang leer dazustehen.
+      if (plan.dropCursor) {
+        req.transaction?.objectStore(META_STORE).delete(CURSOR_KEY);
+      }
+
       if (!db.objectStoreNames.contains(QUEUE_STORE)) {
         db.createObjectStore(QUEUE_STORE, { keyPath: "seq", autoIncrement: true });
       }
@@ -137,6 +182,7 @@ export async function applySnapshot(snapshot: SyncSnapshot): Promise<void> {
     plans: snapshot.plans as unknown as Record<string, unknown>[],
     sessions: snapshot.sessions as unknown as Record<string, unknown>[],
     emom: snapshot.emom as unknown as Record<string, unknown>[],
+    emomResults: snapshot.emomResults as unknown as Record<string, unknown>[],
   };
 
   for (const store of DATA_STORES) {

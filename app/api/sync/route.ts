@@ -79,7 +79,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Datenbankuhr nicht lesbar" }, { status: 502 });
   }
 
-  const [entries, goals, habits, exercises, plans, sessions, emom, bodyProfile] = await Promise.all([
+  const [entries, goals, habits, exercises, plans, sessions, emom, emomResults, bodyProfile] =
+    await Promise.all([
     d1Query<Row>(
       `SELECT habit, date, value, deleted_at
          FROM entries WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ? ORDER BY date ASC`,
@@ -114,6 +115,11 @@ export async function GET(req: NextRequest) {
     d1Query<Row>(
       `SELECT id, name, prepare_seconds, rounds, steps, rest_seconds, position, created_at, deleted_at
          FROM emom_templates WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ? ORDER BY position ASC`,
+      [userId, since]
+    ),
+    d1Query<Row>(
+      `SELECT id, template_name, date, rounds_planned, rounds_completed, note, created_at, deleted_at
+         FROM emom_results WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ? ORDER BY date DESC, created_at DESC`,
       [userId, since]
     ),
     d1Query<Row>(
@@ -168,6 +174,7 @@ export async function GET(req: NextRequest) {
     sessions,
     sets,
     emom,
+    emomResults,
     bodyProfile: bodyProfile[0] ?? null,
   });
 }

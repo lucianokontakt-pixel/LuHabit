@@ -12,6 +12,11 @@ import { cn } from "@/lib/utils";
  * Mit `stepper` bekommt es zusätzlich Plus/Minus-Tasten — für Werte, die man
  * unterwegs eher antippt als über die Tastatur eintippt (Wiederholungen,
  * Dauer in Fünfer-Schritten).
+ *
+ * Die Zahl steht bei 16px (text-base) und darf nicht kleiner werden: iOS zoomt
+ * den Viewport hinein, sobald ein fokussiertes Feld darunter liegt, und das
+ * Layout springt beim Antippen. Kompakt wird das Feld über seine Höhe und die
+ * Breite der Tasten, nicht über den Schriftgrad.
  */
 export function NumberField({
   id,
@@ -79,7 +84,7 @@ export function NumberField({
               const parsed = Number(raw.replace(",", "."));
               onChange(Number.isFinite(parsed) ? parsed : null);
             }}
-            className="nums w-full min-w-0 flex-1 bg-transparent text-center text-sm outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="nums w-full min-w-0 flex-1 bg-transparent text-center text-base outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
           <button
             type="button"
@@ -110,7 +115,7 @@ export function NumberField({
             const parsed = Number(raw.replace(",", "."));
             onChange(Number.isFinite(parsed) ? parsed : null);
           }}
-          className="h-10 px-3 text-sm"
+          className="h-10 px-3"
         />
       )}
     </div>
