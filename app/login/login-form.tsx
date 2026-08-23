@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 
@@ -54,6 +55,26 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   const from = searchParams.get("from") || "/";
   const oauthError = searchParams.get("error");
   const errorDetail = searchParams.get("detail");
+  const silentDone = searchParams.get("silentDone") === "1";
+
+  // Ein abgelaufenes eigenes Sitzungscookie heißt nicht, dass auch die
+  // Google-Sitzung weg ist — iOS räumt bei einer als App installierten Seite
+  // schon nach rund einer Woche ohne Nutzung das eigene Ablagefach leer, viel
+  // öfter, als das 90-Tage-Cookie es vorsähe. Ein stiller Versuch im
+  // Hintergrund holt in diesem Fall die Anmeldung ohne sichtbaren
+  // Zwischenschritt nach; nur wenn der (einmalig, erkennbar an silentDone)
+  // schon gescheitert ist oder ein echter Fehler vorliegt, erscheint der
+  // normale Knopf. Ein ausdrückliches Abmelden markiert silentDone selbst,
+  // damit es hier nicht sofort wieder rückgängig gemacht wird.
+  const autoRetrying = googleEnabled && !oauthError && !silentDone;
+
+  useEffect(() => {
+    if (!autoRetrying) return;
+    // Eine echte Navigation wie beim Knopf unten, kein Routenwechsel — Ziel
+    // ist eine Route, die selbst weiterleitet (zu Google, dann zurück).
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.href = `/api/auth/google/start?silent=1&from=${encodeURIComponent(from)}`;
+  }, [autoRetrying, from]);
 
   return (
     <Card className="w-full max-w-sm gap-6">
@@ -79,17 +100,21 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
       )}
 
       {googleEnabled ? (
-        <div className="px-(--card-spacing)">
-          {/* Bewusst ein Link, kein fetch: der OAuth-Start ist eine echte
-              Navigation zu Google und darf nicht im Hintergrund passieren. */}
-          <a
-            href={`/api/auth/google/start?from=${encodeURIComponent(from)}`}
-            className="flex h-12 w-full items-center justify-center gap-3 rounded-pill bg-elevated text-sm font-medium ring-1 ring-foreground/12 transition-colors hover:ring-foreground/30"
-          >
-            <GoogleMark />
-            Mit Google anmelden
-          </a>
-        </div>
+        autoRetrying ? (
+          <div className="px-(--card-spacing) text-sm text-muted-foreground">Meldet an …</div>
+        ) : (
+          <div className="px-(--card-spacing)">
+            {/* Bewusst ein Link, kein fetch: der OAuth-Start ist eine echte
+                Navigation zu Google und darf nicht im Hintergrund passieren. */}
+            <a
+              href={`/api/auth/google/start?from=${encodeURIComponent(from)}`}
+              className="flex h-12 w-full items-center justify-center gap-3 rounded-pill bg-elevated text-sm font-medium ring-1 ring-foreground/12 transition-colors hover:ring-foreground/30"
+            >
+              <GoogleMark />
+              Mit Google anmelden
+            </a>
+          </div>
+        )
       ) : (
         <p className="px-(--card-spacing) text-sm text-muted-foreground">
           Es ist keine Anmeldung eingerichtet — die App ist offen zugänglich.

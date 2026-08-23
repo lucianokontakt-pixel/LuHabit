@@ -13,6 +13,14 @@ export async function GET(req: NextRequest) {
   const state = randomToken();
   const verifier = randomToken(48);
   const from = req.nextUrl.searchParams.get("from") || "/";
+  // Die eigene 90-Tage-Sitzung übersteht iOS' Speicherbereinigung nicht — bei
+  // einer als Home-Bildschirm-App installierten PWA räumt iOS das isolierte
+  // Ablagefach schon nach rund einer Woche ohne Nutzung leer, das Cookie
+  // eingeschlossen. Ein "stiller" Versuch (prompt=none) fragt Google im
+  // Hintergrund, ob am Gerät noch eine Google-Sitzung besteht, und meldet ohne
+  // sichtbaren Zwischenschritt neu an, solange die besteht — nur wenn auch die
+  // längst nicht mehr da ist, landet man auf der normalen Anmeldeseite.
+  const silent = req.nextUrl.searchParams.get("silent") === "1";
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -25,12 +33,7 @@ export async function GET(req: NextRequest) {
     // Kein Refresh Token nötig — die App spricht nach dem Login nicht mehr
     // mit Google, sie braucht nur die Identität.
     access_type: "online",
-    // Kein prompt-Parameter: ist am Gerät nur ein Google-Konto angemeldet,
-    // bestätigt Google das ohne Zwischenschritt. "select_account" hätte bei
-    // jeder erneuten Anmeldung erzwungen, das Konto extra anzutippen — bei
-    // iOS' 7-Tage-Speicherbereinigung, die die Sitzung öfter zurücksetzt als
-    // die 90 Tage des Cookies vorsehen, war das ein unnötiger Extra-Tap bei
-    // jedem Mal.
+    ...(silent ? { prompt: "none" } : {}),
   });
 
   const res = NextResponse.redirect(`${GOOGLE_AUTH_URL}?${params.toString()}`);
@@ -38,7 +41,7 @@ export async function GET(req: NextRequest) {
   // state und Verifier signiert im Cookie ablegen, kurz gültig.
   res.cookies.set(
     OAUTH_COOKIE,
-    await signValue(btoa(JSON.stringify({ state, verifier, from }))),
+    await signValue(btoa(JSON.stringify({ state, verifier, from, silent }))),
     {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

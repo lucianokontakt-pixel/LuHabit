@@ -11,12 +11,36 @@ import { upsertGoogleUser } from "@/lib/server-user";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
-function loginError(req: NextRequest, code: string, detail?: string) {
+/**
+ * Bei einem stillen Anmeldeversuch (prompt=none, siehe start/route.ts) ist ein
+ * Fehlschlag der Normalfall, sobald keine Google-Sitzung mehr besteht — kein
+ * Grund für eine Fehlermeldung. Die normale Anmeldeseite erscheint dann ohne
+ * jeden Hinweis, dass im Hintergrund schon ein Versuch lief.
+ */
+async function loginError(req: NextRequest, code: string, detail?: string) {
+  const stored = await verifyValue(req.cookies.get(OAUTH_COOKIE)?.value ?? "");
+  let silent = false;
+  let from = "/";
+  if (stored) {
+    try {
+      const parsed = JSON.parse(atob(stored)) as { from?: string; silent?: boolean };
+      silent = Boolean(parsed.silent);
+      if (parsed.from?.startsWith("/") && !parsed.from.startsWith("//")) from = parsed.from;
+    } catch {
+      // Ohne lesbaren Inhalt bleibt es beim normalen, sichtbaren Fehlerpfad.
+    }
+  }
+
   const url = new URL("/login", req.url);
-  url.searchParams.set("error", code);
-  // Googles eigener Fehlercode (z.B. invalid_client, redirect_uri_mismatch)
-  // hilft beim Einrichten enorm und enthält keine Geheimnisse.
-  if (detail) url.searchParams.set("detail", detail);
+  if (silent) {
+    url.searchParams.set("from", from);
+    url.searchParams.set("silentDone", "1");
+  } else {
+    url.searchParams.set("error", code);
+    // Googles eigener Fehlercode (z.B. invalid_client, redirect_uri_mismatch)
+    // hilft beim Einrichten enorm und enthält keine Geheimnisse.
+    if (detail) url.searchParams.set("detail", detail);
+  }
   const res = NextResponse.redirect(url);
   res.cookies.delete(OAUTH_COOKIE);
   return res;
