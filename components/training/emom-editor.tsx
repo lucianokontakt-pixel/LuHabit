@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -39,8 +39,11 @@ const PRESETS = [30, 45, 60, 90, 120];
 
 /**
  * Ein Schalter mit Zahlenfeld dahinter — für Vorbereitung und Pause zwischen
- * Übungen. Der eingetippte Wert bleibt beim Ausschalten erhalten, damit ein
- * versehentliches Aus/Ein nicht die Zahl mit ihm verschluckt.
+ * Übungen. Beides in einer Zeile statt das Zahlenfeld darunter aufklappen zu
+ * lassen: auf dem Handy kostet jede zusätzliche Zeile Platz, den ein Dialog
+ * mit vielen Feldern nicht hat. Der eingetippte Wert bleibt beim Ausschalten
+ * erhalten, damit ein versehentliches Aus/Ein nicht die Zahl mit ihm
+ * verschluckt.
  */
 function ToggleSeconds({
   label,
@@ -65,27 +68,58 @@ function ToggleSeconds({
   step: number;
   idPrefix: string;
 }) {
+  function adjust(delta: number) {
+    const base = value ?? min;
+    onChange(Math.max(min, Math.min(max, base + delta)));
+  }
+  function onChange(next: number) {
+    onValueChange(next);
+  }
+
   return (
-    <div className="flex flex-col gap-2.5">
-      <label className="flex min-w-0 cursor-pointer items-center justify-between gap-3">
-        <span className="flex min-w-0 flex-col gap-0.5">
-          <span className="truncate text-sm">{label}</span>
-          {!enabled && <span className="text-[11px] text-muted-foreground">{hint}</span>}
-        </span>
-        <Switch checked={enabled} onCheckedChange={onEnabledChange} />
+    <div className="flex min-w-0 items-center gap-3">
+      <label className="flex min-w-0 flex-1 cursor-pointer flex-col gap-0.5">
+        <span className="truncate text-sm">{label}</span>
+        {!enabled && <span className="truncate text-[11px] text-muted-foreground">{hint}</span>}
       </label>
       {enabled && (
-        <NumberField
-          id={`${idPrefix}-seconds`}
-          label="Sekunden"
-          value={value}
-          onChange={onValueChange}
-          min={min}
-          max={max}
-          step={step}
-          className="max-w-[140px]"
-        />
+        <div className="flex h-8 shrink-0 items-stretch overflow-hidden rounded-pill bg-elevated ring-1 ring-foreground/8">
+          <button
+            type="button"
+            onClick={() => adjust(-step)}
+            aria-label={`${label} verringern`}
+            className="flex w-7 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:bg-foreground/5"
+          >
+            <Minus className="size-3" />
+          </button>
+          <input
+            id={`${idPrefix}-seconds`}
+            aria-label={`${label} in Sekunden`}
+            type="number"
+            inputMode="numeric"
+            min={min}
+            max={max}
+            step={step}
+            value={value ?? ""}
+            onChange={(e) => {
+              const raw = e.target.value;
+              if (raw === "") return;
+              const parsed = Number(raw);
+              if (Number.isFinite(parsed)) onChange(parsed);
+            }}
+            className="nums w-10 min-w-0 bg-transparent text-center text-sm outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+          <button
+            type="button"
+            onClick={() => adjust(step)}
+            aria-label={`${label} erhöhen`}
+            className="flex w-7 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground active:bg-foreground/5"
+          >
+            <Plus className="size-3" />
+          </button>
+        </div>
       )}
+      <Switch checked={enabled} onCheckedChange={onEnabledChange} className="shrink-0" />
     </div>
   );
 }
@@ -220,15 +254,12 @@ export function EmomEditor({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden rounded-card p-0 sm:max-w-lg">
-        <DialogHeader className="gap-3 py-5 pl-5 pr-12">
+      <DialogContent className="flex max-h-[92vh] flex-col overflow-hidden rounded-card p-0 sm:max-h-[85vh] sm:max-w-lg">
+        <DialogHeader className="gap-2 py-4 pl-4 pr-11 sm:gap-3 sm:py-5 sm:pl-5 sm:pr-12">
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-col gap-1.5">
               <DialogTitle>{template ? "Vorlage bearbeiten" : "Neue Vorlage"}</DialogTitle>
-              <DialogDescription>
-                Jeder Schritt ist eine Runde. Mehrere Schritte kommen reihum dran — so
-                entstehen wechselnde Intervalle.
-              </DialogDescription>
+              <DialogDescription>Schritte laufen reihum, Runde für Runde.</DialogDescription>
             </div>
             {/* Die Gesamtdauer ist die eine Zahl, die beim Einstellen ständig
                 interessiert — verdient deshalb einen festen Platz oben, nicht
@@ -243,31 +274,35 @@ export function EmomEditor({
           </div>
         </DialogHeader>
 
-        <div className="flex flex-col gap-6 overflow-y-auto px-5 py-5">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="emom-name" className="text-xs text-muted-foreground">
-              Name
-            </Label>
-            <Input
-              id="emom-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="z. B. Burpee-Finisher"
+        <div className="flex flex-col gap-4 overflow-y-auto px-4 py-4 sm:gap-5 sm:px-5 sm:py-5">
+          <div className="flex gap-3">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <Label htmlFor="emom-name" className="text-xs text-muted-foreground">
+                Name
+              </Label>
+              <Input
+                id="emom-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="z. B. Burpee-Finisher"
+              />
+            </div>
+            <NumberField
+              id="emom-rounds"
+              label="Runden"
+              value={rounds}
+              onChange={setRounds}
+              min={1}
+              max={MAX_ROUNDS}
+              stepper
+              className="w-28 shrink-0"
             />
           </div>
 
-          <NumberField
-            id="emom-rounds"
-            label="Runden"
-            value={rounds}
-            onChange={setRounds}
-            min={1}
-            max={MAX_ROUNDS}
-            className="max-w-[140px]"
-          />
-
-          <div className="flex flex-col gap-4">
-            <p className="text-xs font-medium text-muted-foreground">Zeiten drumherum</p>
+          {/* Beide Zeiten drumherum in derselben kompakten Zeilenform — eine
+              einzige, klar benannte Stelle je Einstellung, statt sie zusätzlich
+              bei jedem Übergang zwischen den Schritten noch einmal anzubieten. */}
+          <div className="flex flex-col gap-3 rounded-panel bg-elevated/60 px-3 py-2.5">
             <ToggleSeconds
               idPrefix="emom-prepare"
               label="Vorbereitung"
@@ -280,10 +315,11 @@ export function EmomEditor({
               max={MAX_PREPARE_SECONDS}
               step={5}
             />
+            <span aria-hidden className="h-px bg-border" />
             <ToggleSeconds
               idPrefix="emom-rest"
-              label="Pause zwischen Übungen"
-              hint="Der nächste Schritt folgt direkt, ohne Pause dazwischen."
+              label="Pause"
+              hint="Zwischen den Übungen — sonst geht's direkt weiter."
               enabled={restEnabled}
               onEnabledChange={setRestEnabled}
               value={restSeconds}
@@ -319,7 +355,7 @@ export function EmomEditor({
 
                 return (
                   <Fragment key={index}>
-                    <div className="flex flex-col gap-2.5 py-3">
+                    <div className="flex flex-col gap-2 py-2.5 sm:gap-2.5 sm:py-3">
                       <div className="flex items-center justify-between gap-2">
                         <p className="min-w-0 truncate text-[11px] font-medium text-muted-foreground">
                           Schritt {index + 1}
@@ -354,6 +390,7 @@ export function EmomEditor({
                           min={MIN_STEP_SECONDS}
                           max={MAX_STEP_SECONDS}
                           step={5}
+                          stepper
                           className="flex-1"
                         />
                         <NumberField
@@ -364,6 +401,7 @@ export function EmomEditor({
                           min={1}
                           max={MAX_STEP_REPS}
                           placeholder="frei"
+                          stepper
                           className="flex-1"
                         />
                       </div>
@@ -390,34 +428,19 @@ export function EmomEditor({
                     </div>
 
                     {/* Die Pause zwischen zwei Schritten ist ein Übergang, kein
-                        eigener Baustein — deshalb ein schmaler Steg mit der
-                        Pille darauf statt einer eigenen großen Box, die genauso
-                        viel Gewicht beanspruchen würde wie ein ganzer Schritt. */}
+                        eigener Baustein — ein schmaler Steg statt einer Box.
+                        Ob und wie lange pausiert wird, ist eine einzige
+                        Einstellung oben ("Pause zwischen Übungen"); hier steht
+                        deshalb nur noch die Anzeige, kein zweiter Ein-Aus-Knopf
+                        pro Übergang — sonst sähe es nach mehreren getrennten
+                        Pausen aus, wo es nur eine gibt. */}
                     {hasGapAfter && (
-                      <div className="relative flex items-center py-1">
+                      <div className="relative flex items-center py-1.5">
                         <span aria-hidden className="h-px flex-1 bg-border" />
-                        {restEnabled ? (
-                          <button
-                            type="button"
-                            onClick={() => setRestEnabled(false)}
-                            aria-label={`${restSeconds ?? DEFAULT_REST_SECONDS} Sekunden Pause entfernen`}
-                            className="mx-2 flex shrink-0 items-center gap-1 rounded-pill bg-elevated px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:text-destructive"
-                          >
-                            <span className="nums">{restSeconds ?? DEFAULT_REST_SECONDS}s Pause</span>
-                            {/* Ohne Hover auf dem Handy sichtbar bleiben, statt sich
-                                erst bei einer Maus zu zeigen — sonst gäbe es auf dem
-                                Handy nie einen Hinweis, dass Antippen sie entfernt. */}
-                            <Trash2 className="size-3" />
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setRestEnabled(true)}
-                            className="mx-2 flex shrink-0 items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-elevated hover:text-foreground"
-                          >
-                            <Plus className="size-3" />
-                            Pause
-                          </button>
+                        {restEnabled && (
+                          <span className="nums mx-2 shrink-0 text-[11px] text-muted-foreground">
+                            {restSeconds ?? DEFAULT_REST_SECONDS}s Pause
+                          </span>
                         )}
                         <span aria-hidden className="h-px flex-1 bg-border" />
                         {isLastStep && (
@@ -436,7 +459,7 @@ export function EmomEditor({
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
 
-        <div className="flex gap-2 border-t border-border px-5 py-4">
+        <div className="flex gap-2 border-t border-border px-4 py-3 sm:px-5 sm:py-4">
           <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
             Abbrechen
           </Button>

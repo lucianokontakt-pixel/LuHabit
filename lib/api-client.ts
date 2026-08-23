@@ -9,6 +9,25 @@ export type Entry = { habit: HabitType; date: string; value: number };
 export type Goal = { habit: HabitType; target: number; weeklyTarget?: number | null };
 
 /**
+ * Letzter bekannter Stand, im Speicher statt in IndexedDB. Ein Habit ist beim
+ * Öffnen so gut wie immer schon einmal geladen (Dashboard oder vorheriger
+ * Besuch) — ohne diesen Zwischenspeicher würde jede neue Seite trotzdem bei
+ * null/leer anfangen und beim Eintreffen der echten Werte sichtbar
+ * "aufblitzen". Der IndexedDB-Abruf läuft trotzdem weiter, damit der Stand
+ * aktuell bleibt.
+ */
+let cachedEntries: Entry[] | null = null;
+let cachedGoals: Goal[] | null = null;
+
+export function getCachedEntries(): Entry[] | null {
+  return cachedEntries;
+}
+
+export function getCachedGoals(): Goal[] | null {
+  return cachedGoals;
+}
+
+/**
  * Lässt Aufrufe mit demselben Schlüssel nacheinander statt gleichzeitig
  * laufen. addEntry liest den aktuellen Wert, bevor es den neuen schreibt —
  * ohne diese Reihe würden mehrere schnelle Taps alle denselben, noch nicht
@@ -40,6 +59,7 @@ export async function fetchEntries(params: {
 }): Promise<Entry[]> {
   await ensureLocalData();
   const all = await readAll<Entry>("entries");
+  cachedEntries = all;
   // Dieselben Filter, die vorher im SQL standen. Sortiert ist bereits nach
   // Datum aufsteigend, so wie es die Route lieferte.
   return all.filter(
@@ -77,13 +97,21 @@ export async function addEntry(params: {
     const entry: Entry = { habit: params.habit, date: params.date, value };
     await enqueue({ kind: "entry.set", entry });
     void flushQueue();
+    if (cachedEntries) {
+      cachedEntries = [
+        ...cachedEntries.filter((e) => entryKey(e.habit, e.date) !== entryKey(entry.habit, entry.date)),
+        entry,
+      ];
+    }
     return entry;
   });
 }
 
 export async function fetchGoals(): Promise<Goal[]> {
   await ensureLocalData();
-  return readAll<Goal>("goals");
+  const goals = await readAll<Goal>("goals");
+  cachedGoals = goals;
+  return goals;
 }
 
 /**

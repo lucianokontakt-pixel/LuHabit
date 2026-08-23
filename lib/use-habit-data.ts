@@ -2,17 +2,34 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { HabitType, todayISO, isoDateDaysAgo } from "@/lib/habits";
-import { addEntry, fetchEntries, fetchGoals, setGoal, type Entry } from "@/lib/api-client";
+import {
+  addEntry,
+  fetchEntries,
+  fetchGoals,
+  getCachedEntries,
+  getCachedGoals,
+  setGoal,
+  type Entry,
+} from "@/lib/api-client";
 
 // Ein Jahr — deckt sich mit dem Standardfenster von computeStreaks, damit der
 // angezeigte Rekord nicht stillschweigend am Ladefenster hängen bleibt.
 const HISTORY_DAYS = 365;
 
 export function useHabitData(habit: HabitType, defaultGoal: number) {
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [goal, setGoalState] = useState<number>(defaultGoal);
-  const [weeklyGoal, setWeeklyGoalState] = useState<number | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
+  // Aus dem Zwischenspeicher vorbefüllt, falls schon einmal geladen (z. B. auf
+  // dem Dashboard) — sonst würde diese Seite jedes Mal kurz bei 0 anfangen und
+  // beim Eintreffen der echten Werte sichtbar aufblitzen.
+  const earliestEntry = isoDateDaysAgo(HISTORY_DAYS - 1);
+  const cachedGoal = getCachedGoals()?.find((g) => g.habit === habit);
+  const [entries, setEntries] = useState<Entry[]>(
+    () => getCachedEntries()?.filter((e) => e.habit === habit && e.date >= earliestEntry) ?? []
+  );
+  const [goal, setGoalState] = useState<number>(cachedGoal?.target ?? defaultGoal);
+  const [weeklyGoal, setWeeklyGoalState] = useState<number | undefined>(
+    cachedGoal?.weeklyTarget ?? undefined
+  );
+  const [loading, setLoading] = useState(getCachedEntries() === null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {

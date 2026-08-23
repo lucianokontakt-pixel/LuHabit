@@ -2,15 +2,45 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { HabitType, todayISO, isoDateDaysAgo } from "@/lib/habits";
-import { addEntry, fetchEntries, fetchGoals, type Entry } from "@/lib/api-client";
+import {
+  addEntry,
+  fetchEntries,
+  fetchGoals,
+  getCachedEntries,
+  getCachedGoals,
+  type Entry,
+} from "@/lib/api-client";
 
 const HISTORY_DAYS = 180;
 
+function initialGoals(): Record<string, number> {
+  const cached = getCachedGoals();
+  if (!cached) return {};
+  const next: Record<string, number> = {};
+  for (const g of cached) next[g.habit] = g.target;
+  return next;
+}
+
+function initialWeeklyGoals(): Record<string, number | undefined> {
+  const cached = getCachedGoals();
+  if (!cached) return {};
+  const next: Record<string, number | undefined> = {};
+  for (const g of cached) next[g.habit] = g.weeklyTarget ?? undefined;
+  return next;
+}
+
 export function useAllHabitsData() {
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [goals, setGoals] = useState<Record<string, number>>({});
-  const [weeklyGoals, setWeeklyGoals] = useState<Record<string, number | undefined>>({});
-  const [loading, setLoading] = useState(true);
+  // Aus dem Zwischenspeicher vorbefüllt — sonst blitzt jede Karte beim ersten
+  // Rendern kurz bei 0 auf, bevor die echten Werte eine Zwischendurch-Sekunde
+  // später ankommen.
+  const earliestEntry = isoDateDaysAgo(HISTORY_DAYS - 1);
+  const [entries, setEntries] = useState<Entry[]>(
+    () => getCachedEntries()?.filter((e) => e.date >= earliestEntry) ?? []
+  );
+  const [goals, setGoals] = useState<Record<string, number>>(initialGoals);
+  const [weeklyGoals, setWeeklyGoals] =
+    useState<Record<string, number | undefined>>(initialWeeklyGoals);
+  const [loading, setLoading] = useState(getCachedEntries() === null);
 
   const load = useCallback(async () => {
     setLoading(true);
