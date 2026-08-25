@@ -36,7 +36,7 @@ export function ExerciseTrendChart({
     <div className="flex flex-col gap-1">
       {/* Achsen und Raster stehen ab dem ersten Datenpunkt — der eine Punkt
           zeigt, wo die Kurve anfängt, statt Platzhaltertext. */}
-      <ChartContainer config={chartConfig} className="h-[160px] w-full">
+      <ChartContainer config={chartConfig} className="h-[130px] w-full">
         <LineChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
           <CartesianGrid vertical={false} strokeDasharray="2 4" stroke="var(--border)" />
           <XAxis

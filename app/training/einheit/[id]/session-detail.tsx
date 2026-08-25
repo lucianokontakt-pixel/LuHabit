@@ -175,7 +175,7 @@ export function SessionDetail({ id }: { id: string }) {
 
   if (editing) {
     return (
-      <div className="flex flex-col gap-5 pb-8">
+      <div className="flex flex-col gap-4 pb-6">
         <div>
           <button
             type="button"
@@ -357,7 +357,7 @@ export function SessionDetail({ id }: { id: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-8">
+    <div className="flex flex-col gap-4 pb-6">
       <div>
         <Link
           href="/training/statistik"

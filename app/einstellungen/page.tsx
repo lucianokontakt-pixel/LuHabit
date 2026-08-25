@@ -145,7 +145,7 @@ export default function EinstellungenPage() {
   const pending = RESETS.find((r) => r.scope === pendingReset);
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-5">
       <div>
         <p className="text-sm text-muted-foreground">Konto &amp; Darstellung</p>
         <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">

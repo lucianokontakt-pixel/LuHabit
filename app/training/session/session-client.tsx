@@ -565,7 +565,7 @@ export function SessionClient() {
   if (finishedSummary) {
     const waitingForNetwork = pendingIds.has(finishedSummary.session.id);
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
         <SessionSummary summary={finishedSummary} hero>
           <p className="text-sm opacity-75">
             {waitingForNetwork
@@ -627,7 +627,7 @@ export function SessionClient() {
   const previousSession = sessions.find((s) => s.dayId === day.id);
 
   return (
-    <div className="flex flex-col gap-5 pb-40">
+    <div className="flex flex-col gap-4 pb-32">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <button

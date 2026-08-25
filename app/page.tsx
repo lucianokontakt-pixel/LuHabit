@@ -75,7 +75,7 @@ export default function DashboardPage() {
   }).length;
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-sm capitalize text-muted-foreground">{today}</p>
@@ -120,10 +120,10 @@ export default function DashboardPage() {
           </p>
         )}
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {isLoading
             ? Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-[164px] animate-pulse rounded-card bg-card" />
+                <div key={i} className="h-[150px] animate-pulse rounded-card bg-card" />
               ))
             : displayOrder.map((habit) => {
                 const config = habits[habit];

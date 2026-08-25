@@ -153,7 +153,7 @@ export function ExerciseProgress({
           {/* Auch mit einer einzigen Einheit stehen Achsen und Raster — der
               Punkt markiert den Startwert, aus dem die Kurve wird. */}
           <div className="flex flex-col gap-1 px-(--card-spacing)">
-            <ChartContainer config={chartConfig} className="h-[200px] w-full">
+            <ChartContainer config={chartConfig} className="h-[160px] w-full">
               <LineChart data={history} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
                 <CartesianGrid vertical={false} strokeDasharray="2 4" stroke="var(--border)" />
                 <XAxis

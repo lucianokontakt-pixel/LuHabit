@@ -81,7 +81,7 @@ export default function ExercisesPage() {
   const hiddenCount = exercises.filter((e) => e.hidden).length;
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-5">
       <div>
         <p className="text-sm text-muted-foreground">
           {exercises.length} Übungen nach Muskelgruppe und Gerät

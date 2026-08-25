@@ -78,7 +78,7 @@ export function CombinedTrendChart({
   }
 
   return (
-    <ChartContainer config={config} className="h-[260px] w-full">
+    <ChartContainer config={config} className="h-[200px] w-full">
       <LineChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
         <CartesianGrid
           vertical={false}

@@ -29,7 +29,7 @@ export default function KoerperPage() {
   const leanMass = latestWeight && fatMass !== null ? latestWeight - fatMass : null;
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-5">
       <div>
         <p className="text-sm text-muted-foreground">Gewicht, Körperfett &amp; Bedarf</p>
         <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">

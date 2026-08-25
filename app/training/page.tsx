@@ -49,7 +49,7 @@ export default function TrainingOverviewPage() {
   const trainedToday = sessions.some((s) => s.date === todayISO());
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-5">
       <div>
         <p className="text-sm text-muted-foreground">Pläne, Progression &amp; Verlauf</p>
         <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">

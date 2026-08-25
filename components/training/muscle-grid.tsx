@@ -141,7 +141,7 @@ export function MuscleGrid({ progress }: { progress: MuscleProgress[] }) {
         </div>
 
         <div className="px-(--card-spacing)">
-          <ChartContainer config={chartConfig} className="h-[240px] w-full">
+          <ChartContainer config={chartConfig} className="h-[190px] w-full">
             <LineChart data={chartData} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
               <ReferenceArea
                 y1={WEEKLY_SETS_MIN}

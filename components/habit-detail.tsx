@@ -68,7 +68,7 @@ function HabitDetailContent({
     weeklyGoal && weeklyGoal > 0 ? Math.min(100, (weekTotal / weeklyGoal) * 100) : null;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
         <div className="flex size-10 items-center justify-center rounded-xl bg-secondary">
           <Icon className="size-5" />

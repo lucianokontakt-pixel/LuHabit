@@ -159,7 +159,7 @@ export default function ProgressionPage() {
   const stagnatingCount = summaries.filter((s) => s.stagnating).length;
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-5">
       <div>
         <p className="text-sm text-muted-foreground">
           Wo du wächst — und wo es gerade klemmt

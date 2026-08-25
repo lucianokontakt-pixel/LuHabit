@@ -20,14 +20,14 @@ export function DayGoalHero({ reached, total }: { reached: number; total: number
   const percent = total > 0 ? Math.round((reached / total) * 100) : 0;
 
   return (
-    <Card variant="blush" className="gap-4">
-      <div className="flex flex-col gap-3 px-(--card-spacing) sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+    <Card variant="blush" className="gap-3">
+      <div className="flex flex-col gap-2 px-(--card-spacing) sm:flex-row sm:items-end sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <p className="font-display text-4xl leading-none tracking-tight sm:text-heading">
+          <p className="font-display text-3xl leading-none tracking-tight sm:text-heading-sm">
             <span className="nums">{reached}</span>
             <span className="opacity-45"> / {total}</span>
           </p>
-          <p className="mt-2 text-sm opacity-75">
+          <p className="mt-1.5 text-sm opacity-75">
             {reached === 1 ? "Ziel heute erreicht" : "Zielen heute erreicht"}
           </p>
         </div>

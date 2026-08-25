@@ -19,7 +19,7 @@ function Card({
       data-size={size}
       data-variant={variant}
       className={cn(
-        "group/card flex flex-col gap-(--card-spacing) rounded-card py-(--card-spacing) text-sm [--card-spacing:--spacing(5)] data-[size=sm]:[--card-spacing:--spacing(4)]",
+        "group/card flex flex-col gap-(--card-spacing) rounded-card py-(--card-spacing) text-sm [--card-spacing:--spacing(4)] data-[size=sm]:[--card-spacing:--spacing(3)]",
         variant === "default" && "bg-card text-card-foreground",
         variant === "float" && "bg-elevated text-foreground shadow-float",
         variant === "blush" && "bg-blush text-blush-foreground",

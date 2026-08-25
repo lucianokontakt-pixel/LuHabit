@@ -92,7 +92,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             {/* pb-28 reicht als fester Abstand nicht mehr: die untere
                 Navigation wächst um die Safe-Area-Höhe des Geräts nach unten,
                 sonst würde der letzte Inhalt darunter verschwinden. */}
-            <main className="px-edge mx-auto w-full max-w-4xl flex-1 pt-5 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:[--edge:1.5rem] sm:pb-12 sm:pt-8">
+            <main className="px-edge mx-auto w-full max-w-4xl flex-1 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:[--edge:1.5rem] sm:pb-9 sm:pt-6">
               {children}
             </main>
             <BottomNav />

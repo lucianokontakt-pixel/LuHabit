@@ -100,7 +100,7 @@ export default function PlansPage() {
   const deletingPlan = plans.find((p) => p.id === deleting);
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-5">
       <div>
         <p className="text-sm text-muted-foreground">Deine Trainingspläne</p>
         <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">Pläne</h1>

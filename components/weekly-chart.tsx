@@ -48,7 +48,7 @@ export function WeeklyChart({
       })();
 
   return (
-    <ChartContainer config={chartConfig} className="h-[180px] w-full">
+    <ChartContainer config={chartConfig} className="h-[140px] w-full">
       <BarChart data={data} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
         <CartesianGrid
           vertical={false}

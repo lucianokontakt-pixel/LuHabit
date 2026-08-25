@@ -79,7 +79,7 @@ export function TrainingHabitCard({
   const footer = summary ? footerLine({ summary, sessions, exerciseById, activePlan }) : null;
 
   if (loading) {
-    return <div className="h-[280px] animate-pulse rounded-card bg-card" />;
+    return <div className="h-[240px] animate-pulse rounded-card bg-card" />;
   }
 
   if (error || !summary) {
@@ -96,7 +96,7 @@ export function TrainingHabitCard({
 
   return (
     <Link href="/training" className="block">
-      <Card className="gap-5 transition-colors hover:bg-elevated">
+      <Card className="gap-4 transition-colors hover:bg-elevated">
         <div className="flex items-start justify-between gap-4 px-(--card-spacing)">
           <div>
             <h2 className="font-display text-2xl leading-tight tracking-tight">Training</h2>

@@ -69,7 +69,7 @@ export function TrendChart({
   }, [data]);
 
   return (
-    <ChartContainer config={chartConfig} className="h-[180px] w-full">
+    <ChartContainer config={chartConfig} className="h-[140px] w-full">
       <AreaChart data={data} margin={{ left: 0, right: 4, top: 8, bottom: 0 }}>
         <defs>
           <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">

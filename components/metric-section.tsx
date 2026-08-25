@@ -99,7 +99,7 @@ export function MetricSection({
 
       <div className="flex flex-col gap-1 px-(--card-spacing)">
         {loading ? (
-          <div className="h-[180px] animate-pulse rounded-panel bg-elevated" />
+          <div className="h-[140px] animate-pulse rounded-panel bg-elevated" />
         ) : (
           <>
             {/* Das Diagramm steht von Anfang an da, auch ohne Werte. Die Achse

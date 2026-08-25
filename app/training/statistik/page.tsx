@@ -121,7 +121,7 @@ export default function TrainingStatsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-5">
       <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <p className="text-sm text-muted-foreground">Volumen, Bestleistungen &amp; Frequenz</p>

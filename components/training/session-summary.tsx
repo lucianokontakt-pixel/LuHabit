@@ -39,7 +39,7 @@ export function SessionSummary({
   const maxMuscleSets = Math.max(...muscleRows.map((r) => r.sets), 1);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <Card variant={hero ? "blush" : "default"} className="gap-4">
         <div className="px-(--card-spacing)">
           <p className={cn("text-sm", hero ? "opacity-75" : "text-muted-foreground")}>

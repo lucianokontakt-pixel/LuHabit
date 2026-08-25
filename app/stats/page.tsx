@@ -25,7 +25,7 @@ export default function StatsPage() {
   const selectedGoal = selectedId ? goals[selectedId] ?? selectedConfig?.defaultGoal ?? 0 : 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <p className="text-sm text-muted-foreground">Verlauf und Vergleich deiner Habits</p>
@@ -91,7 +91,7 @@ export default function StatsPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="h-[180px] animate-pulse rounded-md bg-muted" />
+              <div className="h-[140px] animate-pulse rounded-md bg-muted" />
             ) : (
               <WeeklyChart
                 entries={selectedEntries}

@@ -132,7 +132,7 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-24">
+    <div className="flex flex-col gap-4 pb-20">
       <div className="flex flex-col gap-3">
         <Link
           href="/training/plaene"
