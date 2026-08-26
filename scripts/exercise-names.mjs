@@ -207,6 +207,7 @@ const CORE = {
   "toe touchers": "Zehenberührung",
   "heel touchers": "Fersenberührung",
   "hip thrust": "Hip Thrust",
+  "hip thrusts": "Hip Thrust",
   "glute bridge": "Glute Bridge",
   "hip bridge": "Beckenheben",
   bridge: "Brücke",
@@ -681,7 +682,7 @@ export function translateName(rawName, equipment) {
     const plain = capitalize(
       normalize(rawName)
         .split(" ")
-        .filter((w) => !EQUIPMENT_WORDS.has(w))
+        .filter((w) => !EQUIPMENT_WORDS.has(w) && MODIFIER[w] !== null)
         .join(" ")
     );
     return {
