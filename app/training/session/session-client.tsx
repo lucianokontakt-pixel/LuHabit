@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Flame,
+  Lightbulb,
   PlayCircle,
   TrendingUp,
   TrendingDown,
@@ -50,11 +51,11 @@ import {
   type PlanDay,
   type Exercise,
   type PlanExercise,
+  type ProgressionResult,
   type SetAdjustment,
   type SetTarget,
   type WorkoutPlan,
 } from "@/lib/training";
-import { deloadWeight, summarizeProgress } from "@/lib/progression";
 import { needsWarmup, warmupWeight, WARMUP_REPS } from "@/lib/warmup";
 import { useSignalSound } from "@/lib/use-signal-sound";
 import { cn } from "@/lib/utils";
@@ -103,7 +104,7 @@ export function SessionClient() {
   const earliestSessionDate = isoDateDaysAgo(30);
   const isSessionToday = sessionDate === today;
 
-  const { plans, exerciseById, sessions, pendingIds, lastSetsFor, addSession, loading } =
+  const { plans, exerciseById, sessions, pendingIds, historyFor, addSession, loading } =
     useTraining();
   const { entries: weightEntries, loading: weightLoading } = useMetricData("weight");
   const bodyweight = weightEntries[weightEntries.length - 1]?.value ?? null;
@@ -158,9 +159,11 @@ export function SessionClient() {
         progressionKind: "weight" | "reps" | null;
         isFirstTime: boolean;
         step: number;
-        stagnating: boolean;
-        sessionsSinceGain: number;
-        deload: number | null;
+        /** Welche Regel den Vorschlag gemacht hat. */
+        kind: ProgressionResult["kind"];
+        /** Warum genau diese Zahlen — wird bei jeder Übung angezeigt. */
+        why: string;
+        sets: number;
       }
     > = {};
     for (const pe of day.exercises) {
@@ -169,10 +172,9 @@ export function SessionClient() {
       const result = computeTargets({
         exercise,
         planExercise: pe,
-        lastSets: lastSetsFor(pe.exerciseId),
+        history: historyFor(pe.exerciseId),
         bodyweight,
       });
-      const summary = summarizeProgress(exercise, sessions);
       map[pe.id] = {
         weight: result.targets[0]?.weight ?? 0,
         reps: result.targets[0]?.reps ?? pe.repMin,
@@ -181,17 +183,14 @@ export function SessionClient() {
         progressionKind: result.progressionKind,
         isFirstTime: result.isFirstTime,
         step: incrementFor(exercise, pe),
-        stagnating: summary.stagnating,
-        sessionsSinceGain: summary.sessionsSinceGain,
-        // Ein Deload ergibt nur Sinn, wo es überhaupt Gewicht gibt.
-        deload:
-          summary.stagnating && !summary.repsBased && summary.current > 0
-            ? deloadWeight(summary.current, exercise, pe)
-            : null,
+        kind: result.kind,
+        why: result.why,
+        // Die Eigengewichts-Progression darf die Satzzahl wachsen lassen.
+        sets: result.sets ?? pe.sets,
       };
     }
     return map;
-  }, [day, exerciseById, lastSetsFor, bodyweight, sessions]);
+  }, [day, exerciseById, historyFor, bodyweight]);
 
   // Startzustand: entweder ein unterbrochener Entwurf oder frische Zielwerte.
   useEffect(() => {
@@ -212,8 +211,11 @@ export function SessionClient() {
       const initial: Record<string, SessionSet[]> = {};
       day.exercises.forEach((pe, exerciseIndex) => {
         const target = targets[pe.id];
-        const perSet = expandTargets(target?.perSet ?? [], pe.sets);
-        const workingRows = Array.from({ length: pe.sets }, (_, i) => ({
+        // Die Eigengewichts-Progression darf einen Satz anhängen — dann zählt
+        // ihre Satzzahl, nicht die des Plans.
+        const rowCount = target?.sets ?? pe.sets;
+        const perSet = expandTargets(target?.perSet ?? [], rowCount);
+        const workingRows = Array.from({ length: rowCount }, (_, i) => ({
           weight: perSet[i]?.weight ?? 0,
           reps: perSet[i]?.reps ?? pe.repMin,
           done: false,
@@ -819,45 +821,30 @@ export function SessionClient() {
                       </Button>
                     </div>
                   )}
-                  {!started && target?.progressed && target.progressionKind === "weight" && (
-                    <p className="mx-(--card-spacing) flex items-center gap-2 rounded-field bg-blush px-3 py-2 text-xs text-blush-foreground">
-                      <TrendingUp className="size-3.5 shrink-0" />
-                      Letztes Mal alle Sätze auf {pe.repMax} — Gewicht auf{" "}
-                      {formatNumber(target.weight)} kg erhöht, zurück auf {pe.repMin} Wdh.
-                    </p>
-                  )}
-                  {!started && target?.progressed && target.progressionKind === "reps" && (
-                    <p className="mx-(--card-spacing) flex items-center gap-2 rounded-field bg-blush px-3 py-2 text-xs text-blush-foreground">
-                      <TrendingUp className="size-3.5 shrink-0" />
-                      Letztes Mal alles geschafft — neues Ziel: {target.reps} Wiederholungen.
-                    </p>
-                  )}
-                  {!started && target?.stagnating && !target.progressed && (
-                    <div className="mx-(--card-spacing) flex flex-wrap items-center gap-2 rounded-field bg-card px-3 py-2 text-xs">
-                      <TrendingDown className="size-3.5 shrink-0 text-muted-foreground" />
-                      <span className="min-w-0 flex-1 text-muted-foreground">
-                        Seit {target.sessionsSinceGain} Einheiten kein Fortschritt.
-                        {target.deload !== null
-                          ? ` Einmal auf ${formatNumber(target.deload)} kg zurückgehen?`
-                          : ""}
-                      </span>
-                      {target.deload !== null && (
-                        <Button
-                          variant="outline"
-                          size="xs"
-                          onClick={() => retargetOpenSets(pe.id, target.deload!, pe.repMin)}
-                        >
-                          Deload
-                        </Button>
+                  {/* Warum genau diese Zahlen. Steht bei jeder Übung, nicht nur
+                      wenn etwas Besonderes passiert ist: ein Vorschlag, den man
+                      nicht nachprüfen kann, ist einer, dem man aufhört zu
+                      vertrauen. Sobald ein Satz steht, redet er an der
+                      Gegenwart vorbei — dann zählt nur noch, was gerade war. */}
+                  {!started && target && (
+                    <p
+                      className={cn(
+                        "mx-(--card-spacing) flex items-center gap-2 rounded-field px-3 py-2 text-xs",
+                        target.kind === "up"
+                          ? "bg-blush text-blush-foreground"
+                          : "bg-card text-muted-foreground"
                       )}
-                    </div>
-                  )}
-                  {!started && target?.isFirstTime && (
-                    <p className="mx-(--card-spacing) flex items-center gap-2 rounded-field bg-card px-3 py-2 text-xs text-muted-foreground">
-                      <Flame className="size-3.5 shrink-0" />
-                      {target.weight > 0
-                        ? `Vorschlag aus deinem Körpergewicht — passe ihn an, wenn er nicht passt.`
-                        : `Trag ein, womit du startest — beim nächsten Mal rechnet die App weiter.`}
+                    >
+                      {target.kind === "up" ? (
+                        <TrendingUp className="size-3.5 shrink-0" />
+                      ) : target.kind === "deload" ? (
+                        <TrendingDown className="size-3.5 shrink-0" />
+                      ) : target.kind === "first" ? (
+                        <Flame className="size-3.5 shrink-0" />
+                      ) : (
+                        <Lightbulb className="size-3.5 shrink-0" />
+                      )}
+                      <span className="min-w-0 flex-1">{target.why}</span>
                     </p>
                   )}
 

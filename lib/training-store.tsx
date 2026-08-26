@@ -23,8 +23,10 @@ type TrainingContextValue = {
   replaceSession: (session: WorkoutSession) => void;
   removeSession: (id: string) => Promise<void>;
   upsertExercise: (exercise: Exercise) => void;
-  /** Zuletzt protokollierte Sätze einer Übung — Basis der Progression. */
+  /** Zuletzt protokollierte Sätze einer Übung. */
   lastSetsFor: (exerciseId: string) => WorkoutSet[];
+  /** Alle Einheiten mit dieser Übung, älteste zuerst — Basis der Progression. */
+  historyFor: (exerciseId: string) => WorkoutSet[][];
 };
 
 const TrainingContext = createContext<TrainingContextValue | null>(null);
@@ -139,6 +141,24 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     [sessions]
   );
 
+  /**
+   * Jede Einheit, in der die Übung vorkam — älteste zuerst, je Eintrag die
+   * Sätze dieser einen Einheit. Die Progression leitet ihren Vorschlag jedes
+   * Mal daraus ab, statt auf einen mitgeführten Zähler zu bauen: so genügt
+   * eine Korrektur an einem alten Satz, damit die nächste Vorgabe stimmt.
+   */
+  const historyFor = useCallback(
+    (exerciseId: string) => {
+      const out: WorkoutSet[][] = [];
+      for (const session of sessions) {
+        const sets = session.sets.filter((s) => s.exerciseId === exerciseId);
+        if (sets.some((s) => s.done && !s.warmup)) out.push(sets);
+      }
+      return out.reverse();
+    },
+    [sessions]
+  );
+
   const value: TrainingContextValue = {
     exercises,
     exerciseById,
@@ -155,6 +175,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     removeSession,
     upsertExercise,
     lastSetsFor,
+    historyFor,
   };
 
   return <TrainingContext.Provider value={value}>{children}</TrainingContext.Provider>;

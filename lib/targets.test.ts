@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   computeTargets,
+  readSession,
+  stallCount,
+  deloadTo,
+  DELOAD_AFTER,
   expandTargets,
   effectiveLoad,
   measuredOn,
@@ -103,7 +107,7 @@ describe("computeTargets — erste Einheit", () => {
     const result = computeTargets({
       exercise: bench,
       planExercise: plan(),
-      lastSets: [],
+      history: [[]],
       bodyweight: 80,
     });
     expect(result.isFirstTime).toBe(true);
@@ -117,7 +121,7 @@ describe("computeTargets — erste Einheit", () => {
     const result = computeTargets({
       exercise: bench,
       planExercise: plan({ startWeight: 60 }),
-      lastSets: [],
+      history: [[]],
       bodyweight: 80,
     });
     expect(result.targets[0].weight).toBe(60);
@@ -127,7 +131,7 @@ describe("computeTargets — erste Einheit", () => {
     const result = computeTargets({
       exercise: pullup,
       planExercise: plan({ exerciseId: "pullup" }),
-      lastSets: [],
+      history: [[]],
       bodyweight: 80,
     });
     expect(result.targets[0].weight).toBe(0);
@@ -138,7 +142,7 @@ describe("computeTargets — erste Einheit", () => {
     const result = computeTargets({
       exercise: bench,
       planExercise: plan(),
-      lastSets: [],
+      history: [[]],
       bodyweight: null,
     });
     expect(result.targets[0].weight).toBe(0);
@@ -150,7 +154,7 @@ describe("computeTargets — Double Progression", () => {
     const result = computeTargets({
       exercise: bench,
       planExercise: plan(),
-      lastSets: sets(3, 80, 12),
+      history: [sets(3, 80, 12)],
       bodyweight: 80,
     });
     expect(result.progressed).toBe(true);
@@ -164,7 +168,7 @@ describe("computeTargets — Double Progression", () => {
     const result = computeTargets({
       exercise: squat,
       planExercise: plan({ exerciseId: "squat" }),
-      lastSets: sets(3, 100, 12).map((s) => ({ ...s, exerciseId: "squat" })),
+      history: [sets(3, 100, 12).map((s) => ({ ...s, exerciseId: "squat" }))],
       bodyweight: 80,
     });
     expect(result.targets[0].weight).toBe(105);
@@ -176,7 +180,7 @@ describe("computeTargets — Double Progression", () => {
       set({ setIndex: 1, weight: 80, reps: 12 }),
       set({ setIndex: 2, weight: 80, reps: 10 }),
     ];
-    const result = computeTargets({ exercise: bench, planExercise: plan(), lastSets, bodyweight: 80 });
+    const result = computeTargets({ exercise: bench, planExercise: plan(), history: [lastSets], bodyweight: 80 });
     expect(result.progressed).toBe(false);
     expect(result.targets.map((t) => t.weight)).toEqual([80, 80, 80]);
     // Jeder Satz behält sein eigenes Ziel — der dritte hat noch Luft.
@@ -188,7 +192,7 @@ describe("computeTargets — Double Progression", () => {
     const result = computeTargets({
       exercise: bench,
       planExercise: plan(),
-      lastSets: sets(2, 80, 12),
+      history: [sets(2, 80, 12)],
       bodyweight: 80,
     });
     expect(result.progressed).toBe(false);
@@ -202,7 +206,7 @@ describe("computeTargets — Double Progression", () => {
       set({ setIndex: 2, weight: 80, reps: 12 }),
       set({ setIndex: 3, weight: 80, reps: 12 }),
     ];
-    const result = computeTargets({ exercise: bench, planExercise: plan(), lastSets, bodyweight: 80 });
+    const result = computeTargets({ exercise: bench, planExercise: plan(), history: [lastSets], bodyweight: 80 });
     expect(result.progressed).toBe(true);
     expect(result.targets[0].weight).toBe(82.5);
   });
@@ -213,7 +217,7 @@ describe("computeTargets — Double Progression", () => {
       set({ setIndex: 1, weight: 80, reps: 12 }),
       set({ setIndex: 2, weight: 80, reps: 12, done: false }),
     ];
-    const result = computeTargets({ exercise: bench, planExercise: plan(), lastSets, bodyweight: 80 });
+    const result = computeTargets({ exercise: bench, planExercise: plan(), history: [lastSets], bodyweight: 80 });
     expect(result.progressed).toBe(false);
   });
 
@@ -221,7 +225,7 @@ describe("computeTargets — Double Progression", () => {
     const result = computeTargets({
       exercise: bench,
       planExercise: plan({ increment: 1.25 }),
-      lastSets: sets(3, 80, 12),
+      history: [sets(3, 80, 12)],
       bodyweight: 80,
     });
     expect(result.targets[0].weight).toBe(81.25);
@@ -231,32 +235,37 @@ describe("computeTargets — Double Progression", () => {
 describe("computeTargets — Eigengewicht ohne Zusatzgewicht", () => {
   const pullupPlan = plan({ exerciseId: "pullup", repMin: 6, repMax: 10 });
 
-  it("steigert die Wiederholungen statt des Gewichts", () => {
+  it("hängt an der Obergrenze einen Satz an statt das Gewicht zu erhöhen", () => {
     const result = computeTargets({
       exercise: pullup,
       planExercise: pullupPlan,
-      lastSets: sets(3, 0, 10).map((s) => ({ ...s, exerciseId: "pullup" })),
+      history: [sets(3, 0, 10).map((s) => ({ ...s, exerciseId: "pullup" }))],
       bodyweight: 80,
     });
     expect(result.progressed).toBe(true);
     expect(result.progressionKind).toBe("reps");
-    expect(result.targets.every((t) => t.weight === 0 && t.reps === 11)).toBe(true);
+    // 3 × 10 geschafft → 4 × 6. Ein Sprung auf 2,5 kg wäre am Klimmzugturm
+    // nicht umsetzbar, ein vierter Satz schon.
+    expect(result.sets).toBe(4);
+    expect(result.targets).toHaveLength(4);
+    expect(result.targets.every((t) => t.weight === 0 && t.reps === 6)).toBe(true);
   });
 
-  it("zählt vom schwächsten Satz aus weiter, nicht von der Obergrenze", () => {
-    const lastSets = [
-      set({ exerciseId: "pullup", setIndex: 0, weight: 0, reps: 13 }),
-      set({ exerciseId: "pullup", setIndex: 1, weight: 0, reps: 12 }),
-      set({ exerciseId: "pullup", setIndex: 2, weight: 0, reps: 12 }),
-    ];
+  it("hört bei sechs Sätzen auf und sagt, dass jetzt Gewicht dran ist", () => {
     const result = computeTargets({
       exercise: pullup,
-      planExercise: pullupPlan,
-      lastSets,
+      planExercise: plan({ exerciseId: "pullup", repMin: 6, repMax: 10, sets: 6 }),
+      history: [
+        Array.from({ length: 6 }, (_, i) =>
+          set({ exerciseId: "pullup", setIndex: i, weight: 0, reps: 10 })
+        ),
+      ],
       bodyweight: 80,
     });
-    // Alle über repMax=10, aber der schwächste Satz gibt den Takt vor.
-    expect(result.targets[0].reps).toBe(13);
+    expect(result.kind).toBe("ceiling");
+    expect(result.progressed).toBe(false);
+    expect(result.sets).toBeUndefined();
+    expect(result.why).toContain("schwerere Variante");
   });
 
   it("lässt ein über die Obergrenze gewachsenes Ziel stehen", () => {
@@ -268,7 +277,7 @@ describe("computeTargets — Eigengewicht ohne Zusatzgewicht", () => {
     const result = computeTargets({
       exercise: pullup,
       planExercise: pullupPlan,
-      lastSets,
+      history: [lastSets],
       bodyweight: 80,
     });
     expect(result.progressed).toBe(false);
@@ -280,7 +289,7 @@ describe("computeTargets — Eigengewicht ohne Zusatzgewicht", () => {
     const result = computeTargets({
       exercise: pullup,
       planExercise: pullupPlan,
-      lastSets: sets(3, 10, 10).map((s) => ({ ...s, exerciseId: "pullup" })),
+      history: [sets(3, 10, 10).map((s) => ({ ...s, exerciseId: "pullup" }))],
       bodyweight: 80,
     });
     expect(result.progressionKind).toBe("weight");
@@ -296,7 +305,7 @@ describe("computeTargets — gescheitertes Topgewicht", () => {
       set({ setIndex: 1, weight: 15, reps: 8 }),
       set({ setIndex: 2, weight: 15, reps: 8 }),
     ];
-    const result = computeTargets({ exercise: bench, planExercise: plan(), lastSets, bodyweight: 80 });
+    const result = computeTargets({ exercise: bench, planExercise: plan(), history: [lastSets], bodyweight: 80 });
     expect(result.targets.map((t) => t.weight)).toEqual([15, 15, 15]);
   });
 
@@ -307,7 +316,7 @@ describe("computeTargets — gescheitertes Topgewicht", () => {
       set({ setIndex: 1, weight: 80, reps: 8 }),
       set({ setIndex: 2, weight: 80, reps: 8 }),
     ];
-    const result = computeTargets({ exercise: bench, planExercise: plan(), lastSets, bodyweight: 80 });
+    const result = computeTargets({ exercise: bench, planExercise: plan(), history: [lastSets], bodyweight: 80 });
     expect(result.targets[0].weight).toBe(80);
   });
 
@@ -316,7 +325,7 @@ describe("computeTargets — gescheitertes Topgewicht", () => {
       set({ setIndex: 0, weight: 80, reps: 5 }),
       set({ setIndex: 1, weight: 75, reps: 6 }),
     ];
-    const result = computeTargets({ exercise: bench, planExercise: plan(), lastSets, bodyweight: 80 });
+    const result = computeTargets({ exercise: bench, planExercise: plan(), history: [lastSets], bodyweight: 80 });
     expect(result.targets[0].weight).toBe(80);
   });
 });
@@ -362,7 +371,7 @@ describe("expandTargets", () => {
       set({ setIndex: 1, weight: 40, reps: 9 }),
       set({ setIndex: 2, weight: 40, reps: 10 }),
     ];
-    const result = computeTargets({ exercise: bench, planExercise: plan(), lastSets, bodyweight: 80 });
+    const result = computeTargets({ exercise: bench, planExercise: plan(), history: [lastSets], bodyweight: 80 });
     const expanded = expandTargets(result.targets, 3);
     expect(expanded.map((t) => `${t.weight}×${t.reps}`)).toEqual(["40×8", "40×9", "40×10"]);
   });
@@ -421,7 +430,7 @@ describe("computeTargets — Sprunghöhe nach Überschreitung", () => {
     const result = computeTargets({
       exercise: bench,
       planExercise: plan(),
-      lastSets: sets(3, 40, 20),
+      history: [sets(3, 40, 20)],
       bodyweight: 80,
     });
     expect(result.progressed).toBe(true);
@@ -434,7 +443,7 @@ describe("computeTargets — Sprunghöhe nach Überschreitung", () => {
       set({ setIndex: 1, weight: 40, reps: 18 }),
       set({ setIndex: 2, weight: 40, reps: 12 }),
     ];
-    const result = computeTargets({ exercise: bench, planExercise: plan(), lastSets, bodyweight: 80 });
+    const result = computeTargets({ exercise: bench, planExercise: plan(), history: [lastSets], bodyweight: 80 });
     // Der 12er-Satz gibt den Takt vor, nicht der 20er.
     expect(result.targets[0].weight).toBe(42.5);
   });
@@ -642,7 +651,7 @@ describe("Aufwärmsätze", () => {
       set({ setIndex: 2, weight: 80, reps: 8 }),
       set({ setIndex: 3, weight: 80, reps: 8 }),
     ];
-    const result = computeTargets({ exercise: bench, planExercise: plan(), lastSets, bodyweight: 80 });
+    const result = computeTargets({ exercise: bench, planExercise: plan(), history: [lastSets], bodyweight: 80 });
     expect(result.targets.map((t) => t.weight)).toEqual([80, 80, 80]);
   });
 
@@ -653,7 +662,7 @@ describe("Aufwärmsätze", () => {
       set({ setIndex: 2, weight: 80, reps: 12 }),
       set({ setIndex: 3, weight: 80, reps: 12 }),
     ];
-    const result = computeTargets({ exercise: bench, planExercise: plan(), lastSets, bodyweight: 80 });
+    const result = computeTargets({ exercise: bench, planExercise: plan(), history: [lastSets], bodyweight: 80 });
     expect(result.progressed).toBe(true);
     expect(result.targets[0].weight).toBe(82.5);
   });
@@ -846,5 +855,148 @@ describe("nextDayFor", () => {
       days: [day("legs", 2), day("push", 0), day("pull", 1)],
     };
     expect(nextDayFor(shuffled, { dayId: "push" }, wednesday)?.id).toBe("pull");
+  });
+});
+
+
+describe("readSession — ehrliches Lesen einer Einheit", () => {
+  it("nennt eine volle Einheit auf Untergrenze erfüllt", () => {
+    expect(readSession(sets(3, 60, 8), plan()).ok).toBe(true);
+  });
+
+  it("wertet weniger Sätze als geplant als verfehlt", () => {
+    // Zwei starke Sätze und dann Feierabend sind keine erfüllte Vorgabe —
+    // sonst könnte eine abgebrochene Einheit die Last steigern.
+    expect(readSession(sets(2, 60, 12), plan()).ok).toBe(false);
+  });
+
+  it("wertet zu wenige Wiederholungen als verfehlt", () => {
+    expect(readSession(sets(3, 60, 7), plan()).ok).toBe(false);
+  });
+
+  it("zählt Aufwärmsätze nicht mit", () => {
+    const mitAufwaermen = [
+      set({ setIndex: 0, weight: 30, reps: 10, warmup: true }),
+      ...sets(3, 60, 8).map((s, i) => ({ ...s, setIndex: i + 1 })),
+    ];
+    const gelesen = readSession(mitAufwaermen, plan());
+    expect(gelesen.ok).toBe(true);
+    expect(gelesen.weight).toBe(60);
+  });
+
+  it("liest eine leere Einheit als verfehlt statt zu stolpern", () => {
+    expect(readSession([], plan())).toEqual({ ok: false, weight: 0, lowestReps: 0, sets: 0 });
+  });
+});
+
+describe("stallCount", () => {
+  const p = plan();
+
+  it("zählt nur die jüngste Serie von Fehlschlägen", () => {
+    const verlauf = [sets(3, 60, 7), sets(3, 60, 8), sets(3, 60, 7), sets(3, 60, 7)];
+    expect(stallCount(verlauf, p)).toBe(2);
+  });
+
+  it("gibt null zurück, wenn die letzte Einheit saß", () => {
+    expect(stallCount([sets(3, 60, 7), sets(3, 60, 9)], p)).toBe(0);
+  });
+
+  it("meldet keinen Stillstand, wenn nur die Wiederholungen wachsen", () => {
+    // Das ist der Fehlalarm, an dem die alte Erkennung litt: bei gleichem
+    // Gewicht von 8 auf 10 zu gehen ist genau der Fortschritt, den die
+    // Doppelprogression will — kein Grund für einen Deload.
+    const hocharbeiten = [sets(3, 60, 8), sets(3, 60, 9), sets(3, 60, 10)];
+    expect(stallCount(hocharbeiten, p)).toBe(0);
+  });
+});
+
+describe("deloadTo", () => {
+  it("nimmt rund zehn Prozent und landet auf einem ladbaren Wert", () => {
+    expect(deloadTo(100, 2.5)).toBe(90);
+  });
+
+  it("geht einen Sprung runter, wenn die Rundung nichts reduziert hätte", () => {
+    // 10 × 0,9 = 9 → auf 2,5er gerundet wieder 10. Ein Deload, der nichts
+    // reduziert, ist keiner.
+    expect(deloadTo(10, 2.5)).toBe(7.5);
+  });
+
+  it("fällt nie unter einen einzigen Sprung", () => {
+    expect(deloadTo(2.5, 2.5)).toBe(2.5);
+  });
+});
+
+describe("computeTargets — Deload", () => {
+  const verfehlt = () => sets(3, 60, 7);
+
+  it("hält das Gewicht, solange das Kontingent nicht aufgebraucht ist", () => {
+    const result = computeTargets({
+      exercise: bench,
+      planExercise: plan(),
+      history: [verfehlt(), verfehlt()],
+      bodyweight: 80,
+    });
+    expect(result.kind).toBe("hold");
+    expect(result.targets[0].weight).toBe(60);
+    expect(result.why).toContain("noch 1 Versuch");
+  });
+
+  it("geht nach drei verfehlten Einheiten in Folge zurück", () => {
+    const result = computeTargets({
+      exercise: bench,
+      planExercise: plan(),
+      history: [verfehlt(), verfehlt(), verfehlt()],
+      bodyweight: 80,
+    });
+    expect(result.kind).toBe("deload");
+    expect(result.stalls).toBe(DELOAD_AFTER);
+    expect(result.targets[0].weight).toBe(55);
+    expect(result.targets.every((t) => t.reps === 8)).toBe(true);
+  });
+
+  it("zählt eine erfolgreiche Einheit dazwischen als Neuanfang", () => {
+    const result = computeTargets({
+      exercise: bench,
+      planExercise: plan(),
+      history: [verfehlt(), verfehlt(), sets(3, 60, 9), verfehlt()],
+      bodyweight: 80,
+    });
+    expect(result.kind).toBe("hold");
+    expect(result.stalls).toBe(1);
+  });
+
+  it("geht bei Eigengewicht nicht zurück — dort gibt es nichts wegzunehmen", () => {
+    const result = computeTargets({
+      exercise: pullup,
+      planExercise: plan({ exerciseId: "pullup", repMin: 6, repMax: 10 }),
+      history: Array.from({ length: 4 }, () =>
+        sets(3, 0, 4).map((s) => ({ ...s, exerciseId: "pullup" }))
+      ),
+      bodyweight: 80,
+    });
+    expect(result.kind).toBe("hold");
+    expect(result.targets.every((t) => t.weight === 0)).toBe(true);
+  });
+});
+
+describe("computeTargets — Begründung", () => {
+  it("liefert zu jedem Vorschlag einen Satz Klartext", () => {
+    const faelle = [
+      { history: [] as WorkoutSet[][], erwartet: "first" },
+      { history: [sets(3, 60, 12)], erwartet: "up" },
+      { history: [sets(3, 60, 9)], erwartet: "hold" },
+      { history: [sets(3, 60, 7), sets(3, 60, 7), sets(3, 60, 7)], erwartet: "deload" },
+    ];
+    for (const fall of faelle) {
+      const result = computeTargets({
+        exercise: bench,
+        planExercise: plan(),
+        history: fall.history,
+        bodyweight: 80,
+      });
+      expect(result.kind, JSON.stringify(fall.erwartet)).toBe(fall.erwartet);
+      expect(result.why.length, result.kind).toBeGreaterThan(10);
+      expect(result.why.endsWith("."), result.why).toBe(true);
+    }
   });
 });

@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatValue } from "@/components/stat-value";
 import {
-  estimateOneRepMax,
+  displayOneRepMax,
   workingSets,
   type Exercise,
   type WorkoutSession,
@@ -64,10 +64,12 @@ export function ExerciseProgress({
       .map((session) => {
         const sets = workingSets(session.sets).filter((s) => s.exerciseId === activeId);
         const topWeight = Math.max(...sets.map((s) => s.weight));
-        const best = sets.reduce(
-          (acc, s) => Math.max(acc, estimateOneRepMax(s.weight, s.reps)),
-          0
-        );
+        // Über zwölf Wiederholungen wird bewusst nicht geschätzt — so ein
+        // Punkt fehlt in der Linie, statt eine Fantasiezahl beizusteuern.
+        const best = sets.reduce<number | null>((acc, s) => {
+          const est = displayOneRepMax(s.weight, s.reps);
+          return est === null ? acc : Math.max(acc ?? 0, est);
+        }, null);
         return {
           date: session.date,
           label: new Date(`${session.date}T00:00:00`).toLocaleDateString("de-DE", {
@@ -75,7 +77,7 @@ export function ExerciseProgress({
             month: "2-digit",
           }),
           weight: topWeight,
-          oneRm: Math.round(best * 10) / 10,
+          oneRm: best,
           volume: sets.reduce((sum, s) => sum + s.weight * s.reps, 0),
           reps: Math.max(...sets.map((s) => s.reps)),
         };
@@ -85,7 +87,7 @@ export function ExerciseProgress({
   const latest = history[history.length - 1];
   const previous = history[history.length - 2];
   const bestWeight = history.reduce((acc, h) => Math.max(acc, h.weight), 0);
-  const bestOneRm = history.reduce((acc, h) => Math.max(acc, h.oneRm), 0);
+  const bestOneRm = history.reduce((acc, h) => Math.max(acc, h.oneRm ?? 0), 0);
 
   if (trained.length === 0) {
     return (
