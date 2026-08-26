@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Flame,
+  PlayCircle,
   TrendingUp,
   TrendingDown,
   X,
@@ -29,6 +30,7 @@ import {
 import { RestTimer } from "@/components/training/rest-timer";
 import { SetRow, type SessionSet } from "@/components/training/set-row";
 import { SessionSummary } from "@/components/training/session-summary";
+import { ExerciseDetail } from "@/components/training/exercise-media";
 import { summarizeSession } from "@/lib/session-stats";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
@@ -46,6 +48,7 @@ import {
   sessionVolume,
   suggestAdjustment,
   type PlanDay,
+  type Exercise,
   type PlanExercise,
   type SetAdjustment,
   type SetTarget,
@@ -112,6 +115,7 @@ export function SessionClient() {
   const [restTotal, setRestTotal] = useState(0);
   const { unlock: unlockSignalSound, play: playSignal } = useSignalSound();
   const [activeExercise, setActiveExercise] = useState<string | null>(null);
+  const [detail, setDetail] = useState<Exercise | null>(null);
   const [confirmAbort, setConfirmAbort] = useState(false);
   const [saving, setSaving] = useState(false);
   /** Gesetzt, sobald gespeichert wurde — dann zeigt die Seite den Abschluss. */
@@ -760,6 +764,18 @@ export function SessionClient() {
 
               {isActive && (
                 <>
+                  {exercise?.media && (
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className="mx-(--card-spacing) w-fit text-muted-foreground"
+                      onClick={() => setDetail(exercise)}
+                    >
+                      <PlayCircle />
+                      Bewegung ansehen
+                    </Button>
+                  )}
+
                   {suggestionOpen && (
                     <div className="mx-(--card-spacing) flex flex-wrap items-center gap-2 rounded-field bg-card px-3 py-2 text-xs">
                       {suggestion.direction === "up" ? (
@@ -946,6 +962,11 @@ export function SessionClient() {
           </div>
         </div>
       </div>
+
+      <ExerciseDetail
+        exercise={detail}
+        onOpenChange={(open) => !open && setDetail(null)}
+      />
 
       <AlertDialog open={confirmAbort} onOpenChange={setConfirmAbort}>
         <AlertDialogContent>
