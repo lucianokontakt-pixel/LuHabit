@@ -28,10 +28,22 @@ const TONES: Record<Signal, { frequency: number; duration: number }[]> = {
  *
  * Ein Umweg über ein <video>-Element (um iOS' Stummschalter zu umgehen, wie
  * bei YouTube) wurde ausprobiert, klang aber hörbar schlechter — der Ton lief
- * dabei durch die Videowiedergabe-Pipeline statt direkt raus. Zurück auf den
- * direkten Weg zu ctx.destination; der Ton respektiert dafür wieder den
- * Stummschalter.
+ * dabei durch die Videowiedergabe-Pipeline statt direkt raus.
+ *
+ * Der Stummschalter wird stattdessen über die Audio Session API abgehandelt
+ * (siehe unlock): iOS schaltet Web Audio am Klingelschalter stumm, solange die
+ * Seite keine Sitzungsart anfordert. Das ist der Grund, warum in der Halle
+ * nichts zu hören war — und der einzige Weg dorthin, der den Klang nicht
+ * verschlechtert.
  */
+
+/**
+ * `navigator.audioSession` steht noch in keiner TypeScript-Bibliothek, gibt es
+ * aber seit Safari 16.4. Nur das eine Feld, das wir setzen.
+ */
+type AudioSessionNavigator = Navigator & {
+  audioSession?: { type: string };
+};
 export function useSignalSound() {
   const [enabled, setEnabled] = useState(true);
   const contextRef = useRef<AudioContext | null>(null);
@@ -66,6 +78,13 @@ export function useSignalSound() {
   const unlock = useCallback(() => {
     if (typeof window === "undefined") return;
     try {
+      // Ohne angeforderte Sitzungsart behandelt iOS die Seite wie eine
+      // Klingelton-Quelle und schweigt am Stummschalter. 'playback' sagt: das
+      // hier ist Inhalt, den jemand hören will — dieselbe Einstufung wie ein
+      // Podcast. Der Preis ist, dass laufende Musik kurz zurücktritt.
+      const nav = navigator as AudioSessionNavigator;
+      if (nav.audioSession) nav.audioSession.type = "playback";
+
       if (!contextRef.current) {
         const Ctor =
           window.AudioContext ??
