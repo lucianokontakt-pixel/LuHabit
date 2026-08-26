@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Flame,
   Lightbulb,
-  PlayCircle,
   TrendingUp,
   TrendingDown,
   X,
@@ -31,7 +30,7 @@ import {
 import { RestTimer } from "@/components/training/rest-timer";
 import { SetRow, type SessionSet } from "@/components/training/set-row";
 import { SessionSummary } from "@/components/training/session-summary";
-import { ExerciseDetail } from "@/components/training/exercise-media";
+import { ExerciseDetail, ExerciseMedia } from "@/components/training/exercise-media";
 import { summarizeSession } from "@/lib/session-stats";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
@@ -769,16 +768,14 @@ export function SessionClient() {
 
               {isActive && (
                 <>
-                  {exercise?.media && (
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      className="mx-(--card-spacing) w-fit text-muted-foreground"
-                      onClick={() => setDetail(exercise)}
-                    >
-                      <PlayCircle />
-                      Bewegung ansehen
-                    </Button>
+                  {/* Die Animation läuft, solange die Übung offen ist — beim
+                      Nachmachen will man sie sehen, nicht erst aufrufen. Tippen
+                      hält sie an, der Knopf schrumpft sie dauerhaft. */}
+                  {exercise && (
+                    <ExerciseMedia
+                      exercise={exercise}
+                      onOpenDetail={() => setDetail(exercise)}
+                    />
                   )}
 
                   {suggestionOpen && (

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Dumbbell } from "lucide-react";
+import { Dumbbell, Info, Maximize2, Minimize2, Pause, Play } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +46,136 @@ export function ExerciseThumb({
       ) : (
         <Dumbbell className="absolute top-1/2 left-1/2 size-4 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />
       )}
+    </div>
+  );
+}
+
+const SIZE_KEY = "luhabit-gif-groesse";
+
+/**
+ * Die laufende Animation über der Satz-Tabelle.
+ *
+ * Tippen hält sie an und zeigt das Standbild — beim Nachmachen will man den
+ * Endpunkt sehen, nicht die Schleife. Der Minimieren-Knopf schrumpft sie auf
+ * einen Streifen, und diese Wahl bleibt: wer die Animation einmal weghaben
+ * wollte, will sie bei der nächsten Übung nicht wieder vor sich haben.
+ */
+export function ExerciseMedia({
+  exercise,
+  onOpenDetail,
+}: {
+  exercise: Pick<Exercise, "id" | "name" | "media">;
+  onOpenDetail?: () => void;
+}) {
+  const [playing, setPlaying] = useState(true);
+  const [mini, setMini] = useState(false);
+
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- liest die Einstellung einmalig beim Mount
+      if (localStorage.getItem(SIZE_KEY) === "mini") setMini(true);
+    } catch {
+      // Kein Speicher, kein Problem — dann bleibt es bei groß.
+    }
+  }, []);
+
+  const toggleSize = () => {
+    setMini((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIZE_KEY, next ? "mini" : "voll");
+      } catch {
+        // Gilt dann nur für diese Sitzung.
+      }
+      return next;
+    });
+  };
+
+  const gif = gifUrl(exercise);
+  const still = imageUrl(exercise);
+  if (!gif || !still) return null;
+
+  const info = onOpenDetail && (
+    <button
+      type="button"
+      onClick={onOpenDetail}
+      aria-label={`${exercise.name} — Anleitung`}
+      className={cn(
+        "flex size-8 shrink-0 items-center justify-center rounded-full",
+        mini ? "text-muted-foreground" : "absolute top-2 right-2 bg-black/55 text-white backdrop-blur-sm"
+      )}
+    >
+      <Info className="size-4" />
+    </button>
+  );
+
+  // Klein heißt Zeile, nicht Streifen: ein schmales Bild mit den Bedienelementen
+  // daneben. Ein breiter Kasten mit einem Briefmarkenbild in der Mitte wäre
+  // dieselbe Höhe für weniger zu sehen.
+  if (mini) {
+    return (
+      <div className="mx-(--card-spacing) flex items-center gap-3">
+        <button
+          type="button"
+          onClick={toggleSize}
+          className="relative size-14 shrink-0 overflow-hidden rounded-md bg-white"
+          aria-label={`${exercise.name} größer zeigen`}
+        >
+          <Image
+            src={still}
+            alt=""
+            fill
+            sizes="56px"
+            className="object-contain"
+            unoptimized
+          />
+        </button>
+        <button
+          type="button"
+          onClick={toggleSize}
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs text-muted-foreground"
+        >
+          <Maximize2 className="size-3.5 shrink-0" />
+          Bewegung größer zeigen
+        </button>
+        {info}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative mx-(--card-spacing) aspect-square overflow-hidden rounded-card bg-white">
+      <button
+        type="button"
+        onClick={() => setPlaying((p) => !p)}
+        className="absolute inset-0 size-full"
+        aria-label={playing ? `${exercise.name} anhalten` : `${exercise.name} abspielen`}
+      >
+        <Image
+          src={playing ? gif : still}
+          alt={`Bewegungsablauf: ${exercise.name}`}
+          fill
+          sizes="(max-width: 640px) 100vw, 480px"
+          className="object-contain"
+          unoptimized
+        />
+      </button>
+
+      <button
+        type="button"
+        onClick={toggleSize}
+        className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-pill bg-black/55 px-2.5 py-1.5 text-xs text-white backdrop-blur-sm"
+      >
+        <Minimize2 className="size-3.5" />
+        Kleiner
+      </button>
+
+      <span className="pointer-events-none absolute right-2 bottom-2 flex items-center gap-1.5 rounded-pill bg-black/55 px-2.5 py-1.5 text-xs text-white backdrop-blur-sm">
+        {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
+        {playing ? "Tippen zum Anhalten" : "Tippen zum Abspielen"}
+      </span>
+
+      {info}
     </div>
   );
 }
