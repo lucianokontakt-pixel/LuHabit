@@ -290,7 +290,11 @@ export function stallCount(
   planExercise: Pick<PlanExercise, "sets" | "repMin">
 ): number {
   let n = 0;
-  for (let i = history.length - 1; i >= 0; i--) {
+  // Bei i >= 1: die allererste Einheit mit einer Übung zählt nie als
+  // Fehlschlag. Dort tastet man sich an ein Gewicht heran, statt eine Vorgabe
+  // zu erfüllen — sonst stünde man nach zwei echten Fehlversuchen schon vor
+  // einem Rückschritt, den nur das Kennenlernen ausgelöst hat.
+  for (let i = history.length - 1; i >= 1; i--) {
     if (readSession(history[i], planExercise).ok) break;
     n++;
   }
@@ -372,9 +376,30 @@ export function computeTargets({
     };
   }
 
-  const stalls = stallCount(history, planExercise);
-
   const topWeight = workingWeight(working, repMin);
+
+  // Die erste Einheit mit einer Übung ist eine Erkundung: man tastet sich an
+  // ein Gewicht heran, statt eine Vorgabe zu erfüllen, die man noch gar nicht
+  // hatte. Sie als Fehlschlag zu lesen wäre der schnellste Weg, das Vertrauen
+  // in die Vorschläge zu verlieren — drei solcher Einheiten hintereinander
+  // würden sogar einen Rückschritt auslösen, ohne dass je etwas misslungen
+  // wäre. Gefunden ist das Gewicht trotzdem: von hier zählt der Plan.
+  if (history.length === 1 && !readSession(lastSets, planExercise).ok) {
+    return {
+      targets: Array.from({ length: sets }, () => ({ weight: topWeight, reps: repMin })),
+      progressed: false,
+      progressionKind: null,
+      isFirstTime: false,
+      kind: "first",
+      why:
+        topWeight > 0
+          ? `Beim ersten Mal rangetastet — diesmal ${formatNumber(topWeight)} kg von Anfang an.`
+          : "Beim ersten Mal rangetastet — diesmal von Anfang an nach Plan.",
+      stalls: 0,
+    };
+  }
+
+  const stalls = stallCount(history, planExercise);
   // Nur die Sätze auf dem Arbeitsgewicht zählen —
   // Aufwärmsätze mit weniger Gewicht sollen die Progression nicht blockieren.
   const workingAtTop = working.filter((s) => s.weight === topWeight);
@@ -464,30 +489,39 @@ export function computeTargets({
       progressionKind: null,
       isFirstTime: false,
       kind: "deload",
-      why: `${stalls} Einheiten in Folge nicht geschafft — zurück auf ${formatNumber(reduced)} kg und neu aufbauen.`,
+      why: `${stalls} Einheiten auf ${formatNumber(topWeight)} kg — einmal zurück auf ${formatNumber(reduced)} kg und neu anlaufen.`,
       stalls,
     };
   }
 
+  // Saß die letzte Einheit, aber noch nicht an der Obergrenze, ist der Weg nach
+  // oben die Wiederholung — eine mehr in jedem Satz. Einfach zu wiederholen,
+  // was schon stand, wäre kein Ziel, sondern eine Abschrift: wer 3 × 8 gemacht
+  // hat und wieder 3 × 8 vorgeschlagen bekommt, kommt nie bei 12 an.
+  //
+  // Aufgesetzt wird dabei auf den einzelnen Satz, nicht auf den schwächsten:
+  // aus 12/10/8 wird 12/11/9, nicht dreimal 9. Sätze fallen im Verlauf einer
+  // Übung natürlich ab; das einzuebnen nähme dem ersten Satz seine Leistung.
+  const climbing = stalls === 0;
   const targets = Array.from({ length: sets }, (_, i) => {
     const previous = workingAtTop[i] ?? workingAtTop[workingAtTop.length - 1];
     // Bei Eigengewicht darf das Ziel über repMax hinausgewachsen sein.
     const ceiling = topWeight === 0 ? Math.max(repMax, previous?.reps ?? repMax) : repMax;
-    const reps = previous ? Math.min(ceiling, Math.max(repMin, previous.reps)) : repMin;
-    return { weight: topWeight, reps };
+    if (!previous) return { weight: topWeight, reps: repMin };
+    const base = Math.max(repMin, previous.reps + (climbing ? 1 : 0));
+    return { weight: topWeight, reps: Math.min(ceiling, base) };
   });
-  const aim = Math.max(...targets.map((t) => t.reps));
-  const remaining = DELOAD_AFTER - stalls;
   return {
     targets,
     progressed: false,
     progressionKind: null,
     isFirstTime: false,
     kind: "hold",
-    why:
-      stalls > 0
-        ? `Letztes Mal nicht geschafft — gleiches Gewicht (noch ${remaining} ${remaining === 1 ? "Versuch" : "Versuche"} bis zum Rückschritt).`
-        : `Obergrenze noch nicht in allen Sätzen — gleiches Gewicht, jetzt ${aim} Wiederholungen.`,
+    // Sachlich bleiben. Ein Zähler bis zum Rückschritt wäre Druck ohne Nutzen —
+    // der Rückschritt erklärt sich selbst, wenn er kommt.
+    why: climbing
+      ? `Gleiches Gewicht — eine Wiederholung mehr pro Satz, bis überall ${repMax} steht.`
+      : `Nochmal ${formatNumber(topWeight)} kg.`,
     stalls,
   };
 }

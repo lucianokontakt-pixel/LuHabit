@@ -184,7 +184,9 @@ describe("computeTargets — Double Progression", () => {
     expect(result.progressed).toBe(false);
     expect(result.targets.map((t) => t.weight)).toEqual([80, 80, 80]);
     // Jeder Satz behält sein eigenes Ziel — der dritte hat noch Luft.
-    expect(result.targets.map((t) => t.reps)).toEqual([12, 12, 10]);
+    // Jeder Satz bekommt eine Wiederholung mehr als zuletzt, gedeckelt bei
+    // repMax — aus 12/12/10 wird 12/12/11, nicht nochmal 12/12/10.
+    expect(result.targets.map((t) => t.reps)).toEqual([12, 12, 11]);
   });
 
   it("löst keine Steigerung aus, wenn die Einheit abgebrochen wurde", () => {
@@ -281,8 +283,9 @@ describe("computeTargets — Eigengewicht ohne Zusatzgewicht", () => {
       bodyweight: 80,
     });
     expect(result.progressed).toBe(false);
-    // Der starke Satz darf sein Ziel behalten, statt auf repMax gekappt zu werden.
-    expect(result.targets.map((t) => t.reps)).toEqual([14, 9, 8]);
+    // Der starke Satz darf sein Ziel behalten, statt auf repMax gekappt zu
+    // werden; die schwächeren steigen um eine Wiederholung.
+    expect(result.targets.map((t) => t.reps)).toEqual([14, 10, 9]);
   });
 
   it("wechselt auf Gewichtsprogression, sobald Zusatzgewicht dabei ist", () => {
@@ -373,7 +376,7 @@ describe("expandTargets", () => {
     ];
     const result = computeTargets({ exercise: bench, planExercise: plan(), history: [lastSets], bodyweight: 80 });
     const expanded = expandTargets(result.targets, 3);
-    expect(expanded.map((t) => `${t.weight}×${t.reps}`)).toEqual(["40×8", "40×9", "40×10"]);
+    expect(expanded.map((t) => `${t.weight}×${t.reps}`)).toEqual(["40×9", "40×10", "40×11"]);
   });
 });
 
@@ -901,6 +904,13 @@ describe("stallCount", () => {
     expect(stallCount([sets(3, 60, 7), sets(3, 60, 9)], p)).toBe(0);
   });
 
+  it("zählt die allererste Einheit nie mit", () => {
+    // Beim ersten Mal tastet man sich an ein Gewicht heran. Das als Fehlschlag
+    // zu führen, würde einen Rückschritt aus dem Kennenlernen auslösen.
+    expect(stallCount([sets(3, 60, 7)], p)).toBe(0);
+    expect(stallCount([sets(3, 60, 7), sets(3, 60, 7)], p)).toBe(1);
+  });
+
   it("meldet keinen Stillstand, wenn nur die Wiederholungen wachsen", () => {
     // Das ist der Fehlalarm, an dem die alte Erkennung litt: bei gleichem
     // Gewicht von 8 auf 10 zu gehen ist genau der Fortschritt, den die
@@ -933,19 +943,20 @@ describe("computeTargets — Deload", () => {
     const result = computeTargets({
       exercise: bench,
       planExercise: plan(),
-      history: [verfehlt(), verfehlt()],
+      history: [verfehlt(), verfehlt(), verfehlt()],
       bodyweight: 80,
     });
     expect(result.kind).toBe("hold");
     expect(result.targets[0].weight).toBe(60);
-    expect(result.why).toContain("noch 1 Versuch");
+    expect(result.why).toContain("Nochmal");
   });
 
   it("geht nach drei verfehlten Einheiten in Folge zurück", () => {
     const result = computeTargets({
       exercise: bench,
       planExercise: plan(),
-      history: [verfehlt(), verfehlt(), verfehlt()],
+      // Vier Einträge: die erste Einheit ist das Rantasten und zählt nicht mit.
+      history: [verfehlt(), verfehlt(), verfehlt(), verfehlt()],
       bodyweight: 80,
     });
     expect(result.kind).toBe("deload");
@@ -958,7 +969,7 @@ describe("computeTargets — Deload", () => {
     const result = computeTargets({
       exercise: bench,
       planExercise: plan(),
-      history: [verfehlt(), verfehlt(), sets(3, 60, 9), verfehlt()],
+      history: [verfehlt(), verfehlt(), verfehlt(), sets(3, 60, 9), verfehlt()],
       bodyweight: 80,
     });
     expect(result.kind).toBe("hold");
@@ -969,7 +980,7 @@ describe("computeTargets — Deload", () => {
     const result = computeTargets({
       exercise: pullup,
       planExercise: plan({ exerciseId: "pullup", repMin: 6, repMax: 10 }),
-      history: Array.from({ length: 4 }, () =>
+      history: Array.from({ length: 5 }, () =>
         sets(3, 0, 4).map((s) => ({ ...s, exerciseId: "pullup" }))
       ),
       bodyweight: 80,
@@ -984,8 +995,11 @@ describe("computeTargets — Begründung", () => {
     const faelle = [
       { history: [] as WorkoutSet[][], erwartet: "first" },
       { history: [sets(3, 60, 12)], erwartet: "up" },
-      { history: [sets(3, 60, 9)], erwartet: "hold" },
-      { history: [sets(3, 60, 7), sets(3, 60, 7), sets(3, 60, 7)], erwartet: "deload" },
+      { history: [sets(3, 60, 9), sets(3, 60, 9)], erwartet: "hold" },
+      {
+        history: [sets(3, 60, 7), sets(3, 60, 7), sets(3, 60, 7), sets(3, 60, 7)],
+        erwartet: "deload",
+      },
     ];
     for (const fall of faelle) {
       const result = computeTargets({
@@ -998,5 +1012,43 @@ describe("computeTargets — Begründung", () => {
       expect(result.why.length, result.kind).toBeGreaterThan(10);
       expect(result.why.endsWith("."), result.why).toBe(true);
     }
+  });
+});
+
+
+describe("computeTargets — erstes Rantasten", () => {
+  it("wertet eine Rampe beim ersten Mal nicht als Fehlschlag", () => {
+    // Genau der Fall aus dem echten Verlauf: 35 → 65 → 72,5 beim Latzug, weil
+    // das Gewicht noch unbekannt war. Der Plan will drei Sätze; auf dem
+    // schwersten stand nur einer.
+    const rantasten = [
+      set({ setIndex: 0, weight: 35, reps: 15 }),
+      set({ setIndex: 1, weight: 65, reps: 10 }),
+      set({ setIndex: 2, weight: 72.5, reps: 8 }),
+    ];
+    const result = computeTargets({
+      exercise: bench,
+      planExercise: plan(),
+      history: [rantasten],
+      bodyweight: 80,
+    });
+    expect(result.kind).toBe("first");
+    expect(result.stalls).toBe(0);
+    // Gefunden ist das Gewicht trotzdem — ab jetzt gilt der volle Plan darauf.
+    expect(result.targets).toEqual([
+      { weight: 72.5, reps: 8 },
+      { weight: 72.5, reps: 8 },
+      { weight: 72.5, reps: 8 },
+    ]);
+  });
+
+  it("steigert auch beim ersten Mal, wenn die Vorgabe wirklich erfüllt war", () => {
+    const result = computeTargets({
+      exercise: bench,
+      planExercise: plan(),
+      history: [sets(3, 60, 12)],
+      bodyweight: 80,
+    });
+    expect(result.kind).toBe("up");
   });
 });
