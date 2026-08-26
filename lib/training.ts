@@ -229,6 +229,12 @@ export type ProgressionResult = {
    * Sonst bleibt es bei der geplanten Satzzahl.
    */
   sets?: number;
+  /**
+   * Das Gewicht, auf das ein Rückschritt ginge — gesetzt, sobald genug
+   * Einheiten in Folge verfehlt wurden. Die Vorgabe selbst bleibt davon
+   * unberührt: den Schritt macht ein Knopfdruck, nicht die App.
+   */
+  deload?: number | null;
 };
 
 /**
@@ -479,18 +485,23 @@ export function computeTargets({
 
   // Dreimal in Folge die Vorgabe verfehlt heißt: es liegt nicht am Tag. Einmal
   // zurückgehen und mit Schwung wieder heran ist der Ausweg aus einer Mauer,
-  // gegen die man sonst noch wochenlang läuft. Bei Eigengewicht gibt es nichts
-  // wegzunehmen — dort bleibt es beim Halten.
-  if (stalls >= DELOAD_AFTER && topWeight > 0) {
-    const reduced = deloadTo(topWeight, increment);
+  // gegen die man sonst noch wochenlang läuft.
+  //
+  // Vorgeschlagen, nicht vollzogen: ob jemand wirklich festhängt oder nur krank,
+  // müde oder schlecht geschlafen war, weiß die Historie nicht. Das Gewicht
+  // bleibt deshalb stehen und `deload` hält bereit, worauf ein Knopfdruck
+  // zurückginge. Bei Eigengewicht gibt es nichts wegzunehmen.
+  const deload = stalls >= DELOAD_AFTER && topWeight > 0 ? deloadTo(topWeight, increment) : null;
+  if (deload !== null) {
     return {
-      targets: Array.from({ length: sets }, () => ({ weight: reduced, reps: repMin })),
+      targets: Array.from({ length: sets }, () => ({ weight: topWeight, reps: repMin })),
       progressed: false,
       progressionKind: null,
       isFirstTime: false,
       kind: "deload",
-      why: `${stalls} Einheiten auf ${formatNumber(topWeight)} kg — einmal zurück auf ${formatNumber(reduced)} kg und neu anlaufen.`,
+      why: `${stalls} Einheiten auf ${formatNumber(topWeight)} kg — einmal zurück auf ${formatNumber(deload)} kg und neu anlaufen?`,
       stalls,
+      deload,
     };
   }
 

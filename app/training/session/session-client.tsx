@@ -164,6 +164,8 @@ export function SessionClient() {
         /** Warum genau diese Zahlen — wird bei jeder Übung angezeigt. */
         why: string;
         sets: number;
+        /** Worauf ein Rückschritt ginge — die Entscheidung bleibt beim Nutzer. */
+        deload: number | null;
       }
     > = {};
     for (const pe of day.exercises) {
@@ -187,6 +189,7 @@ export function SessionClient() {
         why: result.why,
         // Die Eigengewichts-Progression darf die Satzzahl wachsen lassen.
         sets: result.sets ?? pe.sets,
+        deload: result.deload ?? null,
       };
     }
     return map;
@@ -845,6 +848,20 @@ export function SessionClient() {
                         <Lightbulb className="size-3.5 shrink-0" />
                       )}
                       <span className="min-w-0 flex-1">{target.why}</span>
+                      {/* Ob jemand wirklich festhängt oder nur krank war, weiß
+                          die Historie nicht — deshalb schlägt die App den
+                          Rückschritt vor und vollzieht ihn nicht. */}
+                      {target.deload !== null && (
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          onClick={() =>
+                            retargetOpenSets(pe.id, target.deload!, pe.repMin)
+                          }
+                        >
+                          Auf {formatNumber(target.deload)} kg
+                        </Button>
+                      )}
                     </p>
                   )}
 

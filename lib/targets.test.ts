@@ -961,8 +961,10 @@ describe("computeTargets — Deload", () => {
     });
     expect(result.kind).toBe("deload");
     expect(result.stalls).toBe(DELOAD_AFTER);
-    expect(result.targets[0].weight).toBe(55);
-    expect(result.targets.every((t) => t.reps === 8)).toBe(true);
+    // Vorgeschlagen, nicht vollzogen: das Gewicht bleibt stehen, bis jemand
+    // den Knopf drückt.
+    expect(result.deload).toBe(55);
+    expect(result.targets[0].weight).toBe(60);
   });
 
   it("zählt eine erfolgreiche Einheit dazwischen als Neuanfang", () => {
@@ -1010,7 +1012,7 @@ describe("computeTargets — Begründung", () => {
       });
       expect(result.kind, JSON.stringify(fall.erwartet)).toBe(fall.erwartet);
       expect(result.why.length, result.kind).toBeGreaterThan(10);
-      expect(result.why.endsWith("."), result.why).toBe(true);
+      expect(/[.?]$/.test(result.why), result.why).toBe(true);
     }
   });
 });
