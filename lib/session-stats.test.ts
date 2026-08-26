@@ -13,6 +13,9 @@ const bench: Exercise = {
   bodyweightFactor: null,
   loadFactor: null,
   warmup: null,
+  media: null,
+  secondary: [],
+  en: null,
 };
 
 const pullup: Exercise = {

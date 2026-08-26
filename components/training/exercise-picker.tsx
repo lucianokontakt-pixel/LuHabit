@@ -15,7 +15,9 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useTraining } from "@/lib/training-store";
 import { createExercise } from "@/lib/api-training";
+import { ExerciseThumb } from "@/components/training/exercise-media";
 import {
+  EQUIPMENT,
   EQUIPMENT_LABELS,
   MUSCLES,
   MUSCLE_LABELS,
@@ -25,7 +27,14 @@ import {
 } from "@/lib/training";
 import { WARMUP_OPTIONS } from "@/lib/warmup";
 
-const EQUIPMENT_KEYS = Object.keys(EQUIPMENT_LABELS) as Equipment[];
+const EQUIPMENT_KEYS = EQUIPMENT;
+
+/**
+ * So viele Treffer zeigt die Auswahl höchstens. Die Bibliothek hat rund 1300
+ * Übungen — wer ohne Filter öffnet, will ohnehin erst suchen, und ein Dialog
+ * mit tausend Zeilen ruckelt auf dem Handy.
+ */
+const MAX_TREFFER = 60;
 
 export function ExercisePicker({
   open,
@@ -59,12 +68,20 @@ export function ExercisePicker({
     return exercises
       .filter((e) => !e.hidden)
       .filter((e) => (muscle === "all" ? true : e.muscle === muscle))
-      .filter((e) => (q ? e.name.toLowerCase().includes(q) : true));
+      // Auch der englische Originalname zählt — wer "bench press" tippt, soll
+      // Bankdrücken finden.
+      .filter((e) =>
+        q
+          ? e.name.toLowerCase().includes(q) || (e.en?.toLowerCase().includes(q) ?? false)
+          : true
+      );
   }, [exercises, muscle, query]);
+
+  const zuViele = Math.max(0, visible.length - MAX_TREFFER);
 
   const grouped = useMemo(() => {
     const map = new Map<Muscle, Exercise[]>();
-    for (const e of visible) {
+    for (const e of visible.slice(0, MAX_TREFFER)) {
       const list = map.get(e.muscle) ?? [];
       list.push(e);
       map.set(e.muscle, list);
@@ -281,9 +298,10 @@ export function ExercisePicker({
                               onPick(exercise);
                               onOpenChange(false);
                             }}
-                            className="flex items-center justify-between gap-3 rounded-field px-3 py-2.5 text-left transition-colors hover:bg-card"
+                            className="flex items-center justify-between gap-3 rounded-field px-3 py-2 text-left transition-colors hover:bg-card"
                           >
-                            <span className="min-w-0">
+                            <ExerciseThumb exercise={exercise} className="size-9" />
+                            <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm">{exercise.name}</span>
                               <span className="block text-xs text-muted-foreground">
                                 {EQUIPMENT_LABELS[exercise.equipment]}
@@ -298,6 +316,13 @@ export function ExercisePicker({
                       })}
                     </div>
                   ))}
+
+                  {zuViele > 0 && (
+                    <p className="px-1 py-1 text-xs text-muted-foreground">
+                      {zuViele} weitere Übungen — such nach dem Namen oder wähle eine
+                      Muskelgruppe.
+                    </p>
+                  )}
                 </div>
               )}
             </div>

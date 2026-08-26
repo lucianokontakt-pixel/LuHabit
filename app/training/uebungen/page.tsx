@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { TrainingTabs } from "@/components/training/training-tabs";
 import { ExercisePicker } from "@/components/training/exercise-picker";
 import { ExerciseEditor } from "@/components/training/exercise-editor";
+import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
 import { useTraining } from "@/lib/training-store";
 import { deleteExercise, updateExercise } from "@/lib/api-training";
 import {
+  EQUIPMENT,
   EQUIPMENT_LABELS,
   MUSCLES,
   defaultIncrement,
@@ -21,7 +23,14 @@ import {
 } from "@/lib/training";
 import { cn } from "@/lib/utils";
 
-const EQUIPMENT_KEYS = Object.keys(EQUIPMENT_LABELS) as Equipment[];
+const EQUIPMENT_KEYS = EQUIPMENT;
+
+/**
+ * Wie viele Übungen eine Muskelgruppe zeigt, bevor sie aufgeklappt werden will.
+ * Die Bibliothek hat rund 1300 Einträge — ungebremst stünden hier gut tausend
+ * Zeilen samt Vorschaubild im Dokument, nur damit jemand nach unten wischt.
+ */
+const VORSCHAU = 24;
 
 export default function ExercisesPage() {
   const { exercises, upsertExercise, reload, loading } = useTraining();
@@ -31,6 +40,8 @@ export default function ExercisesPage() {
   const [showHidden, setShowHidden] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Exercise | null>(null);
+  const [detail, setDetail] = useState<Exercise | null>(null);
+  const [expanded, setExpanded] = useState<Set<Muscle>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -39,7 +50,13 @@ export default function ExercisesPage() {
       .filter((e) => (showHidden ? true : !e.hidden))
       .filter((e) => (muscle === "all" ? true : e.muscle === muscle))
       .filter((e) => (equipment === "all" ? true : e.equipment === equipment))
-      .filter((e) => (q ? e.name.toLowerCase().includes(q) : true));
+      // Auch der englische Originalname zählt — wer "bench press" tippt, soll
+      // Bankdrücken finden.
+      .filter((e) =>
+        q
+          ? e.name.toLowerCase().includes(q) || (e.en?.toLowerCase().includes(q) ?? false)
+          : true
+      );
   }, [exercises, query, muscle, equipment, showHidden]);
 
   const grouped = useMemo(() => {
@@ -203,7 +220,7 @@ export default function ExercisesPage() {
               </div>
 
               <div className="flex flex-col px-(--card-spacing)">
-                {group.items.map((exercise) => (
+                {(expanded.has(group.key) ? group.items : group.items.slice(0, VORSCHAU)).map((exercise) => (
                   <div
                     key={exercise.id}
                     className={cn(
@@ -211,7 +228,14 @@ export default function ExercisesPage() {
                       exercise.hidden && "opacity-50"
                     )}
                   >
-                    <div className="min-w-0 flex-1">
+                    <button
+                      type="button"
+                      onClick={() => setDetail(exercise)}
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                      aria-label={`${exercise.name} ansehen`}
+                    >
+                      <ExerciseThumb exercise={exercise} />
+                      <div className="min-w-0 flex-1">
                       <p className="truncate text-sm">{exercise.name}</p>
                       <p className="truncate text-xs text-muted-foreground">
                         {EQUIPMENT_LABELS[exercise.equipment]}
@@ -224,7 +248,8 @@ export default function ExercisesPage() {
                         {exercise.isCustom && " · eigene"}
                         {exercise.hidden && " · ausgeblendet"}
                       </p>
-                    </div>
+                      </div>
+                    </button>
 
                     <Button
                       variant="ghost"
@@ -263,6 +288,17 @@ export default function ExercisesPage() {
                     )}
                   </div>
                 ))}
+
+                {group.items.length > VORSCHAU && !expanded.has(group.key) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-1 w-fit"
+                    onClick={() => setExpanded((prev) => new Set(prev).add(group.key))}
+                  >
+                    Alle {group.items.length} anzeigen
+                  </Button>
+                )}
               </div>
             </Card>
           ))}
@@ -279,6 +315,11 @@ export default function ExercisesPage() {
       <ExerciseEditor
         exercise={editing}
         onOpenChange={(open) => !open && setEditing(null)}
+      />
+
+      <ExerciseDetail
+        exercise={detail}
+        onOpenChange={(open) => !open && setDetail(null)}
       />
     </div>
   );

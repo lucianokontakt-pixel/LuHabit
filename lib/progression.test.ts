@@ -13,6 +13,9 @@ const exercise: Exercise = {
   bodyweightFactor: null,
   loadFactor: null,
   warmup: null,
+  media: null,
+  secondary: [],
+  en: null,
 };
 
 function set(overrides: Partial<WorkoutSet>): WorkoutSet {

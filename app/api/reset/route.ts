@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
-import { currentUserId, seedExercises, seedHabits, seedStarterPlan } from "@/lib/server-user";
+import { currentUserId, seedHabits, seedStarterPlan } from "@/lib/server-user";
 
 const UNAUTHORIZED = { error: "Nicht angemeldet" };
 
@@ -16,7 +16,7 @@ const SCOPES: ResetScope[] = ["setup", "habit-entries", "training-sessions"];
 
 /**
  * Setzt die Einrichtung auf den Zustand eines frisch angelegten Kontos:
- * Standard-Habits mit Standardzielen, die vollständige Übungsbibliothek und
+ * Standard-Habits mit Standardzielen, eine unangetastete Übungsbibliothek und
  * Push/Pull/Legs als aktiver Plan.
  *
  * Nicht angefasst werden Einträge und Trainingseinheiten. Damit die Statistik
@@ -45,9 +45,10 @@ async function resetSetup(userId: string): Promise<void> {
   await softDelete("goals", userId);
   await seedHabits(userId);
 
-  // Die Bibliothek wird komplett neu geschrieben. workout_sets verweist nur
-  // über die ID auf die Übung, ohne Fremdschlüssel — Löschen und identisches
-  // Wiederanlegen lässt den Verlauf also unberührt.
+  // Die Bibliothek selbst steht im Katalog und kann nicht zurückgesetzt
+  // werden — hier fallen nur die Anpassungen daran weg (ausgeblendet, eigene
+  // Gewichtssprünge). Selbst angelegte Übungen mit protokollierten Sätzen
+  // bleiben stehen, sonst stünden in alten Einheiten nur noch nackte IDs.
   await d1Query(
     `UPDATE exercises SET deleted_at = datetime('now'), updated_at = datetime('now')
       WHERE user_id = ? AND deleted_at IS NULL
@@ -55,7 +56,6 @@ async function resetSetup(userId: string): Promise<void> {
              OR id NOT IN (SELECT exercise_id FROM workout_sets WHERE user_id = ?))`,
     [userId, userId]
   );
-  await seedExercises(userId);
 
   // Tage und Übungen eines Plans tragen keinen eigenen Grabstein — sie hängen
   // am Plan und werden immer nur zusammen mit ihm gelesen (siehe write-ops.ts).

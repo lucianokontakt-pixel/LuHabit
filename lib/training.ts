@@ -10,7 +10,16 @@ export type Muscle =
   | "calves"
   | "core";
 
-export type Equipment = "barbell" | "dumbbell" | "machine" | "cable" | "bodyweight";
+export type Equipment =
+  | "barbell"
+  | "dumbbell"
+  | "machine"
+  | "cable"
+  | "bodyweight"
+  | "kettlebell"
+  | "band"
+  | "ball"
+  | "other";
 
 export const MUSCLES: { key: Muscle; label: string; group: "upper" | "lower" }[] = [
   { key: "chest", label: "Brust", group: "upper" },
@@ -35,7 +44,24 @@ export const EQUIPMENT_LABELS: Record<Equipment, string> = {
   machine: "Maschine",
   cable: "Kabelzug",
   bodyweight: "Körpergewicht",
+  kettlebell: "Kettlebell",
+  band: "Band",
+  ball: "Ball",
+  other: "Sonstiges",
 };
+
+/** Reihenfolge der Gerätefilter — das Übliche zuerst. */
+export const EQUIPMENT: Equipment[] = [
+  "barbell",
+  "dumbbell",
+  "machine",
+  "cable",
+  "bodyweight",
+  "kettlebell",
+  "band",
+  "ball",
+  "other",
+];
 
 /**
  * Standard-Gewichtssprung: Oberkörper 2,5 kg, Unterkörper 5 kg.
@@ -76,6 +102,16 @@ export type Exercise = {
    * entscheidet (siehe lib/warmup.ts) — 'always'/'never' überschreiben das.
    */
   warmup: "always" | "never" | null;
+  /**
+   * Kürzel der Mediendateien im Katalog — daraus werden GIF und Standbild
+   * zusammengesetzt (siehe lib/exercise-catalog.ts). null bei selbst
+   * angelegten Übungen, die keine Bilder haben.
+   */
+  media: string | null;
+  /** Muskeln, die mitarbeiten. Nur zur Anzeige, nicht in der Statistik. */
+  secondary: Muscle[];
+  /** Der englische Originalname — die Suche findet Übungen auch darüber. */
+  en: string | null;
 };
 
 export type PlanExercise = {

@@ -3,6 +3,7 @@ import { d1Query } from "@/lib/d1";
 import { validSlugId } from "@/lib/ids";
 import { slugifyExercise } from "@/lib/slugify";
 import { currentUserId } from "@/lib/server-user";
+import { catalogEntry, fromCatalog, mergeExercises, mergeOne, type ExerciseRecord } from "@/lib/exercise-catalog";
 import { DEFAULT_BODYWEIGHT_LOAD, type Equipment, type Exercise, type Muscle } from "@/lib/training";
 
 type ExerciseRow = {
@@ -18,7 +19,12 @@ type ExerciseRow = {
   warmup: string | null;
 };
 
-function toExercise(row: ExerciseRow): Exercise {
+/**
+ * Die Zeile so, wie sie in der Datenbank steht. Ob daraus eine eigene Übung
+ * wird oder eine Abweichung von einer Katalogübung, entscheidet erst
+ * mergeExercises.
+ */
+function toRecord(row: ExerciseRow): ExerciseRecord {
   return {
     id: row.id,
     name: row.name,
@@ -33,6 +39,11 @@ function toExercise(row: ExerciseRow): Exercise {
   };
 }
 
+/** Eine einzelne Übung, gelesen wie die ganze Liste. */
+function toExercise(row: ExerciseRow): Exercise {
+  return mergeOne(toRecord(row));
+}
+
 const UNAUTHORIZED = { error: "Nicht angemeldet" };
 
 /** Faustwert für eigene Eigengewichtsübungen — grob ein Liegestütz. */
@@ -45,7 +56,7 @@ export async function GET(req: NextRequest) {
        FROM exercises WHERE user_id = ? AND deleted_at IS NULL ORDER BY name COLLATE NOCASE ASC`,
     [userId]
   );
-  return NextResponse.json({ exercises: rows.map(toExercise) });
+  return NextResponse.json({ exercises: mergeExercises(rows.map(toRecord)) });
 }
 
 export async function POST(req: NextRequest) {
@@ -151,27 +162,55 @@ export async function PUT(req: NextRequest) {
        FROM exercises WHERE user_id = ? AND deleted_at IS NULL AND id = ?`,
     [userId, body.id]
   );
-  if (current.length === 0) {
+
+  // Eine Katalogübung hat erst dann eine Zeile, wenn jemand etwas an ihr
+  // verstellt — dieses Verstellen ist genau der Fall hier. Ihre Ausgangswerte
+  // kommen deshalb aus dem Katalog statt aus der Datenbank.
+  const entry = catalogEntry(body.id);
+  const before: ExerciseRow | null =
+    current[0] ??
+    (entry
+      ? (() => {
+          const base = fromCatalog(entry);
+          return {
+            id: base.id,
+            name: base.name,
+            muscle: base.muscle,
+            equipment: base.equipment,
+            is_custom: 0,
+            hidden: 0,
+            increment: base.increment,
+            bodyweight_factor: base.bodyweightFactor,
+            load_factor: base.loadFactor,
+            warmup: base.warmup,
+          };
+        })()
+      : null);
+
+  if (!before) {
     return NextResponse.json({ error: "Übung nicht gefunden" }, { status: 404 });
   }
 
-  const before = current[0];
   await d1Query(
-    `UPDATE exercises
-        SET name = ?, muscle = ?, equipment = ?, increment = ?, bodyweight_factor = ?,
-            load_factor = ?, warmup = ?, hidden = ?, updated_at = datetime('now')
-      WHERE user_id = ? AND id = ?`,
+    `INSERT INTO exercises (user_id, id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor, load_factor, warmup, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(user_id, id) DO UPDATE
+       SET name = excluded.name, muscle = excluded.muscle, equipment = excluded.equipment,
+           hidden = excluded.hidden, increment = excluded.increment,
+           bodyweight_factor = excluded.bodyweight_factor, load_factor = excluded.load_factor,
+           warmup = excluded.warmup, deleted_at = NULL, updated_at = datetime('now')`,
     [
+      userId,
+      body.id,
       body.name?.trim() || before.name,
       body.muscle ?? before.muscle,
       body.equipment ?? before.equipment,
+      before.is_custom,
+      body.hidden === undefined ? before.hidden : body.hidden ? 1 : 0,
       body.increment === undefined ? before.increment : body.increment,
       body.bodyweightFactor === undefined ? before.bodyweight_factor : body.bodyweightFactor,
       body.loadFactor === undefined ? before.load_factor : body.loadFactor,
       body.warmup === undefined ? before.warmup : body.warmup,
-      body.hidden === undefined ? before.hidden : body.hidden ? 1 : 0,
-      userId,
-      body.id,
     ]
   );
 
@@ -189,6 +228,32 @@ export async function DELETE(req: NextRequest) {
 
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id ist erforderlich" }, { status: 400 });
+
+  // Eine Katalogübung steht im Code, nicht in der Datenbank — löschen lässt
+  // sie sich nicht, nur ausblenden. Dafür braucht es unter Umständen erst eine
+  // Zeile, die dieses Ausblenden festhält.
+  const entry = catalogEntry(id);
+  if (entry) {
+    const base = fromCatalog(entry);
+    await d1Query(
+      `INSERT INTO exercises (user_id, id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor, load_factor, warmup, updated_at)
+       VALUES (?, ?, ?, ?, ?, 0, 1, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(user_id, id) DO UPDATE
+         SET hidden = 1, deleted_at = NULL, updated_at = datetime('now')`,
+      [
+        userId,
+        base.id,
+        base.name,
+        base.muscle,
+        base.equipment,
+        base.increment,
+        base.bodyweightFactor,
+        base.loadFactor,
+        base.warmup,
+      ]
+    );
+    return NextResponse.json({ ok: true, hidden: true });
+  }
 
   // Übungen mit Verlauf werden nur ausgeblendet — sonst verlöre man die Statistik.
   const used = await d1Query<{ count: number }>(

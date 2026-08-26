@@ -28,6 +28,9 @@ const bench: Exercise = {
   bodyweightFactor: 0.6,
   loadFactor: null,
   warmup: null,
+  media: null,
+  secondary: [],
+  en: null,
 };
 
 const pullup: Exercise = {
@@ -41,6 +44,9 @@ const pullup: Exercise = {
   bodyweightFactor: null,
   loadFactor: null,
   warmup: null,
+  media: null,
+  secondary: [],
+  en: null,
 };
 
 const squat: Exercise = {
@@ -54,6 +60,9 @@ const squat: Exercise = {
   bodyweightFactor: 0.75,
   loadFactor: null,
   warmup: null,
+  media: null,
+  secondary: [],
+  en: null,
 };
 
 function plan(overrides: Partial<PlanExercise> = {}): PlanExercise {

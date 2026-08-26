@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { d1Query, d1InsertMany, d1UpsertMany } from "@/lib/d1";
 import { AUTH_COOKIE, OWNER_USER_ID, authConfigured, readSessionCookie } from "@/lib/auth";
 import { DEFAULT_HABIT_SUGGESTIONS } from "@/lib/habits";
-import { SEED_EXERCISES, STARTER_PLAN } from "@/lib/exercise-seed";
+import { STARTER_PLAN } from "@/lib/exercise-seed";
 import { nameForIcon } from "@/lib/habits";
 
 export type DbUser = {
@@ -86,13 +86,15 @@ function newId(prefix: string): string {
 }
 
 /**
- * Standard-Habits, Ziele, Übungsbibliothek und Starterplan für ein frisches
- * Konto. Die Bausteine sind einzeln aufrufbar, weil /api/reset genau denselben
- * Zustand wiederherstellt — nur eben für ein Konto, das schon existiert.
+ * Standard-Habits, Ziele und Starterplan für ein frisches Konto. Die Bausteine
+ * sind einzeln aufrufbar, weil /api/reset genau denselben Zustand
+ * wiederherstellt — nur eben für ein Konto, das schon existiert.
+ *
+ * Die Übungsbibliothek fehlt hier absichtlich: sie kommt aus dem Katalog
+ * (lib/exercise-catalog.ts) und braucht keine Zeilen in der Datenbank.
  */
 export async function provisionNewUser(userId: string): Promise<void> {
   await seedHabits(userId);
-  await seedExercises(userId);
   await seedStarterPlan(userId);
 }
 
@@ -136,44 +138,6 @@ export async function seedHabits(userId: string): Promise<void> {
     ["user_id", "habit", "target", "updated_at"],
     ["user_id", "habit"],
     DEFAULT_HABIT_SUGGESTIONS.map((habit) => [userId, habit.type, habit.defaultGoal, updatedAt])
-  );
-}
-
-/**
- * Jedes Konto bekommt eine eigene Kopie der Bibliothek, damit Ausblenden
- * und eigene Anpassungen niemanden sonst betreffen. Upsert aus demselben
- * Grund wie bei seedHabits — siehe dort.
- */
-export async function seedExercises(userId: string): Promise<void> {
-  const updatedAt = new Date().toISOString().replace("T", " ").slice(0, 19);
-
-  await d1UpsertMany(
-    "exercises",
-    [
-      "user_id",
-      "id",
-      "name",
-      "muscle",
-      "equipment",
-      "is_custom",
-      "hidden",
-      "bodyweight_factor",
-      "load_factor",
-      "updated_at",
-    ],
-    ["user_id", "id"],
-    SEED_EXERCISES.map((e) => [
-      userId,
-      e.id,
-      e.name,
-      e.muscle,
-      e.equipment,
-      0,
-      0,
-      e.factor,
-      e.load ?? null,
-      updatedAt,
-    ])
   );
 }
 

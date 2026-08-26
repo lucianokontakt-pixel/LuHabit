@@ -9,6 +9,12 @@ import {
   type WorkoutSet,
 } from "@/lib/training";
 import { readAll, readOne } from "@/lib/local-db";
+import {
+  catalogEntry,
+  fromCatalog,
+  mergeExercises,
+  type ExerciseRecord,
+} from "@/lib/exercise-catalog";
 import { ensureLocalData } from "@/lib/sync";
 import { enqueue, flushQueue } from "@/lib/write-queue";
 import { dedupeSlug, slugifyExercise } from "@/lib/slugify";
@@ -28,9 +34,14 @@ export type DayInput = {
   }[];
 };
 
+/**
+ * Der lokale Bestand hält nur noch, was von der Bibliothek abweicht — die
+ * Bibliothek selbst kommt aus dem Katalog. Zusammengelegt sieht der Rest der
+ * App weiterhin eine flache Liste (siehe lib/exercise-catalog.ts).
+ */
 export async function fetchExercises(): Promise<Exercise[]> {
   await ensureLocalData();
-  return readAll<Exercise>("exercises");
+  return mergeExercises(await readAll<ExerciseRecord>("exercises"));
 }
 
 export async function createExercise(params: {
@@ -59,6 +70,9 @@ export async function createExercise(params: {
     bodyweightFactor: params.bodyweightFactor ?? null,
     loadFactor,
     warmup: params.warmup ?? null,
+    media: null,
+    secondary: [],
+    en: null,
   };
   await enqueue({ kind: "exercise.save", exercise, isNew: true });
   void flushQueue();
@@ -76,7 +90,12 @@ export async function updateExercise(params: {
   warmup?: "always" | "never" | null;
   hidden?: boolean;
 }): Promise<Exercise> {
-  const before = await readOne<Exercise>("exercises", params.id);
+  // Eine Katalogübung, die noch nie angefasst wurde, hat keine Zeile — ihre
+  // Ausgangswerte kommen dann aus dem Katalog.
+  const entry = catalogEntry(params.id);
+  const before =
+    (await readOne<Exercise>("exercises", params.id)) ??
+    (entry ? fromCatalog(entry) : null);
   const exercise: Exercise = {
     id: params.id,
     name: params.name?.trim() || before?.name || "",
@@ -89,6 +108,9 @@ export async function updateExercise(params: {
       params.bodyweightFactor === undefined ? before?.bodyweightFactor ?? null : params.bodyweightFactor,
     loadFactor: params.loadFactor === undefined ? before?.loadFactor ?? null : params.loadFactor,
     warmup: params.warmup === undefined ? before?.warmup ?? null : params.warmup,
+    media: before?.media ?? null,
+    secondary: before?.secondary ?? [],
+    en: before?.en ?? null,
   };
   await enqueue({ kind: "exercise.save", exercise, isNew: false });
   void flushQueue();
@@ -109,7 +131,9 @@ export async function deleteExercise(id: string): Promise<void> {
   const usedInSessions = sessions.some((s) => s.sets.some((set) => set.exerciseId === id));
   const usedInPlans = plans.some((p) => p.days.some((d) => d.exercises.some((e) => e.exerciseId === id)));
 
-  if (usedInSessions || usedInPlans) {
+  // Eine Katalogübung lässt sich nicht löschen — sie steht im Code, nicht in
+  // der Datenbank. Was hier "löschen" heißt, ist für sie immer ausblenden.
+  if (usedInSessions || usedInPlans || catalogEntry(id)) {
     await updateExercise({ id, hidden: true });
     return;
   }

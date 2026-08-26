@@ -1,0 +1,177 @@
+import catalogData from "@/lib/exercise-catalog.json";
+import { CATALOG_DEFAULTS } from "@/lib/exercise-legacy-map";
+import { DEFAULT_BODYWEIGHT_LOAD, type Equipment, type Exercise, type Muscle } from "@/lib/training";
+
+/**
+ * Die Übungsbibliothek. Sie steht bewusst nicht in der Datenbank: sie ist für
+ * alle Nutzer gleich, ändert sich nur mit einer neuen Version der App und wäre
+ * als 1295 Zeilen pro Nutzer bei jedem Abgleich unnötiger Ballast. Erzeugt von
+ * scripts/build-exercise-catalog.mjs aus dem openGym-Datensatz.
+ *
+ * In der Tabelle `exercises` steht darum nur noch, was jemand selbst angelegt
+ * oder an einer Katalogübung verstellt hat. `mergeExercises` legt beides
+ * übereinander — davor sieht der Rest der App wie bisher eine flache Liste.
+ */
+export type CatalogExercise = {
+  id: string;
+  name: string;
+  muscle: Muscle;
+  equipment: Equipment;
+  secondary: Muscle[];
+  media: string;
+  en: string;
+};
+
+export const CATALOG = catalogData as CatalogExercise[];
+
+const BY_ID = new Map(CATALOG.map((e) => [e.id, e]));
+
+export function catalogEntry(id: string): CatalogExercise | undefined {
+  return BY_ID.get(id);
+}
+
+/** Wie eine Übung in der Datenbank liegt: entweder eigen oder eine Abweichung. */
+export type ExerciseRecord = {
+  id: string;
+  name: string;
+  muscle: Muscle;
+  equipment: Equipment;
+  isCustom: boolean;
+  hidden: boolean;
+  increment: number | null;
+  bodyweightFactor: number | null;
+  loadFactor: number | null;
+  warmup: "always" | "never" | null;
+};
+
+/** Eine Katalogübung so, wie sie ohne jede Anpassung aussieht. */
+export function fromCatalog(entry: CatalogExercise): Exercise {
+  const defaults = CATALOG_DEFAULTS[entry.id];
+  return {
+    id: entry.id,
+    name: entry.name,
+    muscle: entry.muscle,
+    equipment: entry.equipment,
+    isCustom: false,
+    hidden: false,
+    increment: null,
+    bodyweightFactor: defaults?.factor ?? null,
+    loadFactor:
+      defaults?.load ??
+      (entry.equipment === "bodyweight" ? DEFAULT_BODYWEIGHT_LOAD : null),
+    warmup: null,
+    media: entry.media,
+    secondary: entry.secondary,
+    en: entry.en,
+  };
+}
+
+/**
+ * Katalog plus die Zeilen aus der Datenbank. Eine Zeile zu einer Katalog-ID
+ * überschreibt deren Werte, jede andere Zeile ist eine eigene Übung.
+ *
+ * Zeilen, deren ID der Katalog nicht kennt und die nicht als eigene Übung
+ * markiert sind, kommen trotzdem mit: das sind Reste aus der alten Bibliothek,
+ * für die die Migration keine Entsprechung gefunden hat. Sie stillschweigend
+ * zu verschlucken hieße, dass ein Plan auf eine Übung zeigt, die es nirgends
+ * mehr gibt.
+ */
+export function mergeExercises(records: ExerciseRecord[]): Exercise[] {
+  const overrides = new Map(records.map((r) => [r.id, r]));
+  const merged: Exercise[] = [];
+
+  for (const entry of CATALOG) {
+    const base = fromCatalog(entry);
+    const row = overrides.get(entry.id);
+    if (!row) {
+      merged.push(base);
+      continue;
+    }
+    overrides.delete(entry.id);
+    merged.push({
+      ...base,
+      name: row.name,
+      muscle: row.muscle,
+      equipment: row.equipment,
+      hidden: row.hidden,
+      increment: row.increment,
+      bodyweightFactor: row.bodyweightFactor ?? base.bodyweightFactor,
+      loadFactor: row.loadFactor ?? base.loadFactor,
+      warmup: row.warmup,
+    });
+  }
+
+  for (const row of overrides.values()) {
+    merged.push({ ...row, media: null, secondary: [], en: null });
+  }
+
+  return merged.sort((a, b) => a.name.localeCompare(b.name, "de"));
+}
+
+/** Eine einzelne Zeile zusammenlegen, ohne über den ganzen Katalog zu laufen. */
+export function mergeOne(record: ExerciseRecord): Exercise {
+  const entry = BY_ID.get(record.id);
+  if (!entry) return { ...record, media: null, secondary: [], en: null };
+  const base = fromCatalog(entry);
+  return {
+    ...base,
+    name: record.name,
+    muscle: record.muscle,
+    equipment: record.equipment,
+    hidden: record.hidden,
+    increment: record.increment,
+    bodyweightFactor: record.bodyweightFactor ?? base.bodyweightFactor,
+    loadFactor: record.loadFactor ?? base.loadFactor,
+    warmup: record.warmup,
+  };
+}
+
+/**
+ * Nur die Zeilen, die überhaupt gespeichert werden müssen. Eine Katalogübung,
+ * an der nichts verstellt ist, braucht keinen Datenbankeintrag.
+ */
+export function isPlainCatalogEntry(row: ExerciseRecord): boolean {
+  const entry = BY_ID.get(row.id);
+  if (!entry || row.isCustom) return false;
+  const base = fromCatalog(entry);
+  return (
+    row.name === base.name &&
+    row.muscle === base.muscle &&
+    row.equipment === base.equipment &&
+    row.hidden === false &&
+    row.increment === null &&
+    row.warmup === null &&
+    row.bodyweightFactor === base.bodyweightFactor &&
+    row.loadFactor === base.loadFactor
+  );
+}
+
+const MEDIA_BASE = "/uebungen";
+
+/** Das animierte GIF einer Übung, oder null bei einer eigenen Übung. */
+export function gifUrl(exercise: { id: string; media: string | null }): string | null {
+  if (!exercise.media) return null;
+  return `${MEDIA_BASE}/gif/${exercise.id.slice(3)}-${exercise.media}.gif`;
+}
+
+/** Das Standbild — leichter als das GIF, für Listen und Vorschauen. */
+export function imageUrl(exercise: { id: string; media: string | null }): string | null {
+  if (!exercise.media) return null;
+  return `${MEDIA_BASE}/img/${exercise.id.slice(3)}-${exercise.media}.jpg`;
+}
+
+/**
+ * Die Anleitungen liegen getrennt vom Katalog, weil sie mit 600 KB deutlich
+ * schwerer sind als die Liste selbst und nur gebraucht werden, wenn jemand eine
+ * einzelne Übung aufschlägt. Der Datensatz liefert sie nur auf Englisch.
+ */
+let instructionsCache: Record<string, string[]> | null = null;
+
+export async function loadInstructions(id: string): Promise<string[]> {
+  if (!instructionsCache) {
+    const response = await fetch(`${MEDIA_BASE}/anleitungen.json`);
+    if (!response.ok) return [];
+    instructionsCache = (await response.json()) as Record<string, string[]>;
+  }
+  return instructionsCache[id] ?? [];
+}
