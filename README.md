@@ -123,7 +123,7 @@ gleichzeitig festlegt, auf welches Konto der Wert geschrieben wird.
    Shortcut lautlos ausführt (Nachfrage vor Ausführung: aus) — läuft dann automatisch nach jedem
    Wiegen.
 
-Bis dahin bzw. alternativ einfach manuell auf der `/koerper`-Seite eintragen.
+Bis dahin bzw. alternativ einfach manuell unter `/statistik/koerper` eintragen.
 
 ## 4. Deploy auf Cloudflare Workers
 

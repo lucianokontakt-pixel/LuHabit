@@ -1,28 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  basalMetabolicRate,
   bodyMassIndex,
   bmiCategory,
   isPlausibleHeight,
 } from "@/lib/body-profile";
-
-describe("basalMetabolicRate (Mifflin-St Jeor)", () => {
-  it("rechnet für Männer +5", () => {
-    const bmr = basalMetabolicRate({ gender: "male", weight: 80, height: 180, age: 30 });
-    expect(bmr).toBeCloseTo(10 * 80 + 6.25 * 180 - 5 * 30 + 5, 5);
-  });
-
-  it("rechnet für Frauen -161", () => {
-    const bmr = basalMetabolicRate({ gender: "female", weight: 65, height: 165, age: 30 });
-    expect(bmr).toBeCloseTo(10 * 65 + 6.25 * 165 - 5 * 30 - 161, 5);
-  });
-
-  it("gibt null zurück, solange ein Wert fehlt", () => {
-    expect(basalMetabolicRate({ gender: "male", weight: 0, height: 180, age: 30 })).toBeNull();
-    expect(basalMetabolicRate({ gender: "male", weight: 80, height: 0, age: 30 })).toBeNull();
-    expect(basalMetabolicRate({ gender: "male", weight: 80, height: 180, age: 0 })).toBeNull();
-  });
-});
 
 describe("isPlausibleHeight", () => {
   it("akzeptiert normale Körpergrößen", () => {

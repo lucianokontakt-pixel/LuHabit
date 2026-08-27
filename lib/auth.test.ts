@@ -32,7 +32,7 @@ describe("isPublicPath", () => {
   it("schützt die Seiten", () => {
     expect(isPublicPath("/")).toBe(false);
     expect(isPublicPath("/einstellungen")).toBe(false);
-    expect(isPublicPath("/koerper")).toBe(false);
+    expect(isPublicPath("/statistik/koerper")).toBe(false);
   });
 
   it("öffnet nichts, was nur so aussieht", () => {

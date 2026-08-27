@@ -12,14 +12,6 @@ export type BodyProfile = {
   activity: string;
 };
 
-export const ACTIVITY_LEVELS = [
-  { value: "1.2", label: "Sitzend", hint: "wenig bis keine Bewegung" },
-  { value: "1.375", label: "Leicht aktiv", hint: "Sport 1–3× / Woche" },
-  { value: "1.55", label: "Moderat aktiv", hint: "Sport 3–5× / Woche" },
-  { value: "1.725", label: "Sehr aktiv", hint: "Sport 6–7× / Woche" },
-  { value: "1.9", label: "Extrem aktiv", hint: "körperliche Arbeit + Sport" },
-];
-
 export const DEFAULT_PROFILE: BodyProfile = {
   age: "",
   gender: "male",
@@ -123,18 +115,6 @@ export function useBodyProfile() {
   );
 
   return { profile, update, hydrated };
-}
-
-/** Mifflin-St Jeor */
-export function basalMetabolicRate(p: {
-  gender: Gender;
-  weight: number;
-  height: number;
-  age: number;
-}): number | null {
-  if (!(p.weight > 0 && p.height > 0 && p.age > 0)) return null;
-  const base = 10 * p.weight + 6.25 * p.height - 5 * p.age;
-  return p.gender === "male" ? base + 5 : base - 161;
 }
 
 /** Plausible Körpergrößen — schützt vor Tippfehlern wie "65" statt "185". */

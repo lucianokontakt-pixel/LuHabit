@@ -81,7 +81,7 @@ const RESETS = [
     hint: "Jede Messung von Gewicht und Körperfett.",
     title: "Alle Körperwerte löschen?",
     description:
-      "Gewichts- und Körperfettverlauf sind danach leer, BMI und Kalorienrechner rechnen mit nichts mehr, und die Gewichtsvorschläge für Eigengewichtsübungen fallen auf null. Deine Einstellungen und Trainingseinheiten bleiben. Das lässt sich nicht rückgängig machen; exportiere vorher, wenn du sie behalten willst.",
+      "Gewichts- und Körperfettverlauf sind danach leer, der BMI rechnet mit nichts mehr, und die Gewichtsvorschläge für Eigengewichtsübungen fallen auf null. Deine Einstellungen und Trainingseinheiten bleiben. Das lässt sich nicht rückgängig machen; exportiere vorher, wenn du sie behalten willst.",
     confirm: "Körperwerte löschen",
     success: "Alle Körperwerte gelöscht",
   },
