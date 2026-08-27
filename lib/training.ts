@@ -555,6 +555,28 @@ export function setLabels(sets: { warmup: boolean }[]): string[] {
  * Last behaupten und sagt nichts — bei Eigengewicht ist die Wiederholung die
  * ganze Leistung.
  */
+/**
+ * Der beste Wert, den eine Übung je gebracht hat — „32,5 kg" oder, wo es kein
+ * Gewicht gibt, „12 Wdh".
+ *
+ * Bei Eigengewicht ohne Zusatzgewicht ist die Wiederholungszahl die ganze
+ * Leistung; ein Bestwert von 0 kg wäre keine. Null, solange nichts
+ * protokolliert ist. Aufwärmsätze bleiben außen vor.
+ */
+export function bestEffortLabel(history: WorkoutSet[][]): string | null {
+  let weight = 0;
+  let reps = 0;
+  for (const session of history) {
+    for (const s of workingSets(session)) {
+      if (s.weight > weight) weight = s.weight;
+      if (s.reps > reps) reps = s.reps;
+    }
+  }
+  if (weight > 0) return `${formatNumber(weight)} kg`;
+  if (reps > 0) return `${reps} Wdh`;
+  return null;
+}
+
 export function formatLoggedSets(sets: { weight: number; reps: number }[]): string {
   return sets
     .map((s) => (s.weight > 0 ? `${formatNumber(s.weight)}×${s.reps}` : String(s.reps)))

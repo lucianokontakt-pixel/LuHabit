@@ -47,6 +47,7 @@ import {
   expandTargets,
   incrementFor,
   measuredOn,
+  bestEffortLabel,
   formatLoggedSets,
   setLabels,
   sessionVolume,
@@ -571,14 +572,37 @@ export function SessionClient() {
     node?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [activeExercise]);
 
-  const completedSets = useMemo(
-    () => Object.values(setsByExercise).flat().filter((s) => s.done),
+  /**
+   * Gezählt wird, was der Plan verlangt. Aufwärmzeilen bleiben draußen — sie
+   * sind eine Empfehlung, und eine übersprungene Rampe darf die Einheit nicht
+   * unfertig aussehen lassen. Die Karten rechnen genauso, also stimmen Kopf und
+   * Karte jetzt überein.
+   */
+  const allWorkingRows = useMemo(
+    () => Object.values(setsByExercise).flat().filter((s) => !s.warmup),
     [setsByExercise]
   );
-  const totalSets = useMemo(
-    () => Object.values(setsByExercise).flat().length,
-    [setsByExercise]
-  );
+  const completedSets = allWorkingRows.filter((s) => s.done).length;
+  const totalSets = allWorkingRows.length;
+  const allDone = totalSets > 0 && completedSets === totalSets;
+
+  /**
+   * Einmal Bescheid sagen, wenn der letzte Satz steht — sonst scrollt man nach
+   * dem letzten Haken suchend weiter. Kein Dialog: die Einheit ist nicht vorbei,
+   * nur der Plan ist abgearbeitet, und wer noch etwas dranhängen will, soll
+   * nicht erst etwas wegklicken müssen. Ein Haken wieder raus, und die Meldung
+   * darf beim nächsten Mal erneut kommen.
+   */
+  const announcedRef = useRef(false);
+  useEffect(() => {
+    if (!allDone) {
+      announcedRef.current = false;
+      return;
+    }
+    if (announcedRef.current) return;
+    announcedRef.current = true;
+    toast.success("Alles erledigt — du kannst beenden.");
+  }, [allDone]);
   // Wie im Abschluss gerechnet: ohne Aufwärmsätze, mit dem Anteil des
   // Körpergewichts. Sonst stünde am Fuß der Einheit eine andere Zahl als
   // zwei Sekunden später auf dem Abschlussbildschirm.
@@ -603,7 +627,7 @@ export function SessionClient() {
 
   async function handleFinish() {
     if (!day || !located) return;
-    if (completedSets.length === 0) {
+    if (completedSets === 0) {
       toast.error("Hak mindestens einen Satz ab, bevor du beendest.");
       return;
     }
@@ -790,9 +814,18 @@ export function SessionClient() {
         <div className="shrink-0 text-right">
           <p className="nums text-heading-sm leading-none">{formatClock(elapsed)}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {completedSets.length}/{totalSets} Sätze
+            {allDone ? "alle Sätze erledigt" : `${completedSets}/${totalSets} Sätze`}
           </p>
         </div>
+      </div>
+
+      {/* Wie weit die Einheit ist, ohne dass man zwei Zahlen im Kopf teilen
+          muss. Achromatisch — Peach gehört in dieser Ansicht der Pause. */}
+      <div className="h-1 overflow-hidden rounded-pill bg-foreground/10">
+        <div
+          className="h-full rounded-pill bg-foreground transition-[width] duration-300 ease-out"
+          style={{ width: `${totalSets > 0 ? (completedSets / totalSets) * 100 : 0}%` }}
+        />
       </div>
 
       {/* Der ganze Trainingstag, nicht die einzelne Übung — die hat ihre eigene
@@ -841,6 +874,7 @@ export function SessionClient() {
           // Marke, gegen die jeder einzelne Satz antritt, und wird nicht
           // falsch, nur weil einer davon schon steht.
           const lastLogged = lastLoggedFor(pe.exerciseId);
+          const best = bestEffortLabel(historyFor(pe.exerciseId));
           const isExtra = extras.some((e) => e.id === pe.id);
 
           return (
@@ -898,13 +932,24 @@ export function SessionClient() {
                     />
                   )}
 
-                  {lastLogged && (
-                    <p className="mx-(--card-spacing) text-xs text-muted-foreground">
-                      Letztes Mal ({formatDayLabel(lastLogged.date, today)}):{" "}
-                      <span className="nums text-foreground">
-                        {formatLoggedSets(lastLogged.sets)}
-                      </span>
-                    </p>
+                  {/* Was war, und was das Beste war. Auf einer Zeile, die auf
+                      schmalen Geräten umbricht statt abzuschneiden. */}
+                  {(lastLogged || best) && (
+                    <div className="mx-(--card-spacing) flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                      {lastLogged && (
+                        <span>
+                          Letztes Mal ({formatDayLabel(lastLogged.date, today)}):{" "}
+                          <span className="nums text-foreground">
+                            {formatLoggedSets(lastLogged.sets)}
+                          </span>
+                        </span>
+                      )}
+                      {best && (
+                        <span>
+                          Bestwert <span className="nums text-foreground">{best}</span>
+                        </span>
+                      )}
+                    </div>
                   )}
 
                   {suggestionOpen && (

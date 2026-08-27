@@ -8,6 +8,7 @@ import {
   expandTargets,
   effectiveLoad,
   measuredOn,
+  bestEffortLabel,
   formatLoggedSets,
   setLabels,
   sessionVolume,
@@ -737,6 +738,31 @@ describe("setLabels", () => {
       "W",
       "2",
     ]);
+  });
+});
+
+describe("bestEffortLabel", () => {
+  it("nennt das höchste Arbeitsgewicht", () => {
+    expect(bestEffortLabel([sets(3, 60, 8), sets(3, 62.5, 6)])).toBe("62,5 kg");
+  });
+
+  it("nimmt bei Eigengewicht die Wiederholung", () => {
+    expect(bestEffortLabel([sets(3, 0, 8), sets(3, 0, 12)])).toBe("12 Wdh");
+  });
+
+  it("lässt Aufwärmsätze und offene Sätze außen vor", () => {
+    const history = [
+      [
+        set({ setIndex: 0, weight: 90, reps: 8, warmup: true }),
+        set({ setIndex: 1, weight: 100, reps: 5, done: false }),
+        set({ setIndex: 2, weight: 60, reps: 8 }),
+      ],
+    ];
+    expect(bestEffortLabel(history)).toBe("60 kg");
+  });
+
+  it("sagt nichts, solange nichts protokolliert ist", () => {
+    expect(bestEffortLabel([])).toBe(null);
   });
 });
 
