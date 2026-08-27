@@ -11,6 +11,7 @@ import { StatValue } from "@/components/stat-value";
 import { TrainingTabs } from "@/components/training/training-tabs";
 import { MuscleGrid } from "@/components/training/muscle-grid";
 import { TrainingCalendar } from "@/components/training/training-calendar";
+import { TrainingHeatmap } from "@/components/training/training-heatmap";
 import { ExerciseProgress } from "@/components/training/exercise-progress";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
@@ -230,6 +231,8 @@ export default function TrainingStatsPage() {
           </p>
 
           <MuscleGrid progress={progress} />
+
+          <TrainingHeatmap sessions={sessions} />
 
           <TrainingCalendar sessions={sessions} months={3} />
 
