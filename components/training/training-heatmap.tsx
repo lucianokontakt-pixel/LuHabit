@@ -97,7 +97,7 @@ export function TrainingHeatmap({ sessions }: { sessions: WorkoutSession[] }) {
                     title={title}
                     aria-label={title}
                     disabled={!trained}
-                    onClick={() => router.push(`/training/einheit/${day.sessionIds[0]}`)}
+                    onClick={() => router.push(`/einheit/${day.sessionIds[0]}`)}
                     className={cn(
                       "size-3 rounded-[3px]",
                       LEVEL_CLASSES[day.level],

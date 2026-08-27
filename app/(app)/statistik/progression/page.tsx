@@ -5,8 +5,10 @@ import { ChevronDown, TrendingDown, TrendingUp, Minus, Search } from "lucide-rea
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrainingTabs } from "@/components/training/training-tabs";
+import { SectionTabs } from "@/components/section-tabs";
+import { STATISTIK_TABS } from "@/lib/nav-links";
 import { ExerciseTrendChart } from "@/components/training/exercise-trend-chart";
+import { ExerciseProgress } from "@/components/training/exercise-progress";
 import { useTraining } from "@/lib/training-store";
 import { summarizeProgress, type ProgressSummary } from "@/lib/progression";
 import { MUSCLES, workingSets, type Muscle } from "@/lib/training";
@@ -111,7 +113,7 @@ function ProgressRow({ summary }: { summary: ProgressSummary }) {
 }
 
 export default function ProgressionPage() {
-  const { exercises, sessions, loading } = useTraining();
+  const { exercises, sessions, exerciseById, loading } = useTraining();
   const [query, setQuery] = useState("");
   const [muscle, setMuscle] = useState<Muscle | "all">("all");
   const [sort, setSort] = useState<"activity" | "stagnating" | "gain">("activity");
@@ -161,15 +163,13 @@ export default function ProgressionPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <p className="text-sm text-muted-foreground">
-          Wo du wächst — und wo es gerade klemmt
-        </p>
+        <p className="text-sm text-muted-foreground">Wo du wächst — und wo es klemmt</p>
         <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">
-          Progression
+          Je Übung
         </h1>
       </div>
 
-      <TrainingTabs />
+      <SectionTabs tabs={STATISTIK_TABS} />
 
       {loading ? (
         <div className="h-64 animate-pulse rounded-card bg-card" />
@@ -301,6 +301,11 @@ export default function ProgressionPage() {
             Angezeigt wird das Arbeitsgewicht (der schwerste Satz einer Einheit). Übungen ohne
             Zusatzgewicht wie Klimmzüge werden in Wiederholungen gemessen.
           </p>
+
+          {/* Eine Übung im Detail, mit dem geschätzten Maximum daneben. Steht
+              hier statt in der Statistik, damit alles Übungsbezogene
+              beieinander liegt. */}
+          <ExerciseProgress sessions={sessions} exerciseById={exerciseById} />
         </>
       )}
     </div>

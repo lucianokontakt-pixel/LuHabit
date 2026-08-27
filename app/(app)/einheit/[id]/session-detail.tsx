@@ -146,7 +146,7 @@ export function SessionDetail({ id }: { id: string }) {
     try {
       await removeSession(session.id);
       toast.success("Einheit gelöscht");
-      router.push("/training/statistik");
+      router.push("/statistik");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Konnte Einheit nicht löschen");
     }
@@ -164,7 +164,7 @@ export function SessionDetail({ id }: { id: string }) {
           Sie wurde vermutlich gelöscht. Im Verlauf stehen alle Einheiten, die es noch gibt.
         </p>
         <Link
-          href="/training/statistik"
+          href="/statistik"
           className={buttonVariants({ variant: "outline", className: "w-fit" })}
         >
           Zum Verlauf
@@ -360,7 +360,7 @@ export function SessionDetail({ id }: { id: string }) {
     <div className="flex flex-col gap-4 pb-6">
       <div>
         <Link
-          href="/training/statistik"
+          href="/statistik"
           className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="size-4" />

@@ -5,14 +5,14 @@ import { useMemo } from "react";
 import { Play, CalendarDays, Dumbbell, Timer } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
-import { StatValue } from "@/components/stat-value";
-import { TrainingTabs } from "@/components/training/training-tabs";
+import { SectionTabs } from "@/components/section-tabs";
+import { WeekCard } from "@/components/training/week-card";
+import { TRAINING_TABS } from "@/lib/nav-links";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
 import { measuredOn, nextDayFor, sessionVolume, MUSCLE_LABELS } from "@/lib/training";
-import { formatCompact, formatDateLong, formatNumber } from "@/lib/format";
-import { cn } from "@/lib/utils";
-import { isoDateDaysAgo, todayISO } from "@/lib/datum";
+import { formatDateLong, formatNumber } from "@/lib/format";
+import { todayISO } from "@/lib/datum";
 
 export default function TrainingOverviewPage() {
   const { activePlan, sessions, exerciseById, loading, error } = useTraining();
@@ -27,37 +27,19 @@ export default function TrainingOverviewPage() {
     [activePlan, lastSession]
   );
 
-  const weekStart = isoDateDaysAgo(6);
-  const weekSessions = sessions.filter((s) => s.date >= weekStart);
-
-  // Kalenderwoche (Montag–Sonntag) für das Wochenziel — nicht die letzten 7 Tage.
-  const mondayISO = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-    return d.toLocaleDateString("sv-SE");
-  })();
-  const thisWeekCount = new Set(
-    sessions.filter((s) => s.date >= mondayISO).map((s) => s.date)
-  ).size;
   const weeklyTarget = activePlan?.weeklyTarget ?? null;
-  const weekVolume = weekSessions.reduce((sum, s) => sum + volumeOf(s), 0);
-  const weekMinutes = weekSessions.reduce(
-    (sum, s) => sum + Math.round((s.durationSeconds ?? 0) / 60),
-    0
-  );
-
   const trainedToday = sessions.some((s) => s.date === todayISO());
 
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <p className="text-sm text-muted-foreground">Pläne, Progression &amp; Verlauf</p>
+        <p className="text-sm text-muted-foreground">Was heute dran ist</p>
         <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">
           Training
         </h1>
       </div>
 
-      <TrainingTabs />
+      <SectionTabs tabs={TRAINING_TABS} />
 
       {error && (
         <Card className="gap-1">
@@ -98,7 +80,7 @@ export default function TrainingOverviewPage() {
 
           <div className="px-(--card-spacing)">
             <Link
-              href={`/training/session?day=${encodeURIComponent(nextDay.id)}`}
+              href={`/session?day=${encodeURIComponent(nextDay.id)}`}
               className={buttonVariants({ size: "lg", className: "w-full" })}
             >
               <Play className="size-4" />
@@ -115,73 +97,25 @@ export default function TrainingOverviewPage() {
             </p>
           </div>
           <div className="px-(--card-spacing)">
-            <Link href="/training/plaene" className={buttonVariants({ size: "lg" })}>
+            <Link href="/plaene" className={buttonVariants({ size: "lg" })}>
               Zu den Plänen
             </Link>
           </div>
         </Card>
       )}
 
-      <div className="grid grid-cols-3 gap-3">
-        <Card size="sm" className="gap-0">
-          <div className="px-(--card-spacing)">
-            <StatValue label="Einheiten" value={String(weekSessions.length)} />
-            <p className="mt-1 text-[11px] text-muted-foreground">letzte 7 Tage</p>
-          </div>
-        </Card>
-        <Card size="sm" className="gap-0">
-          <div className="px-(--card-spacing)">
-            <StatValue label="Volumen" value={formatCompact(Math.round(weekVolume))} unit="kg" />
-            <p className="mt-1 text-[11px] text-muted-foreground">letzte 7 Tage</p>
-          </div>
-        </Card>
-        <Card size="sm" className="gap-0">
-          <div className="px-(--card-spacing)">
-            <StatValue label="Zeit" value={String(weekMinutes)} unit="min" />
-            <p className="mt-1 text-[11px] text-muted-foreground">letzte 7 Tage</p>
-          </div>
-        </Card>
-      </div>
-
-      {weeklyTarget !== null && (
-        <Card className="gap-3">
-          <div className="flex items-baseline justify-between gap-3 px-(--card-spacing)">
-            <div>
-              <p className="text-xs text-muted-foreground">Diese Woche</p>
-              <p className="nums mt-1 text-heading-sm leading-none">
-                {thisWeekCount}
-                <span className="text-muted-foreground"> / {weeklyTarget}</span>
-              </p>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {thisWeekCount >= weeklyTarget
-                ? "Wochenziel erreicht."
-                : `Noch ${weeklyTarget - thisWeekCount} ${
-                    weeklyTarget - thisWeekCount === 1 ? "Einheit" : "Einheiten"
-                  }`}
-            </p>
-          </div>
-          <div className="px-(--card-spacing)">
-            <div className="flex gap-1.5">
-              {Array.from({ length: weeklyTarget }, (_, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    "h-1.5 flex-1 rounded-pill transition-colors",
-                    i < thisWeekCount ? "bg-chart-1" : "bg-elevated"
-                  )}
-                />
-              ))}
-            </div>
-          </div>
-        </Card>
-      )}
+      <WeekCard
+        sessions={sessions}
+        exerciseById={exerciseById}
+        weeklyTarget={weeklyTarget}
+        weights={weights}
+      />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-muted-foreground">Letzte Einheiten</h2>
           <Link
-            href="/training/statistik"
+            href="/statistik"
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             Alle ansehen
@@ -207,7 +141,7 @@ export default function TrainingOverviewPage() {
               return (
                 <Card key={session.id} size="sm" className="gap-0">
                   <Link
-                    href={`/training/einheit/${session.id}`}
+                    href={`/einheit/${session.id}`}
                     className="flex items-center gap-3 px-(--card-spacing)"
                   >
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-tile bg-elevated">

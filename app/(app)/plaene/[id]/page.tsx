@@ -96,7 +96,7 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
       setPlans(next);
       setHydrated(false);
       toast.success("Plan gespeichert");
-      router.push("/training/plaene");
+      router.push("/plaene");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Konnte Plan nicht speichern");
     } finally {
@@ -124,7 +124,7 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
     return (
       <div className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">Dieser Plan wurde nicht gefunden.</p>
-        <Link href="/training/plaene" className={buttonVariants({ variant: "outline" })}>
+        <Link href="/plaene" className={buttonVariants({ variant: "outline" })}>
           Zurück zu den Plänen
         </Link>
       </div>
@@ -135,7 +135,7 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
     <div className="flex flex-col gap-4 pb-20">
       <div className="flex flex-col gap-3">
         <Link
-          href="/training/plaene"
+          href="/plaene"
           className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="size-4" />

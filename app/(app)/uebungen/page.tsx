@@ -6,7 +6,8 @@ import { Eye, EyeOff, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { TrainingTabs } from "@/components/training/training-tabs";
+import { SectionTabs } from "@/components/section-tabs";
+import { TRAINING_TABS } from "@/lib/nav-links";
 import { ExercisePicker } from "@/components/training/exercise-picker";
 import { ExerciseEditor } from "@/components/training/exercise-editor";
 import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
@@ -108,7 +109,7 @@ export default function ExercisesPage() {
         </h1>
       </div>
 
-      <TrainingTabs />
+      <SectionTabs tabs={TRAINING_TABS} />
 
       <div className="flex flex-col gap-3">
         <div className="flex gap-2">

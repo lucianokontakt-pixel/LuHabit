@@ -8,12 +8,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatValue } from "@/components/stat-value";
-import { TrainingTabs } from "@/components/training/training-tabs";
+import { SectionTabs } from "@/components/section-tabs";
+import { STATISTIK_TABS } from "@/lib/nav-links";
 import { MuscleGrid } from "@/components/training/muscle-grid";
 import { TrainingCalendar } from "@/components/training/training-calendar";
 import { TrainingHeatmap } from "@/components/training/training-heatmap";
 import { MuscleMap } from "@/components/training/muscle-map";
-import { ExerciseProgress } from "@/components/training/exercise-progress";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
 import { measuredOn, sessionVolume, workingSets } from "@/lib/training";
@@ -126,7 +126,7 @@ export default function TrainingStatsPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <p className="text-sm text-muted-foreground">Volumen, Bestleistungen &amp; Frequenz</p>
+          <p className="text-sm text-muted-foreground">Volumen, Frequenz &amp; Verlauf</p>
           <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">
             Statistik
           </h1>
@@ -142,7 +142,7 @@ export default function TrainingStatsPage() {
         </Tabs>
       </div>
 
-      <TrainingTabs />
+      <SectionTabs tabs={STATISTIK_TABS} />
 
       {loading ? (
         <div className="h-32 animate-pulse rounded-card bg-card" />
@@ -243,8 +243,6 @@ export default function TrainingStatsPage() {
 
           <TrainingCalendar sessions={sessions} months={3} />
 
-          <ExerciseProgress sessions={sessions} exerciseById={exerciseById} />
-
           <section className="flex flex-col gap-3">
             <h2 className="text-sm font-medium text-muted-foreground">
               Alle Einheiten ({inRange.length})
@@ -264,7 +262,7 @@ export default function TrainingStatsPage() {
                       {/* Die Zeile führt zur Einheit — dort steht dieselbe
                           Übersicht wie direkt nach dem Training, samt Bearbeiten. */}
                       <Link
-                        href={`/training/einheit/${session.id}`}
+                        href={`/einheit/${session.id}`}
                         className="group flex min-w-0 flex-1 items-center gap-2"
                       >
                         <span className="min-w-0 flex-1">

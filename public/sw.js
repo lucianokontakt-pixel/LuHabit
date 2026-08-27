@@ -10,13 +10,13 @@
  * fliegen alle Caches mit anderem Namen raus.
  */
 
-const VERSION = "v6";
+const VERSION = "v7";
 const STATIC_CACHE = `luhabit-static-${VERSION}`;
 const PAGE_CACHE = `luhabit-pages-${VERSION}`;
 const KEEP = [STATIC_CACHE, PAGE_CACHE];
 
 /** Die Seite, die offline einspringt, wenn genau diese Adresse nie geladen wurde. */
-const FALLBACK = "/training";
+const FALLBACK = "/";
 
 /**
  * Alle festen Seiten der App werden gleich beim Installieren geholt, nicht erst
@@ -28,19 +28,19 @@ const FALLBACK = "/training";
  * liegt nur das Gerüst.
  *
  * Nicht dabei und mit Absicht:
- *   Adressen mit einer ID darin (/training/einheit/<id>, /training/plaene/<id>)
- *   — die kennt niemand vorab, die landen beim ersten Besuch im Cache.
- *   / leitet auf /training weiter, und eine Weiterleitung gehört nicht in den
- *   Cache.
+ *   Adressen mit einer ID darin (/einheit/<id>, /plaene/<id>) — die kennt
+ *   niemand vorab, die landen beim ersten Besuch im Cache.
+ *   Die alten /training/*-Adressen leiten nur weiter, und eine Weiterleitung
+ *   gehört nicht in den Cache.
  *   /login muss immer aus dem Netz kommen.
  */
 const WARMUP = [
-  "/training",
-  "/training/session",
-  "/training/plaene",
-  "/training/progression",
-  "/training/statistik",
-  "/training/uebungen",
+  "/",
+  "/session",
+  "/plaene",
+  "/uebungen",
+  "/statistik",
+  "/statistik/progression",
   "/koerper",
   "/einstellungen",
 ];

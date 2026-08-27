@@ -686,7 +686,7 @@ export function SessionClient() {
 
   function handleAbort() {
     clearDraft();
-    router.push("/training");
+    router.push("/");
   }
 
   if (finishedSummary) {
@@ -709,7 +709,7 @@ export function SessionClient() {
 
         <div className="flex flex-wrap gap-2">
           <Link
-            href="/training"
+            href="/"
             className={buttonVariants({ size: "lg", className: "flex-1 sm:flex-none" })}
           >
             Fertig
@@ -718,7 +718,7 @@ export function SessionClient() {
               Bearbeiten-Seite lädt sie über ihre ID und liefe ins Leere. */}
           {!waitingForNetwork && (
             <Link
-              href={`/training/einheit/${finishedSummary.session.id}`}
+              href={`/einheit/${finishedSummary.session.id}`}
               className={buttonVariants({
                 variant: "outline",
                 size: "lg",
@@ -744,7 +744,7 @@ export function SessionClient() {
         <p className="text-sm text-muted-foreground">
           Der Tag wurde vermutlich gelöscht oder umbenannt. Wähle im Training einen neuen Start.
         </p>
-        <Link href="/training" className={buttonVariants({ variant: "outline", className: "w-fit" })}>
+        <Link href="/" className={buttonVariants({ variant: "outline", className: "w-fit" })}>
           Zurück zum Training
         </Link>
       </div>
