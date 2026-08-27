@@ -1,4 +1,9 @@
-import { gifUrl, imageUrl, INSTRUCTIONS_URL } from "@/lib/exercise-catalog";
+import {
+  gifUrl,
+  imageUrl,
+  INSTRUCTIONS_DE_URL,
+  INSTRUCTIONS_URL,
+} from "@/lib/exercise-catalog";
 import type { Exercise } from "@/lib/training";
 
 export type VorladeFortschritt = { fertig: number; gesamt: number };
@@ -20,7 +25,7 @@ export async function ladeMedienVor(
   exercises: Exercise[],
   onProgress?: (fortschritt: VorladeFortschritt) => void
 ): Promise<{ geladen: number; fehler: number }> {
-  const urls: string[] = [INSTRUCTIONS_URL];
+  const urls: string[] = [INSTRUCTIONS_DE_URL, INSTRUCTIONS_URL];
   for (const exercise of exercises) {
     const gif = gifUrl(exercise);
     const still = imageUrl(exercise);

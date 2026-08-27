@@ -47,3 +47,7 @@ next-env.d.ts
 
 # claude code tooling
 .claude/
+
+# Arbeitsdateien der Anleitungs-Übersetzung — mit einem Befehl neu erzeugt
+scripts/anleitungen-quelle.json
+scripts/anleitungen-fehlend.json

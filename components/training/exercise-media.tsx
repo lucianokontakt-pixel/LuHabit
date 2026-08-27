@@ -316,11 +316,22 @@ export function ExerciseDetail({
               />
 
               {steps.length > 0 && (
-                <ol className="flex list-decimal flex-col gap-2 pl-5 text-sm text-muted-foreground">
-                  {steps.map((step, i) => (
-                    <li key={i}>{step}</li>
-                  ))}
-                </ol>
+                <section className="flex flex-col gap-3">
+                  <h3 className="text-sm font-medium">So geht&apos;s</h3>
+                  {/* Die Ziffer als eigene Fläche statt als Listenpunkt: beim
+                      Nachmachen sucht man den Schritt, an dem man ist, und ein
+                      graues "3." im Fließtext findet der Blick nicht wieder. */}
+                  <ol className="flex flex-col gap-2.5">
+                    {steps.map((step, i) => (
+                      <li key={i} className="flex gap-3">
+                        <span className="nums mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-elevated text-[11px] text-muted-foreground">
+                          {i + 1}
+                        </span>
+                        <span className="min-w-0 flex-1 text-sm leading-snug">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
               )}
 
               {exercise.en && exercise.en !== exercise.name && (

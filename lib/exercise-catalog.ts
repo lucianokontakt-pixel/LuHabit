@@ -163,24 +163,39 @@ export function imageUrl(exercise: { id: string; media: string | null }): string
 /**
  * Die Anleitungen liegen getrennt vom Katalog, weil sie mit 600 KB deutlich
  * schwerer sind als die Liste selbst und nur gebraucht werden, wenn jemand eine
- * einzelne Übung aufschlägt. Der Datensatz liefert sie nur auf Englisch.
+ * einzelne Übung aufschlägt.
+ *
+ * Der Datensatz liefert sie auf Englisch; die deutsche Fassung entsteht aus
+ * scripts/anleitungen-bauen.mjs. Gelesen wird zuerst Deutsch — nur was dort
+ * fehlt, kommt aus dem Original. So kann die Übersetzung wachsen, ohne dass
+ * zwischendurch Übungen ohne Anleitung dastehen.
  */
-let instructionsCache: Record<string, string[]> | null = null;
+type Anleitungen = Record<string, string[]>;
 
-/** Alle Anleitungen in einer Datei — ein Abruf reicht für die ganze Bibliothek. */
+let deutschCache: Anleitungen | null = null;
+let englischCache: Anleitungen | null = null;
+
+/** Alle Anleitungen in je einer Datei — ein Abruf reicht für die Bibliothek. */
 export const INSTRUCTIONS_URL = `${MEDIA_BASE}/anleitungen.json`;
+export const INSTRUCTIONS_DE_URL = `${MEDIA_BASE}/anleitungen-de.json`;
+
+async function holeAnleitungen(url: string): Promise<Anleitungen> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return {};
+    return (await response.json()) as Anleitungen;
+  } catch {
+    // Ohne Netz und ohne Zwischenspeicher gibt es keine Anleitung — die Übung
+    // bleibt trotzdem benutzbar, also still bleiben statt werfen.
+    return {};
+  }
+}
 
 export async function loadInstructions(id: string): Promise<string[]> {
-  if (!instructionsCache) {
-    try {
-      const response = await fetch(INSTRUCTIONS_URL);
-      if (!response.ok) return [];
-      instructionsCache = (await response.json()) as Record<string, string[]>;
-    } catch {
-      // Ohne Netz und ohne Zwischenspeicher gibt es keine Anleitung — die
-      // Übung bleibt trotzdem benutzbar, also still bleiben statt werfen.
-      return [];
-    }
-  }
-  return instructionsCache[id] ?? [];
+  if (!deutschCache) deutschCache = await holeAnleitungen(INSTRUCTIONS_DE_URL);
+  const deutsch = deutschCache[id];
+  if (deutsch && deutsch.length > 0) return deutsch;
+
+  if (!englischCache) englischCache = await holeAnleitungen(INSTRUCTIONS_URL);
+  return englischCache[id] ?? [];
 }
