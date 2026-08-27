@@ -20,13 +20,9 @@ export type SyncResult =
 function countRecords(snapshot: ReturnType<typeof readSyncPayload>): number {
   return (
     snapshot.entries.length +
-    snapshot.goals.length +
-    snapshot.habits.length +
     snapshot.exercises.length +
     snapshot.plans.length +
     snapshot.sessions.length +
-    snapshot.emom.length +
-    snapshot.emomResults.length +
     Object.values(snapshot.removed).reduce((sum, list) => sum + list.length, 0)
   );
 }

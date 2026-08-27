@@ -28,18 +28,13 @@ async function get(path: string): Promise<Record<string, unknown>> {
 
 type WithId = { id: string };
 const byId = <T extends WithId>(list: T[]) => [...list].sort((a, b) => a.id.localeCompare(b.id));
-const byHabit = <T extends { habit: string }>(list: T[]) =>
-  [...list].sort((a, b) => a.habit.localeCompare(b.habit));
 const json = (value: unknown) => JSON.stringify(value);
 
-const [sync, plans, sessions, exercises, habits, goals, emom] = await Promise.all([
+const [sync, plans, sessions, exercises] = await Promise.all([
   get("/api/sync"),
   get("/api/training/plans"),
   get("/api/training/sessions?limit=500"),
   get("/api/training/exercises"),
-  get("/api/habits"),
-  get("/api/goals"),
-  get("/api/training/emom"),
 ]);
 
 const snapshot = readSyncPayload(sync);
@@ -48,9 +43,6 @@ const cases: [string, unknown[], unknown[]][] = [
   ["Pläne", byId(snapshot.plans), byId(plans.plans as WithId[])],
   ["Einheiten", byId(snapshot.sessions), byId(sessions.sessions as WithId[])],
   ["Übungen", byId(snapshot.exercises), byId(exercises.exercises as WithId[])],
-  ["Habits", byId(snapshot.habits), byId(habits.habits as WithId[])],
-  ["EMOM-Vorlagen", byId(snapshot.emom), byId(emom.templates as WithId[])],
-  ["Ziele", byHabit(snapshot.goals), byHabit(goals.goals as { habit: string }[])],
 ];
 
 let failed = 0;

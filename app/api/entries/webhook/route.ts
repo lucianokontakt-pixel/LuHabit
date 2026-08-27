@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
-import { todayISO } from "@/lib/habits";
+import { todayISO } from "@/lib/datum";
 import { userIdForWebhookSecret } from "@/lib/server-user";
 
 // Für externe Quellen (z.B. iOS Shortcuts) gedacht, die keine Session haben.

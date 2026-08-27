@@ -1,15 +1,18 @@
-import { LayoutGrid, Dumbbell, HeartPulse, BarChart3, type LucideIcon } from "lucide-react";
+import { Dumbbell, HeartPulse, BarChart3, type LucideIcon } from "lucide-react";
 
 export type NavLink = { href: string; label: string; icon: LucideIcon };
 
 export const NAV_LINKS: NavLink[] = [
-  { href: "/", label: "Übersicht", icon: LayoutGrid },
   { href: "/training", label: "Training", icon: Dumbbell },
+  { href: "/training/statistik", label: "Statistik", icon: BarChart3 },
   { href: "/koerper", label: "Körper", icon: HeartPulse },
-  { href: "/stats", label: "Stats", icon: BarChart3 },
 ];
 
 export function isActiveLink(href: string, pathname: string): boolean {
-  if (href === "/") return pathname === "/" || pathname.startsWith("/habit");
+  // Statistik ist ein eigener Tab und liegt (noch) unter /training — sie darf
+  // deshalb nicht auch den Trainings-Tab aktiv setzen.
+  if (href === "/training") {
+    return pathname.startsWith("/training") && !pathname.startsWith("/training/statistik");
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }

@@ -23,7 +23,7 @@ import {
   type Exercise,
 } from "@/lib/training";
 import { formatDayLabel } from "@/lib/format";
-import { todayISO } from "@/lib/habits";
+import { todayISO } from "@/lib/datum";
 import { cn } from "@/lib/utils";
 
 /**

@@ -9,10 +9,10 @@ import { StatValue, type DeltaDirection } from "@/components/stat-value";
 import { TrendChart } from "@/components/trend-chart";
 import { useMetricData } from "@/lib/use-metric-data";
 import { formatNumber } from "@/lib/format";
-import type { Entry } from "@/lib/api-client";
+import type { Metric, MetricEntry } from "@/lib/api-messwerte";
 
 /** Vergleichswert von vor ~n Tagen. Ohne zweiten Messpunkt gibt es kein Delta. */
-function valueDaysAgo(entries: Entry[], days: number): number | null {
+function valueDaysAgo(entries: MetricEntry[], days: number): number | null {
   if (entries.length < 2) return null;
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
@@ -31,7 +31,7 @@ export function MetricSection({
   direction = "neutral",
   days = 30,
 }: {
-  metric: string;
+  metric: Metric;
   label: string;
   unit: string;
   icon: LucideIcon;

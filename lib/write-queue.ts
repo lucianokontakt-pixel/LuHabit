@@ -97,12 +97,6 @@ async function send(op: WriteOp): Promise<Response> {
     case "entry.set":
       // Absoluter Wert, kein delta — nur so ist ein zweiter Versuch harmlos.
       return post("/api/entries", op.entry);
-    case "goal.set":
-      return post("/api/goals", op.goal, "PUT");
-    case "habit.save":
-      return post("/api/habits", { ...op.habit, weeklyGoal: op.weeklyGoal }, op.isNew ? "POST" : "PUT");
-    case "habit.delete":
-      return remove(`/api/habits?id=${encodeURIComponent(op.id)}`);
     case "exercise.save":
       return post("/api/training/exercises", op.exercise, op.isNew ? "POST" : "PUT");
     case "exercise.delete":
@@ -119,14 +113,6 @@ async function send(op: WriteOp): Promise<Response> {
       return post("/api/training/sessions", sessionBody(op.session), op.isNew ? "POST" : "PUT");
     case "session.delete":
       return remove(`/api/training/sessions?id=${encodeURIComponent(op.id)}`);
-    case "emom.save":
-      return post("/api/training/emom", op.template, op.isNew ? "POST" : "PUT");
-    case "emom.delete":
-      return remove(`/api/training/emom?id=${encodeURIComponent(op.id)}`);
-    case "emomResult.save":
-      return post("/api/training/emom-results", op.result);
-    case "emomResult.delete":
-      return remove(`/api/training/emom-results?id=${encodeURIComponent(op.id)}`);
   }
 }
 

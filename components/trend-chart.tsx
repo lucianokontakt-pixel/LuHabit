@@ -8,8 +8,18 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { dateRange, entriesToMap } from "@/lib/stats";
-import type { Entry } from "@/lib/api-client";
+import type { MetricEntry } from "@/lib/api-messwerte";
+
+/** Die Kalendertage eines Fensters, ältester zuerst. */
+function dateRange(fromDaysAgo: number, toDaysAgo = 0): string[] {
+  const dates: string[] = [];
+  for (let i = fromDaysAgo; i >= toDaysAgo; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    dates.push(d.toLocaleDateString("sv-SE"));
+  }
+  return dates;
+}
 
 const chartConfig = {
   value: {
@@ -36,7 +46,7 @@ export function TrendChart({
   unit,
   emptyDays = 14,
 }: {
-  entries: Entry[];
+  entries: MetricEntry[];
   unit?: string;
   /** Breite des Zeitfensters, solange es noch keinen echten Verlauf gibt. */
   emptyDays?: number;
@@ -47,7 +57,7 @@ export function TrendChart({
     }
     // Ohne Verlauf spannt ein fester Zeitraum die Achse auf. Fehlende Tage
     // bleiben null: recharts zeichnet dort nichts, das Raster steht trotzdem.
-    const byDate = entriesToMap(entries);
+    const byDate = new Map(entries.map((e) => [e.date, e.value]));
     return dateRange(emptyDays - 1, 0).map((date) => ({
       date,
       label: dayLabel(date),

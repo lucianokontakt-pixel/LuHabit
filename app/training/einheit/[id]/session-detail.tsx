@@ -27,7 +27,7 @@ import { useMetricData } from "@/lib/use-metric-data";
 import { updateSession } from "@/lib/api-training";
 import { summarizeSession } from "@/lib/session-stats";
 import { incrementFor, setLabels, type WorkoutSession } from "@/lib/training";
-import { todayISO } from "@/lib/habits";
+import { todayISO } from "@/lib/datum";
 import { formatDateLong } from "@/lib/format";
 
 type EditableExercise = { exerciseId: string; sets: SessionSet[] };

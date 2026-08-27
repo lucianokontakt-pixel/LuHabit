@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
 import { currentUserId } from "@/lib/server-user";
 import { toCsv } from "@/lib/csv";
-import { todayISO } from "@/lib/habits";
+import { todayISO } from "@/lib/datum";
 
 /**
  * Datenexport — alles, was einem Konto gehört, zum Mitnehmen.
@@ -23,8 +23,6 @@ type Row = Record<string, unknown>;
 async function collect(userId: string) {
   const [
     user,
-    habits,
-    goals,
     entries,
     bodyProfile,
     exercises,
@@ -35,15 +33,6 @@ async function collect(userId: string) {
     sets,
   ] = await Promise.all([
     d1Query<Row>(`SELECT email, name, created_at FROM users WHERE id = ?`, [userId]),
-    d1Query<Row>(
-      `SELECT id, label, unit, icon, default_goal, quick_add, step, kind, created_at
-         FROM custom_habits WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at ASC`,
-      [userId]
-    ),
-    d1Query<Row>(
-      `SELECT habit, target, weekly_target FROM goals WHERE user_id = ? AND deleted_at IS NULL ORDER BY habit ASC`,
-      [userId]
-    ),
     d1Query<Row>(
       `SELECT habit, date, value, created_at FROM entries WHERE user_id = ? AND deleted_at IS NULL
         ORDER BY date ASC, habit ASC`,
@@ -89,8 +78,6 @@ async function collect(userId: string) {
 
   return {
     user: user[0] ?? null,
-    habits,
-    goals,
     entries,
     bodyProfile: bodyProfile[0] ?? null,
     exercises,
@@ -120,16 +107,19 @@ export async function GET(req: NextRequest) {
   const data = await collect(userId);
   const stamp = todayISO();
 
-  if (format === "habits") {
+  if (format === "koerper") {
+    // Gewicht und Körperfett, eine Zeile je Messung.
     return download(
       toCsv(
-        ["habit", "datum", "wert", "einheit"],
-        data.entries.map((e) => {
-          const habit = data.habits.find((h) => h.id === e.habit);
-          return [habit?.label ?? e.habit, e.date, e.value, habit?.unit ?? ""];
-        })
+        ["messwert", "datum", "wert", "einheit"],
+        data.entries.map((e) => [
+          e.habit === "weight" ? "Gewicht" : e.habit === "bodyfat" ? "Körperfett" : String(e.habit),
+          e.date,
+          e.value,
+          e.habit === "bodyfat" ? "%" : "kg",
+        ])
       ),
-      `luhabit-habits-${stamp}.csv`,
+      `luhabit-koerper-${stamp}.csv`,
       "text/csv"
     );
   }

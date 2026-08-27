@@ -20,22 +20,16 @@
  *     Abgleich nirgends referenzieren.
  */
 
-import type { EmomResult, EmomTemplate } from "@/lib/emom";
 import type { WorkoutPlan, WorkoutSession } from "@/lib/training";
 import type {
   Collection,
   StoredEntry,
   StoredExercise,
-  StoredGoal,
-  StoredHabit,
 } from "@/lib/sync-payload";
 import { entryKey } from "@/lib/sync-payload";
 
 export type WriteOp =
   | { kind: "entry.set"; entry: StoredEntry }
-  | { kind: "goal.set"; goal: StoredGoal }
-  | { kind: "habit.save"; habit: StoredHabit; weeklyGoal: number | null; isNew: boolean }
-  | { kind: "habit.delete"; id: string }
   | { kind: "exercise.save"; exercise: StoredExercise; isNew: boolean }
   | { kind: "exercise.delete"; id: string }
   // daysChanged hält fest, ob die Tage wirklich neu geschrieben werden sollen.
@@ -47,11 +41,7 @@ export type WriteOp =
   | { kind: "plan.save"; plan: WorkoutPlan; isNew: boolean; daysChanged: boolean }
   | { kind: "plan.delete"; id: string }
   | { kind: "session.save"; session: WorkoutSession; isNew: boolean }
-  | { kind: "session.delete"; id: string }
-  | { kind: "emom.save"; template: EmomTemplate; isNew: boolean }
-  | { kind: "emom.delete"; id: string }
-  | { kind: "emomResult.save"; result: EmomResult }
-  | { kind: "emomResult.delete"; id: string };
+  | { kind: "session.delete"; id: string };
 
 /** Eine Operation mit ihrem Platz in der Schlange. */
 export type QueuedOp = { seq: number; op: WriteOp; createdAt: string };
@@ -108,42 +98,6 @@ export function localEffect(op: WriteOp): LocalEffect[] {
           sort: op.entry.date,
         },
       ];
-    case "goal.set":
-      return [
-        {
-          collection: "goals",
-          key: op.goal.habit,
-          action: "put",
-          data: op.goal,
-          sort: op.goal.habit,
-        },
-      ];
-    case "habit.save":
-      return [
-        {
-          collection: "habits",
-          key: op.habit.id,
-          action: "put",
-          data: op.habit,
-          sort: nowStamp(),
-        },
-        {
-          collection: "goals",
-          key: op.habit.id,
-          action: "put",
-          data: {
-            habit: op.habit.id,
-            target: op.habit.defaultGoal,
-            weeklyTarget: op.weeklyGoal,
-          },
-          sort: op.habit.id,
-        },
-      ];
-    case "habit.delete":
-      return [
-        { collection: "habits", key: op.id, action: "delete" },
-        { collection: "goals", key: op.id, action: "delete" },
-      ];
     case "exercise.save":
       return [
         {
@@ -180,30 +134,6 @@ export function localEffect(op: WriteOp): LocalEffect[] {
       ];
     case "session.delete":
       return [{ collection: "sessions", key: op.id, action: "delete" }];
-    case "emom.save":
-      return [
-        {
-          collection: "emom",
-          key: op.template.id,
-          action: "put",
-          data: op.template,
-          sort: `${pad(op.template.position)}|${nowStamp()}`,
-        },
-      ];
-    case "emom.delete":
-      return [{ collection: "emom", key: op.id, action: "delete" }];
-    case "emomResult.save":
-      return [
-        {
-          collection: "emomResults",
-          key: op.result.id,
-          action: "put",
-          data: op.result,
-          sort: `${op.result.date}|${nowStamp()}`,
-        },
-      ];
-    case "emomResult.delete":
-      return [{ collection: "emomResults", key: op.id, action: "delete" }];
   }
 }
 
@@ -212,9 +142,9 @@ export function localEffect(op: WriteOp): LocalEffect[] {
  * Zwei Operationen mit derselben Kennung heben einander auf: die spätere gilt.
  */
 export function targetOf(op: WriteOp): string {
-  // Der erste Effekt ist die Hauptsache (die Habit-Zeile, nicht ihr Ziel) —
-  // das entscheidet, welche zweier Operationen auf denselben Datensatz beim
-  // Eindampfen gewinnt und ob eine Einheit noch als "wartet auf Netz" gilt.
+  // Der erste Effekt ist die Hauptsache — das entscheidet, welche zweier
+  // Operationen auf denselben Datensatz beim Eindampfen gewinnt und ob eine
+  // Einheit noch als "wartet auf Netz" gilt.
   const [effect] = localEffect(op);
   return `${effect.collection}:${effect.key}`;
 }

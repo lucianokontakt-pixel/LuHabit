@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
-import { HabitType } from "@/lib/habits";
 import { currentUserId } from "@/lib/server-user";
 
-type EntryRow = { habit: HabitType; date: string; value: number };
+type EntryRow = { habit: string; date: string; value: number };
 
 const UNAUTHORIZED = { error: "Nicht angemeldet" };
 
@@ -49,7 +48,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const { habit, date, delta, value } = body as {
-    habit: HabitType;
+    habit: string;
     date: string;
     delta?: number;
     value?: number;

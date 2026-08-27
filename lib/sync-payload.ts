@@ -11,8 +11,6 @@
  * mit Standardwerten an, als dass 500 andere Datensätze nicht ankommen.
  */
 
-import type { HabitKind } from "@/lib/habits";
-import type { EmomResult, EmomStep, EmomTemplate } from "@/lib/emom";
 import type {
   Equipment,
   Muscle,
@@ -26,17 +24,6 @@ import type {
 type Row = Record<string, unknown>;
 
 export type StoredEntry = { habit: string; date: string; value: number };
-export type StoredGoal = { habit: string; target: number; weeklyTarget: number | null };
-export type StoredHabit = {
-  id: string;
-  label: string;
-  unit: string;
-  icon: string;
-  defaultGoal: number;
-  quickAdd: number[];
-  step: number;
-  kind: HabitKind;
-};
 export type StoredExercise = {
   id: string;
   name: string;
@@ -60,25 +47,16 @@ export type StoredBodyProfile = {
  * Die Sammlungen, in denen ein Datensatz liegen kann. Muss zu DATA_STORES in
  * lib/local-db.ts passen.
  */
-export type Collection =
-  | "entries"
-  | "goals"
-  | "habits"
-  | "exercises"
-  | "plans"
-  | "sessions"
-  | "emom"
-  | "emomResults";
+export type Collection = "entries" | "exercises" | "plans" | "sessions";
 
 /**
  * Was der Abgleich geliefert hat, sortiert nach "einsortieren" und "entfernen".
  * Die Schlüssel in `removed` sind dieselben, unter denen die Datensätze
- * gespeichert liegen — bei Einträgen also habit|datum, sonst die ID.
+ * gespeichert liegen — bei Körperwerten also messwert|datum, sonst die ID.
  *
  * `sortKeys` hält je Datensatz die Zeichenkette, nach der die Sammlung sortiert
  * wird. Sie steht getrennt, weil sie Felder braucht, die es in den
- * Domänenobjekten nicht gibt: Habits nach ihrem Anlegedatum, Einheiten nach
- * Datum UND Startzeit. Ohne die Startzeit wäre bei zwei Einheiten am selben Tag
+ * Domänenobjekten nicht gibt: Einheiten nach Datum UND Startzeit. Ohne die Startzeit wäre bei zwei Einheiten am selben Tag
  * offen, welche die jüngere ist — und genau darauf stützt sich die Progression,
  * wenn sie die zuletzt protokollierten Sätze einer Übung sucht.
  */
@@ -86,13 +64,9 @@ export type SyncSnapshot = {
   cursor: string;
   full: boolean;
   entries: StoredEntry[];
-  goals: StoredGoal[];
-  habits: StoredHabit[];
   exercises: StoredExercise[];
   plans: WorkoutPlan[];
   sessions: WorkoutSession[];
-  emom: EmomTemplate[];
-  emomResults: EmomResult[];
   bodyProfile: StoredBodyProfile | null;
   removed: Record<Collection, string[]>;
   sortKeys: Record<Collection, Record<string, string>>;
@@ -129,44 +103,6 @@ function bool(value: unknown): boolean {
 
 function isDeleted(row: Row): boolean {
   return row.deleted_at !== null && row.deleted_at !== undefined;
-}
-
-/** Zahlenliste aus einer JSON-Spalte. Unlesbares ergibt die Rückfallliste. */
-function numberList(value: unknown, fallback: number[]): number[] {
-  if (Array.isArray(value)) {
-    const list = value.map((v) => Number(v)).filter((n) => Number.isFinite(n));
-    return list.length > 0 ? list : fallback;
-  }
-  if (typeof value !== "string") return fallback;
-  try {
-    return numberList(JSON.parse(value), fallback);
-  } catch {
-    return fallback;
-  }
-}
-
-function emomSteps(value: unknown): EmomStep[] {
-  const raw = typeof value === "string" ? safeParse(value) : value;
-  if (!Array.isArray(raw)) return [];
-  const steps: EmomStep[] = [];
-  for (const item of raw) {
-    if (typeof item !== "object" || item === null) continue;
-    const step = item as Row;
-    steps.push({
-      seconds: num(step.seconds, 60),
-      reps: numOrNull(step.reps),
-      label: str(step.label),
-    });
-  }
-  return steps;
-}
-
-function safeParse(value: string): unknown {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -243,34 +179,6 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
     (r) => str(r.date)
   );
 
-  const goals = split(
-    rows("goals"),
-    (r) => str(r.habit),
-    (r): StoredGoal => ({
-      habit: str(r.habit),
-      target: num(r.target),
-      weeklyTarget: numOrNull(r.weekly_target),
-    }),
-    (r) => str(r.habit)
-  );
-
-  const habits = split(
-    rows("habits"),
-    (r) => str(r.id),
-    (r): StoredHabit => ({
-      id: str(r.id),
-      label: str(r.label),
-      unit: str(r.unit),
-      icon: str(r.icon, "Target"),
-      defaultGoal: num(r.default_goal, 1),
-      quickAdd: numberList(r.quick_add, [1]),
-      step: num(r.step, 1),
-      kind: r.kind === "toggle" ? "toggle" : "counter",
-    }),
-    // Route: ORDER BY created_at ASC
-    (r) => str(r.created_at)
-  );
-
   const exercises = split(
     rows("exercises"),
     (r) => str(r.id),
@@ -340,50 +248,15 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
     (r) => `${str(r.date)}|${str(r.started_at)}`
   );
 
-  const emom = split(
-    rows("emom"),
-    (r) => str(r.id),
-    (r): EmomTemplate => ({
-      id: str(r.id),
-      name: str(r.name),
-      prepareSeconds: num(r.prepare_seconds, 10),
-      rounds: num(r.rounds, 10),
-      steps: emomSteps(r.steps),
-      restSeconds: num(r.rest_seconds),
-      position: num(r.position),
-    }),
-    // Route: ORDER BY position ASC, created_at ASC
-    (r) => `${pad(num(r.position))}|${str(r.created_at)}`
-  );
-
-  const emomResults = split(
-    rows("emomResults"),
-    (r) => str(r.id),
-    (r): EmomResult => ({
-      id: str(r.id),
-      templateName: str(r.template_name, "EMOM"),
-      date: str(r.date),
-      roundsPlanned: num(r.rounds_planned),
-      roundsCompleted: num(r.rounds_completed),
-      note: r.note === null || r.note === undefined ? null : str(r.note),
-    }),
-    // Route: ORDER BY date DESC, created_at DESC — gelesen wird absteigend.
-    (r) => `${str(r.date)}|${str(r.created_at)}`
-  );
-
   const profileRow = (p.bodyProfile ?? null) as Row | null;
 
   return {
     cursor: str(p.now),
     full: p.full === true,
     entries: entries.live,
-    goals: goals.live,
-    habits: habits.live,
     exercises: exercises.live,
     plans: plans.live,
     sessions: sessions.live,
-    emom: emom.live,
-    emomResults: emomResults.live,
     bodyProfile: profileRow
       ? {
           age: numOrNull(profileRow.age),
@@ -398,23 +271,15 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
       : null,
     removed: {
       entries: entries.removed,
-      goals: goals.removed,
-      habits: habits.removed,
       exercises: exercises.removed,
       plans: plans.removed,
       sessions: sessions.removed,
-      emom: emom.removed,
-      emomResults: emomResults.removed,
     },
     sortKeys: {
       entries: entries.sortKeys,
-      goals: goals.sortKeys,
-      habits: habits.sortKeys,
       exercises: exercises.sortKeys,
       plans: plans.sortKeys,
       sessions: sessions.sortKeys,
-      emom: emom.sortKeys,
-      emomResults: emomResults.sortKeys,
     },
   };
 }

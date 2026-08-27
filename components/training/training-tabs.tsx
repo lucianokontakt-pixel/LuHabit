@@ -10,16 +10,15 @@ const TABS = [
   { href: "/training/uebungen", label: "Übungen" },
   { href: "/training/progression", label: "Progression" },
   { href: "/training/statistik", label: "Statistik" },
-  { href: "/training/emom", label: "EMOM" },
 ];
 
 export function TrainingTabs() {
   const pathname = usePathname();
 
   return (
-    // Grid statt horizontalem Scroll: sechs Tabs passen auf 375px nicht in
-    // eine Zeile, sollen aber ohne Wischen erreichbar sein — also zwei Reihen
-    // à drei Spalten. Ab sm ist Platz für eine Zeile.
+    // Grid statt horizontalem Scroll: fünf Tabs passen auf 375px nicht in eine
+    // Zeile, sollen aber ohne Wischen erreichbar sein — also zwei Reihen à drei
+    // Spalten. Ab sm ist Platz für eine Zeile.
     <div className="grid grid-cols-3 gap-1 rounded-panel bg-card p-1 sm:inline-flex sm:w-auto sm:rounded-pill">
       {TABS.map((tab) => {
         const active =

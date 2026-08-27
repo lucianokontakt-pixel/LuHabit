@@ -7,7 +7,6 @@ import { BottomNav } from "@/components/bottom-nav";
 import { SyncRunner } from "@/components/sync-runner";
 import { ServiceWorkerRegistration } from "@/components/service-worker";
 import { Toaster } from "@/components/ui/sonner";
-import { HabitRegistryProvider } from "@/lib/habit-registry";
 
 // Sohne stand-in — the half-step weights in the design map onto Inter's
 // variable axis, so the finer 430/450/480 hierarchy survives.
@@ -31,7 +30,7 @@ const mono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "LuHabit",
-  description: "Deine Habits, dein Training, deine Werte — an einem Ort.",
+  description: "Dein Training und deine Werte — an einem Ort.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -87,19 +86,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full flex flex-col bg-background">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <HabitRegistryProvider>
-            <Nav />
-            {/* pb-28 reicht als fester Abstand nicht mehr: die untere
-                Navigation wächst um die Safe-Area-Höhe des Geräts nach unten,
-                sonst würde der letzte Inhalt darunter verschwinden. */}
-            <main className="px-edge mx-auto w-full max-w-4xl flex-1 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:[--edge:1.5rem] sm:pb-9 sm:pt-6">
-              {children}
-            </main>
-            <BottomNav />
-            <Toaster />
-            <ServiceWorkerRegistration />
-            <SyncRunner />
-          </HabitRegistryProvider>
+          <Nav />
+          {/* pb-28 reicht als fester Abstand nicht mehr: die untere Navigation
+              wächst um die Safe-Area-Höhe des Geräts nach unten, sonst würde
+              der letzte Inhalt darunter verschwinden. */}
+          <main className="px-edge mx-auto w-full max-w-4xl flex-1 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:[--edge:1.5rem] sm:pb-9 sm:pt-6">
+            {children}
+          </main>
+          <BottomNav />
+          <Toaster />
+          <ServiceWorkerRegistration />
+          <SyncRunner />
         </ThemeProvider>
       </body>
     </html>

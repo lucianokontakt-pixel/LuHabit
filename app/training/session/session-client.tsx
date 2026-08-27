@@ -37,8 +37,7 @@ import { summarizeSession } from "@/lib/session-stats";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
 import { saveSession } from "@/lib/api-training";
-import { addEntry } from "@/lib/api-client";
-import { addDaysISO, isoDateDaysAgo, todayISO } from "@/lib/habits";
+import { addDaysISO, isoDateDaysAgo, todayISO } from "@/lib/datum";
 import { newId } from "@/lib/ids";
 import { formatClock, formatDayLabel, formatNumber } from "@/lib/format";
 import {
@@ -652,8 +651,6 @@ export function SessionClient() {
       // Eintippen gedauert hat. Diese Zahl ist keine Trainingsdauer, also
       // bleibt sie leer, statt eine falsche zu erfinden.
       const durationSeconds = isSessionToday ? elapsed : null;
-      const habitMinutes =
-        durationSeconds !== null ? Math.max(1, Math.round(durationSeconds / 60)) : null;
       const payload = {
         planId: located.plan.id,
         dayId: day.id,
@@ -670,17 +667,6 @@ export function SessionClient() {
       // Reload zu warten, den die Warteschlange im Hintergrund anstößt.
       const saved = await saveSession(payload);
       addSession(saved);
-
-      // Die Einheit zählt auch auf das Training-Habit im Dashboard ein — aber
-      // nur mit einer echten Dauer. Nachgetragene Minuten trägst du auf der
-      // Habit-Seite selbst nach, dort geht das inzwischen auch rückwirkend.
-      if (habitMinutes !== null) {
-        try {
-          await addEntry({ habit: "training", date: sessionDate, delta: habitMinutes });
-        } catch {
-          // Das Habit kann gelöscht worden sein — die Einheit ist trotzdem gespeichert
-        }
-      }
 
       clearDraft();
 

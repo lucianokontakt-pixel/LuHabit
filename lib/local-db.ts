@@ -19,7 +19,8 @@ import type { LocalEffect, QueuedOp, WriteOp } from "@/lib/write-ops";
 
 const DB_NAME = "luhabit";
 // 2: "emomResults" als neue Sammlung dazugekommen.
-const DB_VERSION = 2;
+// 3: Habits, Ziele und EMOM sind weggefallen — ihre Sammlungen ebenfalls.
+const DB_VERSION = 3;
 
 /**
  * Ab welcher Fassung der bestehende Bestand noch lesbar ist.
@@ -53,16 +54,13 @@ export function upgradePlan(oldVersion: number): { wipe: boolean; dropCursor: bo
 
 /** Die Sammlungen, die der Abgleich füllt. Werden bei einem vollständigen
  *  Abgleich geleert und neu geschrieben. */
-export const DATA_STORES = [
-  "entries",
-  "goals",
-  "habits",
-  "exercises",
-  "plans",
-  "sessions",
-  "emom",
-  "emomResults",
-] as const;
+export const DATA_STORES = ["entries", "exercises", "plans", "sessions"] as const;
+
+/**
+ * Sammlungen aus früheren Fassungen. Sie werden beim Öffnen entfernt, damit die
+ * Datenbank nicht auf Dauer Speicher für etwas belegt, das niemand mehr liest.
+ */
+const RETIRED_STORES = ["goals", "habits", "emom", "emomResults"] as const;
 
 export type DataStore = (typeof DATA_STORES)[number];
 
@@ -129,6 +127,13 @@ export function openDb(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(META_STORE)) db.createObjectStore(META_STORE);
 
+      // Sammlungen, die es nicht mehr gibt, hier wegräumen. Ohne das bliebe
+      // ihr Inhalt für immer im Speicher des Geräts liegen — unsichtbar, aber
+      // belegt, und auf iOS zählt jedes Megabyte gegen die Quote.
+      for (const name of RETIRED_STORES) {
+        if (db.objectStoreNames.contains(name)) db.deleteObjectStore(name);
+      }
+
       // Bei jedem Upgrade den Cursor fallen lassen, damit der nächste Abgleich
       // einmal ALLES holt. Eine neu hinzugekommene Sammlung bekäme sonst nur
       // das mit, was sich seit dem letzten Abgleich geändert hat — was schon
@@ -160,7 +165,6 @@ export function openDb(): Promise<IDBDatabase> {
 /** Der Schlüssel, unter dem ein Datensatz in seiner Sammlung liegt. */
 function keyOf(store: DataStore, record: Record<string, unknown>): string {
   if (store === "entries") return entryKey(String(record.habit), String(record.date));
-  if (store === "goals") return String(record.habit);
   return String(record.id);
 }
 
@@ -176,13 +180,9 @@ export async function applySnapshot(snapshot: SyncSnapshot): Promise<void> {
 
   const records: Record<DataStore, Record<string, unknown>[]> = {
     entries: snapshot.entries,
-    goals: snapshot.goals,
-    habits: snapshot.habits,
     exercises: snapshot.exercises,
     plans: snapshot.plans as unknown as Record<string, unknown>[],
     sessions: snapshot.sessions as unknown as Record<string, unknown>[],
-    emom: snapshot.emom as unknown as Record<string, unknown>[],
-    emomResults: snapshot.emomResults as unknown as Record<string, unknown>[],
   };
 
   for (const store of DATA_STORES) {

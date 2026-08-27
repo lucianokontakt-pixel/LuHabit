@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDaysISO } from "@/lib/habits";
+import { addDaysISO } from "@/lib/datum";
 import { formatDayLabel } from "@/lib/format";
 
 describe("addDaysISO", () => {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
-import { currentUserId, seedHabits, seedStarterPlan } from "@/lib/server-user";
+import { currentUserId, seedStarterPlan } from "@/lib/server-user";
 
 const UNAUTHORIZED = { error: "Nicht angemeldet" };
 
@@ -10,27 +10,25 @@ const UNAUTHORIZED = { error: "Nicht angemeldet" };
  * aufräumen will, verliert nichts; wer wirklich Tabula rasa will, wählt die
  * Datenknöpfe zusätzlich.
  */
-export type ResetScope = "setup" | "habit-entries" | "training-sessions";
+export type ResetScope = "setup" | "body-values" | "training-sessions";
 
-const SCOPES: ResetScope[] = ["setup", "habit-entries", "training-sessions"];
+const SCOPES: ResetScope[] = ["setup", "body-values", "training-sessions"];
 
 /**
- * Setzt die Einrichtung auf den Zustand eines frisch angelegten Kontos:
- * Standard-Habits mit Standardzielen, eine unangetastete Übungsbibliothek und
- * Push/Pull/Legs als aktiver Plan.
+ * Setzt die Einrichtung auf den Zustand eines frisch angelegten Kontos: eine
+ * unangetastete Übungsbibliothek und Push/Pull/Legs als aktiver Plan.
  *
- * Nicht angefasst werden Einträge und Trainingseinheiten. Damit die Statistik
- * lesbar bleibt, überleben selbst angelegte Übungen, zu denen es protokollierte
- * Sätze gibt — ohne sie stünden in alten Einheiten nur noch nackte IDs.
- * Einträge zu selbst angelegten Zielen bleiben ebenfalls liegen: legt man das
- * Ziel erneut an, ist sein Verlauf wieder da.
+ * Nicht angefasst werden Körperwerte und Trainingseinheiten. Damit die
+ * Statistik lesbar bleibt, überleben selbst angelegte Übungen, zu denen es
+ * protokollierte Sätze gibt — ohne sie stünden in alten Einheiten nur noch
+ * nackte IDs.
  */
 /**
  * Weich löschen statt entfernen — überall in dieser Datei. Ein Reset läuft nur
  * auf dem Server; ohne Grabstein bliebe er für den Abgleich unsichtbar und die
  * alten Zeilen lägen auf dem Handy für immer weiter herum, ganz gleich, was
  * der Server danach neu anlegt. Dieselbe Regel wie bei jedem anderen Löschen
- * in der App (siehe zum Beispiel app/api/habits/route.ts).
+ * in der App.
  */
 async function softDelete(table: string, userId: string): Promise<void> {
   await d1Query(
@@ -41,10 +39,6 @@ async function softDelete(table: string, userId: string): Promise<void> {
 }
 
 async function resetSetup(userId: string): Promise<void> {
-  await softDelete("custom_habits", userId);
-  await softDelete("goals", userId);
-  await seedHabits(userId);
-
   // Die Bibliothek selbst steht im Katalog und kann nicht zurückgesetzt
   // werden — hier fallen nur die Anpassungen daran weg (ausgeblendet, eigene
   // Gewichtssprünge). Selbst angelegte Übungen mit protokollierten Sätzen
@@ -92,7 +86,8 @@ async function resetSetup(userId: string): Promise<void> {
   );
 }
 
-async function resetHabitEntries(userId: string): Promise<void> {
+/** Gewicht und Körperfett — der einzige Inhalt der Tabelle `entries`. */
+async function resetBodyValues(userId: string): Promise<void> {
   await softDelete("entries", userId);
 }
 
@@ -124,7 +119,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (scope === "setup") await resetSetup(userId);
-  if (scope === "habit-entries") await resetHabitEntries(userId);
+  if (scope === "body-values") await resetBodyValues(userId);
   if (scope === "training-sessions") await resetTrainingSessions(userId);
 
   return NextResponse.json({ ok: true, scope });

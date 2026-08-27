@@ -20,7 +20,7 @@ import { measuredOn, sessionVolume, workingSets } from "@/lib/training";
 import { muscleProgress, weekStartISO } from "@/lib/muscle-stats";
 import { summarizeSession } from "@/lib/session-stats";
 import { formatCompact, formatDateLong, formatNumber } from "@/lib/format";
-import { isoDateDaysAgo } from "@/lib/habits";
+import { isoDateDaysAgo } from "@/lib/datum";
 
 type Range = "week" | "month" | "year" | "all";
 

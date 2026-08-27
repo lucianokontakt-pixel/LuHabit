@@ -50,22 +50,22 @@ const RESETS = [
   {
     scope: "setup",
     label: "Einrichtung zurücksetzen",
-    hint: "Standard-Ziele, komplette Übungsbibliothek und der Push/Pull/Legs-Plan — so wie bei einem frisch angelegten Konto.",
+    hint: "Komplette Übungsbibliothek und der Push/Pull/Legs-Plan — so wie bei einem frisch angelegten Konto.",
     title: "Einrichtung auf Werkszustand zurücksetzen?",
     description:
-      "Deine Ziele, Übungen, Trainingspläne und dein Körperprofil gehen auf den Ausgangszustand zurück. Eigene Ziele, Pläne und Übungen verschwinden dabei. Alle Einträge und Trainingseinheiten bleiben vollständig erhalten — auch die zu eigenen Zielen: legst du so ein Ziel erneut an, ist sein Verlauf wieder da.",
+      "Deine Übungen, Trainingspläne und dein Körperprofil gehen auf den Ausgangszustand zurück. Eigene Pläne und Übungen verschwinden dabei — außer eigenen Übungen, zu denen es protokollierte Sätze gibt, sonst stünden in alten Einheiten nur noch nackte IDs. Körperwerte und Trainingseinheiten bleiben vollständig erhalten.",
     confirm: "Zurücksetzen",
     success: "Einrichtung zurückgesetzt",
   },
   {
-    scope: "habit-entries",
-    label: "Alle Habit-Einträge löschen",
-    hint: "Jeder eingetragene Wert für Schritte, Wasser, Gewicht, Körperfett und alle weiteren Ziele.",
-    title: "Alle Habit-Einträge löschen?",
+    scope: "body-values",
+    label: "Alle Körperwerte löschen",
+    hint: "Jede eingetragene Messung von Gewicht und Körperfett.",
+    title: "Alle Körperwerte löschen?",
     description:
-      "Sämtliche Tageswerte werden gelöscht — Streaks, Verläufe und Körperkurven sind danach leer. Deine Ziele und Einstellungen bleiben, die Trainingseinheiten auch. Das lässt sich nicht rückgängig machen; exportiere vorher, wenn du sie behalten willst.",
-    confirm: "Einträge löschen",
-    success: "Alle Habit-Einträge gelöscht",
+      "Gewichts- und Körperfettverlauf sind danach leer, BMI und Kalorienrechner rechnen mit nichts mehr, und die Gewichtsvorschläge für Eigengewichtsübungen fallen auf null. Deine Einstellungen und Trainingseinheiten bleiben. Das lässt sich nicht rückgängig machen; exportiere vorher, wenn du sie behalten willst.",
+    confirm: "Körperwerte löschen",
+    success: "Alle Körperwerte gelöscht",
   },
   {
     scope: "training-sessions",
@@ -293,9 +293,9 @@ export default function EinstellungenPage() {
         <div className="px-(--card-spacing)">
           <h2 className="text-sm font-medium">Automatischer Sync</h2>
           <p className="mt-1 text-[13px] text-muted-foreground">
-            Secret für externe Automationen (z. B. einen iOS-Shortcut, der Gewicht oder
-            Schritte aus Apple Health schickt). Nicht weitergeben — wer es kennt, kann Werte
-            auf dein Konto schreiben.
+            Secret für externe Automationen — etwa einen iOS-Shortcut, der dein Gewicht aus
+            Apple Health schickt. Nicht weitergeben: wer es kennt, kann Werte auf dein Konto
+            schreiben.
           </p>
         </div>
 
@@ -317,7 +317,6 @@ export default function EinstellungenPage() {
                 {[
                   { habit: "weight", label: "Gewicht" },
                   { habit: "bodyfat", label: "Körperfett" },
-                  { habit: "steps", label: "Schritte" },
                 ].map(({ habit, label }) => {
                   const url = webhookUrl(habit, secret);
                   return (
@@ -365,12 +364,12 @@ export default function EinstellungenPage() {
             Alles als JSON
           </a>
           <a
-            href="/api/export?format=habits"
+            href="/api/export?format=koerper"
             download
             className={buttonVariants({ variant: "outline" })}
           >
             <Download className="size-3.5" />
-            Habits als CSV
+            Körperwerte als CSV
           </a>
           <a
             href="/api/export?format=training"

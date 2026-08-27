@@ -79,21 +79,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Datenbankuhr nicht lesbar" }, { status: 502 });
   }
 
-  const [entries, goals, habits, exercises, plans, sessions, emom, emomResults, bodyProfile] =
+  const [entries, exercises, plans, sessions, bodyProfile] =
     await Promise.all([
     d1Query<Row>(
       `SELECT habit, date, value, deleted_at
          FROM entries WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ? ORDER BY date ASC`,
-      [userId, since]
-    ),
-    d1Query<Row>(
-      `SELECT habit, target, weekly_target, deleted_at
-         FROM goals WHERE user_id = ? AND COALESCE(updated_at, '0000-01-01 00:00:00') >= ?`,
-      [userId, since]
-    ),
-    d1Query<Row>(
-      `SELECT id, label, unit, icon, default_goal, quick_add, step, kind, created_at, deleted_at
-         FROM custom_habits WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ? ORDER BY created_at ASC`,
       [userId, since]
     ),
     d1Query<Row>(
@@ -110,16 +100,6 @@ export async function GET(req: NextRequest) {
     d1Query<Row>(
       `SELECT id, plan_id, day_id, day_name, date, duration_seconds, note, started_at, deleted_at
          FROM workout_sessions WHERE user_id = ? AND COALESCE(updated_at, started_at, '0000-01-01 00:00:00') >= ? ORDER BY date DESC`,
-      [userId, since]
-    ),
-    d1Query<Row>(
-      `SELECT id, name, prepare_seconds, rounds, steps, rest_seconds, position, created_at, deleted_at
-         FROM emom_templates WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ? ORDER BY position ASC`,
-      [userId, since]
-    ),
-    d1Query<Row>(
-      `SELECT id, template_name, date, rounds_planned, rounds_completed, note, created_at, deleted_at
-         FROM emom_results WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ? ORDER BY date DESC, created_at DESC`,
       [userId, since]
     ),
     d1Query<Row>(
@@ -165,16 +145,12 @@ export async function GET(req: NextRequest) {
     now,
     full,
     entries,
-    goals,
-    habits,
     exercises,
     plans,
     planDays,
     planExercises,
     sessions,
     sets,
-    emom,
-    emomResults,
     bodyProfile: bodyProfile[0] ?? null,
   });
 }

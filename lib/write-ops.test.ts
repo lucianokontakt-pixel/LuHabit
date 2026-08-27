@@ -1,69 +1,51 @@
 import { describe, expect, it } from "vitest";
 import { collapse, localEffect, targetOf, type QueuedOp, type WriteOp } from "@/lib/write-ops";
+import type { WorkoutPlan, WorkoutSession } from "@/lib/training";
 
-const eintrag = (habit: string, date: string, value: number): WriteOp => ({
+const messwert = (habit: string, date: string, value: number): WriteOp => ({
   kind: "entry.set",
   entry: { habit, date, value },
+});
+
+const plan = (id: string, name: string): WorkoutPlan => ({
+  id,
+  name,
+  isActive: true,
+  position: 0,
+  weeklyTarget: null,
+  days: [],
+});
+
+const einheit = (id: string, date: string): WorkoutSession => ({
+  id,
+  planId: "plan-1",
+  dayId: "day-1",
+  dayName: "Upper",
+  date,
+  durationSeconds: 3600,
+  note: null,
+  sets: [],
 });
 
 const queued = (ops: WriteOp[]): QueuedOp[] =>
   ops.map((op, i) => ({ seq: i + 1, op, createdAt: "2026-08-22 15:00:00" }));
 
-describe("localEffect — EMOM-Ergebnisse", () => {
-  const ergebnis: WriteOp = {
-    kind: "emomResult.save",
-    result: {
-      id: "emomr-1",
-      templateName: "Cindy",
-      date: "2026-08-23",
-      roundsPlanned: 20,
-      roundsCompleted: 14,
-      note: "Arme platt",
-    },
-  };
-
-  it("legt ein Ergebnis unter seiner ID in emomResults ab", () => {
-    const [effect] = localEffect(ergebnis);
-    expect(effect).toMatchObject({
-      collection: "emomResults",
-      key: "emomr-1",
-      action: "put",
-    });
-  });
-
-  it("sortiert nach Datum, damit der Verlauf sofort richtig steht", () => {
-    const [effect] = localEffect(ergebnis);
-    expect(effect.action === "put" && effect.sort.startsWith("2026-08-23")).toBe(true);
-  });
-
-  it("entfernt ein gelöschtes Ergebnis aus derselben Sammlung", () => {
-    expect(localEffect({ kind: "emomResult.delete", id: "emomr-1" })).toEqual([
-      { collection: "emomResults", key: "emomr-1", action: "delete" },
-    ]);
-  });
-
-  it("meint mit Speichern und Löschen denselben Datensatz", () => {
-    // Sonst könnten beide nebeneinander in der Schlange stehen bleiben und die
-    // Löschung käme vor dem Speichern beim Server an.
-    expect(targetOf(ergebnis)).toBe(targetOf({ kind: "emomResult.delete", id: "emomr-1" }));
-  });
-});
-
 describe("localEffect", () => {
-  it("legt einen Eintrag unter habit|datum ab", () => {
-    const [effect] = localEffect(eintrag("water", "2026-08-22", 750));
+  it("legt einen Körperwert unter messwert|datum ab", () => {
+    const [effect] = localEffect(messwert("weight", "2026-08-22", 82.4));
     expect(effect).toMatchObject({
       collection: "entries",
-      key: "water|2026-08-22",
+      key: "weight|2026-08-22",
       action: "put",
-      data: { habit: "water", date: "2026-08-22", value: 750 },
+      data: { habit: "weight", date: "2026-08-22", value: 82.4 },
       sort: "2026-08-22",
     });
   });
 
   it("macht aus einer Löschung ein Entfernen, nicht ein Schreiben", () => {
-    const effects = localEffect({ kind: "habit.delete", id: "lesen" });
-    expect(effects).toContainEqual({ collection: "habits", key: "lesen", action: "delete" });
+    expect(localEffect({ kind: "session.delete", id: "ws-1" })).toEqual([
+      { collection: "sessions", key: "ws-1", action: "delete" },
+    ]);
   });
 
   it("sortiert Übungen nach Namen, Groß- und Kleinschreibung egal", () => {
@@ -80,126 +62,86 @@ describe("localEffect", () => {
     if (effect.action === "put") expect(effect.sort).toBe("ab wheel");
   });
 
-  it("schreibt bei habit.save auch das Ziel — sonst bliebe es bis zum nächsten Abgleich unsichtbar", () => {
-    const effects = localEffect({
-      kind: "habit.save",
+  it("sortiert Einheiten nach Datum, damit der Verlauf sofort richtig steht", () => {
+    const [effect] = localEffect({
+      kind: "session.save",
       isNew: true,
-      weeklyGoal: 3,
-      habit: {
-        id: "dehnen", label: "Dehnen", unit: "Minuten", icon: "Target",
-        defaultGoal: 10, quickAdd: [5], step: 5, kind: "counter",
-      },
+      session: einheit("ws-1", "2026-08-23"),
     });
-    expect(effects).toContainEqual({
-      collection: "habits",
-      key: "dehnen",
-      action: "put",
-      data: expect.objectContaining({ id: "dehnen", label: "Dehnen" }),
-      sort: expect.any(String),
-    });
-    expect(effects).toContainEqual({
-      collection: "goals",
-      key: "dehnen",
-      action: "put",
-      data: { habit: "dehnen", target: 10, weeklyTarget: 3 },
-      sort: "dehnen",
-    });
-  });
-
-  it("löscht bei habit.delete auch das Ziel mit", () => {
-    const effects = localEffect({ kind: "habit.delete", id: "lesen" });
-    expect(effects).toContainEqual({ collection: "goals", key: "lesen", action: "delete" });
+    expect(effect.action === "put" && effect.sort.startsWith("2026-08-23")).toBe(true);
   });
 });
 
 describe("targetOf", () => {
   it("erkennt Speichern und Löschen desselben Datensatzes als dieselbe Kennung", () => {
-    const speichern: WriteOp = {
-      kind: "habit.save", isNew: false, weeklyGoal: null,
-      habit: { id: "lesen", label: "Lesen", unit: "min", icon: "BookOpen", defaultGoal: 20, quickAdd: [5], step: 5, kind: "counter" },
-    };
-    expect(targetOf(speichern)).toBe(targetOf({ kind: "habit.delete", id: "lesen" }));
+    const speichern: WriteOp = { kind: "plan.save", plan: plan("plan-1", "PPL"), isNew: false, daysChanged: false };
+    expect(targetOf(speichern)).toBe(targetOf({ kind: "plan.delete", id: "plan-1" }));
   });
 
   it("hält verschiedene Sammlungen auseinander, auch bei gleicher ID", () => {
-    expect(targetOf({ kind: "habit.delete", id: "x" })).not.toBe(
+    expect(targetOf({ kind: "plan.delete", id: "x" })).not.toBe(
       targetOf({ kind: "exercise.delete", id: "x" })
     );
   });
 });
 
 describe("collapse", () => {
-  it("behält von zehn Tipps auf denselben Eintrag nur den letzten", () => {
-    // Wer offline zehnmal auf "+250 ml" tippt, soll nicht zehn Anfragen senden.
+  it("behält von zehn Korrekturen an einem Wert nur die letzte", () => {
+    // Wer offline zehnmal am Gewicht dreht, soll nicht zehn Anfragen senden.
     const ops = queued(
-      Array.from({ length: 10 }, (_, i) => eintrag("water", "2026-08-22", (i + 1) * 250))
+      Array.from({ length: 10 }, (_, i) => messwert("weight", "2026-08-22", 80 + i * 0.1))
     );
     const übrig = collapse(ops);
     expect(übrig).toHaveLength(1);
-    expect(übrig[0].op).toEqual(eintrag("water", "2026-08-22", 2500));
+    expect(übrig[0].op).toEqual(messwert("weight", "2026-08-22", 80.9));
   });
 
   it("fasst nichts zusammen, was verschiedene Datensätze betrifft", () => {
     const ops = queued([
-      eintrag("water", "2026-08-22", 500),
-      eintrag("coffee", "2026-08-22", 2),
-      eintrag("water", "2026-08-21", 1000),
+      messwert("weight", "2026-08-22", 82),
+      messwert("bodyfat", "2026-08-22", 18),
+      messwert("weight", "2026-08-21", 82.4),
     ]);
     expect(collapse(ops)).toHaveLength(3);
   });
 
   it("lässt eine Löschung gewinnen, die nach einer Änderung kam", () => {
-    const speichern: WriteOp = {
-      kind: "emom.save", isNew: true,
-      template: { id: "emom-1", name: "Test", prepareSeconds: 10, rounds: 10, steps: [], restSeconds: 0, position: 0 },
-    };
-    const ops = queued([speichern, { kind: "emom.delete", id: "emom-1" }]);
-    const übrig = collapse(ops);
+    const speichern: WriteOp = { kind: "plan.save", plan: plan("plan-1", "PPL"), isNew: true, daysChanged: true };
+    const übrig = collapse(queued([speichern, { kind: "plan.delete", id: "plan-1" }]));
     expect(übrig).toHaveLength(1);
-    expect(übrig[0].op.kind).toBe("emom.delete");
+    expect(übrig[0].op.kind).toBe("plan.delete");
   });
 
   it("lässt eine Änderung gewinnen, die nach einer Löschung kam", () => {
     // Löschen und gleich neu anlegen — die Neuanlage darf nicht verschwinden.
-    const speichern: WriteOp = {
-      kind: "emom.save", isNew: true,
-      template: { id: "emom-1", name: "Neu", prepareSeconds: 10, rounds: 10, steps: [], restSeconds: 0, position: 0 },
-    };
-    const ops = queued([{ kind: "emom.delete", id: "emom-1" }, speichern]);
-    const übrig = collapse(ops);
+    const speichern: WriteOp = { kind: "plan.save", plan: plan("plan-1", "Neu"), isNew: true, daysChanged: true };
+    const übrig = collapse(queued([{ kind: "plan.delete", id: "plan-1" }, speichern]));
     expect(übrig).toHaveLength(1);
-    expect(übrig[0].op.kind).toBe("emom.save");
+    expect(übrig[0].op.kind).toBe("plan.save");
   });
 
-  it("dampft mehrfaches Nachbessern eines Ergebnisses auf den letzten Stand ein", () => {
-    // Wer die Rundenzahl offline zweimal korrigiert, soll nicht zwei
+  it("dampft mehrfaches Nachbessern einer Einheit auf den letzten Stand ein", () => {
+    // Wer eine Einheit offline zweimal korrigiert, soll nicht zwei
     // Schreibvorgänge senden — der letzte beschreibt den ganzen Zustand.
-    const ergebnis = (roundsCompleted: number): WriteOp => ({
-      kind: "emomResult.save",
-      result: {
-        id: "emomr-1",
-        templateName: "Cindy",
-        date: "2026-08-23",
-        roundsPlanned: 20,
-        roundsCompleted,
-        note: null,
-      },
+    const stand = (date: string): WriteOp => ({
+      kind: "session.save",
+      isNew: false,
+      session: einheit("ws-1", date),
     });
-    const übrig = collapse(queued([ergebnis(12), ergebnis(14)]));
+    const übrig = collapse(queued([stand("2026-08-22"), stand("2026-08-23")]));
     expect(übrig).toHaveLength(1);
-    expect((übrig[0].op as { result: { roundsCompleted: number } }).result.roundsCompleted).toBe(14);
+    expect((übrig[0].op as { session: WorkoutSession }).session.date).toBe("2026-08-23");
   });
 
   it("behält die Reihenfolge nach dem letzten Auftreten", () => {
-    // Reihenfolge zählt: die Löschung eines Habits muss beim Server nach der
-    // Änderung des anderen ankommen, sonst stimmt der Endzustand nicht.
+    // Reihenfolge zählt: was zuletzt geändert wurde, muss beim Server auch
+    // zuletzt ankommen, sonst stimmt der Endzustand nicht.
     const ops = queued([
-      eintrag("water", "2026-08-22", 100),
-      eintrag("coffee", "2026-08-22", 1),
-      eintrag("water", "2026-08-22", 900),
+      messwert("weight", "2026-08-22", 82),
+      messwert("bodyfat", "2026-08-22", 18),
+      messwert("weight", "2026-08-22", 82.5),
     ]);
-    const übrig = collapse(ops);
-    expect(übrig.map((q) => q.seq)).toEqual([2, 3]);
+    expect(collapse(ops).map((q) => q.seq)).toEqual([2, 3]);
   });
 
   it("kommt mit einer leeren Schlange klar", () => {
@@ -209,11 +151,9 @@ describe("collapse", () => {
 
 describe("localEffect — plan.save daysChanged betrifft nur die Netzwerkseite", () => {
   it("ändert daran nichts am lokalen Effekt — der schreibt immer den vollen Plan", () => {
-    const plan: import("@/lib/training").WorkoutPlan = {
-      id: "plan-1", name: "PPL", isActive: true, position: 0, weeklyTarget: null, days: [],
-    };
-    const mit = localEffect({ kind: "plan.save", plan, isNew: false, daysChanged: true });
-    const ohne = localEffect({ kind: "plan.save", plan, isNew: false, daysChanged: false });
+    const p = plan("plan-1", "PPL");
+    const mit = localEffect({ kind: "plan.save", plan: p, isNew: false, daysChanged: true });
+    const ohne = localEffect({ kind: "plan.save", plan: p, isNew: false, daysChanged: false });
     expect(mit).toEqual(ohne);
   });
 });

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { Play, CalendarDays, Dumbbell, Timer, ArrowRight } from "lucide-react";
+import { Play, CalendarDays, Dumbbell, Timer } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { StatValue } from "@/components/stat-value";
@@ -12,7 +12,7 @@ import { useMetricData } from "@/lib/use-metric-data";
 import { measuredOn, nextDayFor, sessionVolume, MUSCLE_LABELS } from "@/lib/training";
 import { formatCompact, formatDateLong, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { isoDateDaysAgo, todayISO } from "@/lib/habits";
+import { isoDateDaysAgo, todayISO } from "@/lib/datum";
 
 export default function TrainingOverviewPage() {
   const { activePlan, sessions, exerciseById, loading, error } = useTraining();
@@ -121,19 +121,6 @@ export default function TrainingOverviewPage() {
           </div>
         </Card>
       )}
-
-      {/* Eigene Karte statt in die Trainingskarte eingebettet — EMOM ist
-          eine eigenständige Sache, keine Variante des Plan-Trainings. Sonst
-          nur über den letzten, oft nicht sichtbaren Tab der Leiste oben
-          erreichbar, deshalb als echter Knopf statt als schmaler Textlink. */}
-      <Link
-        href="/training/emom"
-        className={buttonVariants({ variant: "outline", size: "lg", className: "w-full" })}
-      >
-        <Timer className="size-4" />
-        EMOM starten
-        <ArrowRight className="size-4" />
-      </Link>
 
       <div className="grid grid-cols-3 gap-3">
         <Card size="sm" className="gap-0">
