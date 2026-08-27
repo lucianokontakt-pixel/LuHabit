@@ -915,27 +915,24 @@ export function SessionClient() {
                     <ExerciseMedia
                       exercise={exercise}
                       onOpenDetail={() => setDetail(exercise)}
-                    />
-                  )}
-
-                  {/* Was war, und was das Beste war. Auf einer Zeile, die auf
-                      schmalen Geräten umbricht statt abzuschneiden. */}
-                  {(lastLogged || best) && (
-                    <div className="mx-(--card-spacing) flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                    >
+                      {/* Was war, und was das Beste war. In der kompakten
+                          Ansicht füllt das den Platz neben der Bewegung, der
+                          sonst leer bliebe. */}
+                      {best && (
+                        <p>
+                          Bestwert <span className="nums text-foreground">{best}</span>
+                        </p>
+                      )}
                       {lastLogged && (
-                        <span>
+                        <p>
                           Letztes Mal ({formatDayLabel(lastLogged.date, today)}):{" "}
                           <span className="nums text-foreground">
                             {formatLoggedSets(lastLogged.sets)}
                           </span>
-                        </span>
+                        </p>
                       )}
-                      {best && (
-                        <span>
-                          Bestwert <span className="nums text-foreground">{best}</span>
-                        </span>
-                      )}
-                    </div>
+                    </ExerciseMedia>
                   )}
 
                   {suggestionOpen && (

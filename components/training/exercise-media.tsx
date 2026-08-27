@@ -65,37 +65,44 @@ export function ExerciseThumb({
 const SIZE_KEY = "luhabit-gif-groesse";
 
 /**
- * Die laufende Animation über der Satz-Tabelle.
+ * Die Bewegung während der Einheit.
  *
- * Tippen hält sie an und zeigt das Standbild — beim Nachmachen will man den
- * Endpunkt sehen, nicht die Schleife. Der Minimieren-Knopf schrumpft sie auf
- * einen Streifen, und diese Wahl bleibt: wer die Animation einmal weghaben
- * wollte, will sie bei der nächsten Übung nicht wieder vor sich haben.
+ * Standard ist kompakt: ein 112er-Quadrat links, daneben das, was sonst
+ * darunter stand. Das Quadrat über die volle Breite fraß auf einem 390er-Handy
+ * rund 60 Prozent des Bildschirms — viel Platz für etwas, das beim Training nur
+ * zur Orientierung dient, und die Zeile daneben blieb dabei leer.
+ *
+ * Wer die Bewegung wirklich ansehen will, macht sie groß; dort hält ein Tippen
+ * sie an, denn beim Nachmachen will man den Endpunkt sehen, nicht die Schleife.
+ * Die Wahl bleibt über Übungen und Einheiten hinweg gespeichert.
  */
 export function ExerciseMedia({
   exercise,
   onOpenDetail,
+  children,
 }: {
-  exercise: Pick<Exercise, "id" | "name" | "media">;
+  exercise: Pick<Exercise, "id" | "name" | "media" | "muscle" | "equipment">;
   onOpenDetail?: () => void;
+  /** Die Zeilen neben (kompakt) bzw. unter (groß) der Bewegung. */
+  children?: React.ReactNode;
 }) {
   const [playing, setPlaying] = useState(true);
-  const [mini, setMini] = useState(false);
+  const [big, setBig] = useState(false);
 
   useEffect(() => {
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- liest die Einstellung einmalig beim Mount
-      if (localStorage.getItem(SIZE_KEY) === "mini") setMini(true);
+      if (localStorage.getItem(SIZE_KEY) === "gross") setBig(true);
     } catch {
-      // Kein Speicher, kein Problem — dann bleibt es bei groß.
+      // Kein Speicher, kein Problem — dann bleibt es bei kompakt.
     }
   }, []);
 
   const toggleSize = () => {
-    setMini((prev) => {
+    setBig((prev) => {
       const next = !prev;
       try {
-        localStorage.setItem(SIZE_KEY, next ? "mini" : "voll");
+        localStorage.setItem(SIZE_KEY, next ? "gross" : "kompakt");
       } catch {
         // Gilt dann nur für diese Sitzung.
       }
@@ -105,90 +112,102 @@ export function ExerciseMedia({
 
   const gif = gifUrl(exercise);
   const still = imageUrl(exercise);
-  if (!gif || !still) return null;
+  if (!gif || !still) return <>{children}</>;
 
-  const info = onOpenDetail && (
+  const detailButton = onOpenDetail && (
     <button
       type="button"
       onClick={onOpenDetail}
       aria-label={`${exercise.name} — Anleitung`}
       className={cn(
         "flex size-8 shrink-0 items-center justify-center rounded-full",
-        mini ? "text-muted-foreground" : "absolute top-2 right-2 bg-black/55 text-white backdrop-blur-sm"
+        big
+          ? "absolute top-2 right-2 bg-black/55 text-white backdrop-blur-sm"
+          : "text-muted-foreground"
       )}
     >
       <Info className="size-4" />
     </button>
   );
 
-  // Klein heißt Zeile, nicht Streifen: ein schmales Bild mit den Bedienelementen
-  // daneben. Ein breiter Kasten mit einem Briefmarkenbild in der Mitte wäre
-  // dieselbe Höhe für weniger zu sehen.
-  if (mini) {
+  if (!big) {
     return (
-      <div className="mx-(--card-spacing) flex items-center gap-3">
+      <div className="mx-(--card-spacing) flex items-start gap-3">
+        {/* Das Bild ist zugleich der Schalter: „größer" ist die einzige Sache,
+            die man hier von ihm will. */}
         <button
           type="button"
           onClick={toggleSize}
-          className="relative size-14 shrink-0 overflow-hidden rounded-md bg-white"
           aria-label={`${exercise.name} größer zeigen`}
+          className="relative size-28 shrink-0 overflow-hidden rounded-card bg-white"
         >
           <Image
-            src={still}
-            alt=""
+            src={gif}
+            alt={`Bewegungsablauf: ${exercise.name}`}
             fill
-            sizes="56px"
+            sizes="112px"
             className="object-contain"
             unoptimized
           />
+          <span className="absolute right-1 bottom-1 flex size-5 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm">
+            <Maximize2 className="size-3" />
+          </span>
         </button>
-        <button
-          type="button"
-          onClick={toggleSize}
-          className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs text-muted-foreground"
-        >
-          <Maximize2 className="size-3.5 shrink-0" />
-          Bewegung größer zeigen
-        </button>
-        {info}
+
+        <div className="flex min-w-0 flex-1 flex-col gap-1 pt-0.5 text-xs text-muted-foreground">
+          <p className="truncate">
+            {MUSCLE_LABELS[exercise.muscle]} · {EQUIPMENT_LABELS[exercise.equipment]}
+          </p>
+          {children}
+        </div>
+
+        {detailButton}
       </div>
     );
   }
 
   return (
-    <div className="relative mx-(--card-spacing) aspect-square overflow-hidden rounded-card bg-white">
-      <button
-        type="button"
-        onClick={() => setPlaying((p) => !p)}
-        className="absolute inset-0 size-full"
-        aria-label={playing ? `${exercise.name} anhalten` : `${exercise.name} abspielen`}
-      >
-        <Image
-          src={playing ? gif : still}
-          alt={`Bewegungsablauf: ${exercise.name}`}
-          fill
-          sizes="(max-width: 640px) 100vw, 480px"
-          className="object-contain"
-          unoptimized
-        />
-      </button>
+    <>
+      <div className="relative mx-(--card-spacing) aspect-square overflow-hidden rounded-card bg-white">
+        <button
+          type="button"
+          onClick={() => setPlaying((p) => !p)}
+          className="absolute inset-0 size-full"
+          aria-label={playing ? `${exercise.name} anhalten` : `${exercise.name} abspielen`}
+        >
+          <Image
+            src={playing ? gif : still}
+            alt={`Bewegungsablauf: ${exercise.name}`}
+            fill
+            sizes="(max-width: 640px) 100vw, 480px"
+            className="object-contain"
+            unoptimized
+          />
+        </button>
 
-      <button
-        type="button"
-        onClick={toggleSize}
-        className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-pill bg-black/55 px-2.5 py-1.5 text-xs text-white backdrop-blur-sm"
-      >
-        <Minimize2 className="size-3.5" />
-        Kleiner
-      </button>
+        <button
+          type="button"
+          onClick={toggleSize}
+          className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-pill bg-black/55 px-2.5 py-1.5 text-xs text-white backdrop-blur-sm"
+        >
+          <Minimize2 className="size-3.5" />
+          Kleiner
+        </button>
 
-      <span className="pointer-events-none absolute right-2 bottom-2 flex items-center gap-1.5 rounded-pill bg-black/55 px-2.5 py-1.5 text-xs text-white backdrop-blur-sm">
-        {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
-        {playing ? "Tippen zum Anhalten" : "Tippen zum Abspielen"}
-      </span>
+        <span className="pointer-events-none absolute right-2 bottom-2 flex items-center gap-1.5 rounded-pill bg-black/55 px-2.5 py-1.5 text-xs text-white backdrop-blur-sm">
+          {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
+          {playing ? "Tippen zum Anhalten" : "Tippen zum Abspielen"}
+        </span>
 
-      {info}
-    </div>
+        {detailButton}
+      </div>
+
+      {children && (
+        <div className="mx-(--card-spacing) flex flex-col gap-1 text-xs text-muted-foreground">
+          {children}
+        </div>
+      )}
+    </>
   );
 }
 
