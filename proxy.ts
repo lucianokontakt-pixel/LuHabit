@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE, authConfigured, isPublicPath, readSessionCookie } from "@/lib/auth";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   // Ohne eingerichteten Login bleibt die App offen — so wie in der lokalen
   // Entwicklung ohne Konfiguration.
   if (!authConfigured()) {

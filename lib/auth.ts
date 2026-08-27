@@ -1,13 +1,13 @@
 /**
  * Sitzungen als signiertes Cookie statt als Datenbank-Eintrag.
  *
- * Die Middleware läuft bei jedem einzelnen Request. Ein DB-Aufruf pro Request
+ * Der Proxy läuft bei jedem einzelnen Request. Ein DB-Aufruf pro Request
  * wäre über die D1-HTTP-API spürbar teuer, deshalb trägt das Cookie die
  * Nutzerkennung selbst und ist mit HMAC-SHA256 signiert. Nachteil, den man
  * kennen sollte: eine Sitzung lässt sich nicht serverseitig widerrufen, sie
  * läuft nur ab. Für diese App ist das der richtige Tausch.
  *
- * Diese Datei wird auch aus der Middleware importiert und darf deshalb nur
+ * Diese Datei wird auch aus dem Proxy importiert und darf deshalb nur
  * Web-APIs benutzen — kein Node, kein Datenbankzugriff.
  */
 
@@ -72,7 +72,7 @@ export function authConfigured(): boolean {
 
 /**
  * Pfade, die ohne Sitzung erreichbar sein müssen. Webhooks prüfen ihr eigenes
- * Secret in der Route (userIdForWebhookSecret) — die Middleware darf sie nicht
+ * Secret in der Route (userIdForWebhookSecret) — der Proxy darf sie nicht
  * vorher abfangen.
  *
  * Bewusst eine Funktion und keine Ausnahme im Matcher: Next.js verlangt den

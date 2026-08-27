@@ -72,7 +72,7 @@ Produktion muss sie gesetzt sein.
 | `ALLOWED_EMAILS` | Optional, kommagetrennt. Gesetzt = nur diese Adressen dürfen sich anmelden. Leer = offene Registrierung. |
 
 Sitzungen liegen als signiertes Cookie (HMAC-SHA256), nicht in der Datenbank —
-die Middleware kommt so ohne Datenbankzugriff pro Request aus. Der Preis: eine
+der Proxy kommt so ohne Datenbankzugriff pro Request aus. Der Preis: eine
 Sitzung lässt sich nicht serverseitig widerrufen, sie läuft nach 90 Tagen ab.
 Wer alle Sitzungen sofort ungültig machen will, ändert `AUTH_SECRET`.
 
