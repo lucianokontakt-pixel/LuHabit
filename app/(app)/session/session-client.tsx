@@ -63,8 +63,8 @@ import {
 import { needsWarmup, warmupWeight, WARMUP_REPS } from "@/lib/warmup";
 import { useSignalSound } from "@/lib/use-signal-sound";
 import { cn } from "@/lib/utils";
+import { DRAFT_KEY } from "@/lib/session-draft";
 
-const DRAFT_KEY = "luhabit-active-session";
 
 type Draft = {
   dayId: string;

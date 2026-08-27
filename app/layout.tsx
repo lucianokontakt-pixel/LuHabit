@@ -2,8 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Source_Serif_4, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Nav } from "@/components/nav";
-import { BottomNav } from "@/components/bottom-nav";
 import { SyncRunner } from "@/components/sync-runner";
 import { ServiceWorkerRegistration } from "@/components/service-worker";
 import { Toaster } from "@/components/ui/sonner";
@@ -86,14 +84,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full flex flex-col bg-background">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <Nav />
-          {/* pb-28 reicht als fester Abstand nicht mehr: die untere Navigation
-              wächst um die Safe-Area-Höhe des Geräts nach unten, sonst würde
-              der letzte Inhalt darunter verschwinden. */}
-          <main className="px-edge mx-auto w-full max-w-4xl flex-1 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:[--edge:1.5rem] sm:pb-9 sm:pt-6">
-            {children}
-          </main>
-          <BottomNav />
+          {/* Navigation und Inhaltsrahmen sitzen in app/(app)/layout.tsx, nicht
+              hier: der Start-Knopf in der unteren Leiste muss den aktiven Plan
+              kennen, und der kommt aus dem TrainingProvider. Die Anmeldeseite
+              bringt ihren eigenen Rahmen mit und braucht beides nicht. */}
+          {children}
           <Toaster />
           <ServiceWorkerRegistration />
           <SyncRunner />

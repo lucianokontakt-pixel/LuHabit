@@ -7,8 +7,9 @@ import { MetricSection } from "@/components/metric-section";
 import { MuscleMap } from "@/components/koerper/muscle-map";
 import { MuscleGrid } from "@/components/koerper/muscle-grid";
 import { BodyProfileForm } from "@/components/koerper/body-profile-form";
-import { CalorieCalculator } from "@/components/calorie-calculator";
 import { StatValue } from "@/components/stat-value";
+import { SectionTabs } from "@/components/section-tabs";
+import { STATISTIK_TABS } from "@/lib/nav-links";
 import { useMetricData } from "@/lib/use-metric-data";
 import { useTraining } from "@/lib/training-store";
 import { muscleProgress } from "@/lib/muscle-stats";
@@ -21,7 +22,7 @@ import {
 } from "@/lib/body-profile";
 import { formatNumber } from "@/lib/format";
 
-export default function KoerperPage() {
+export default function StatistikKoerperPage() {
   const { entries: weightEntries } = useMetricData("weight");
   const { entries: fatEntries } = useMetricData("bodyfat");
   const { profile } = useBodyProfile();
@@ -52,11 +53,13 @@ export default function KoerperPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <p className="text-sm text-muted-foreground">Werte, Muskeln &amp; Bedarf</p>
+        <p className="text-sm text-muted-foreground">Werte &amp; Muskelverteilung</p>
         <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">
           Körper
         </h1>
       </div>
+
+      <SectionTabs tabs={STATISTIK_TABS} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card size="sm" className="gap-0">
@@ -123,9 +126,8 @@ export default function KoerperPage() {
         direction="down-good"
       />
 
-      {/* Wo die Sätze hingingen. Steht bei „Körper" und nicht bei „Statistik",
-          weil es eine Frage an den Körper ist: welche Gruppe bekommt Arbeit —
-          nicht, wie viel Gewicht insgesamt bewegt wurde. */}
+      {/* Wo die Sätze hingingen — welche Gruppe bekommt Arbeit, nicht wie viel
+          Gewicht insgesamt bewegt wurde. */}
       <MuscleMap
         sessions={recentSessions}
         exerciseById={exerciseById}
@@ -142,8 +144,6 @@ export default function KoerperPage() {
         </div>
         <MuscleGrid progress={progress} />
       </div>
-
-      <CalorieCalculator latestWeight={latestWeight} />
 
       <BodyProfileForm />
     </div>

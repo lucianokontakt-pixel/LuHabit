@@ -7,12 +7,25 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 import { SyncStatus } from "@/components/sync-status";
 import { NAV_LINKS, isActiveLink } from "@/lib/nav-links";
+import { buttonVariants } from "@/components/ui/button";
+import { useTraining } from "@/lib/training-store";
+import { nextDayFor } from "@/lib/training";
+import { abonniereEntwurf, keinEntwurf, offenerEntwurfTag } from "@/lib/session-draft";
+import { Dumbbell, Play } from "lucide-react";
+import { useSyncExternalStore } from "react";
 
 export function Nav() {
   const pathname = usePathname();
+  const { activePlan, sessions } = useTraining();
+  const offenerTag = useSyncExternalStore(abonniereEntwurf, offenerEntwurfTag, keinEntwurf);
 
   // Auf der Login-Seite gibt es noch nichts zu navigieren.
   if (pathname === "/login") return null;
+
+  const naechster = activePlan ? nextDayFor(activePlan, sessions[0]) : null;
+  const zielTag = offenerTag ?? naechster?.id ?? null;
+  const ziel = zielTag ? `/session?day=${encodeURIComponent(zielTag)}` : "/plaene";
+  const laeuft = offenerTag !== null;
 
   return (
     // steep's nav is whisper-quiet: no border, no shadow, just the logo and links.
@@ -47,6 +60,19 @@ export function Nav() {
         </nav>
 
         <div className="flex items-center gap-1.5">
+          {/* Auf dem Handy sitzt der Start-Knopf in der unteren Leiste. Hier
+              oben hätte man ihn sonst nirgends: wer in der Statistik steht und
+              trainieren will, müsste erst zurück auf die Übersicht. */}
+          <Link
+            href={ziel}
+            /* Über cn, nicht direkt über buttonVariants: sonst stünden das
+               inline-flex der Grundfassung und dieses hidden nebeneinander und
+               die Reihenfolge im Stylesheet entschiede, wer gewinnt. */
+            className={cn(buttonVariants({ size: "sm" }), "mr-1 hidden sm:inline-flex")}
+          >
+            {laeuft ? <Play /> : <Dumbbell />}
+            {laeuft ? "Weiter" : "Start"}
+          </Link>
           <SyncStatus />
           <ThemeToggle />
           <UserMenu />

@@ -17,8 +17,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { SectionTabs } from "@/components/section-tabs";
-import { TRAINING_TABS } from "@/lib/nav-links";
 import { useTraining } from "@/lib/training-store";
 import { createPlan, deletePlan, updatePlan } from "@/lib/api-training";
 import { SPLIT_TEMPLATES, type SplitTemplate } from "@/lib/exercise-seed";
@@ -107,7 +105,6 @@ export default function PlansPage() {
         <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">Pläne</h1>
       </div>
 
-      <SectionTabs tabs={TRAINING_TABS} />
 
       {loading ? (
         <div className="h-32 animate-pulse rounded-card bg-card" />

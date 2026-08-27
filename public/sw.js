@@ -10,7 +10,7 @@
  * fliegen alle Caches mit anderem Namen raus.
  */
 
-const VERSION = "v8";
+const VERSION = "v9";
 const STATIC_CACHE = `luhabit-static-${VERSION}`;
 const PAGE_CACHE = `luhabit-pages-${VERSION}`;
 const KEEP = [STATIC_CACHE, PAGE_CACHE];
@@ -41,7 +41,7 @@ const WARMUP = [
   "/uebungen",
   "/statistik",
   "/statistik/progression",
-  "/koerper",
+  "/statistik/koerper",
   "/einstellungen",
 ];
 

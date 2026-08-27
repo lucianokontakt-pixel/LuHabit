@@ -1,37 +1,45 @@
-import { Dumbbell, HeartPulse, BarChart3, type LucideIcon } from "lucide-react";
+import { House, CalendarDays, BarChart3, List, type LucideIcon } from "lucide-react";
 
 export type NavLink = { href: string; label: string; icon: LucideIcon };
 export type SubTab = { href: string; label: string };
 
 /**
- * Die drei Bereiche der App. Jeder beantwortet eine Frage: Training „was mache
- * ich", Statistik „wie läuft es", Körper „wo stehe ich".
+ * Die vier Bereiche der App — plus der Start-Knopf, der keiner ist.
+ *
+ * Pläne und Übungen waren bis hierher Unter-Tabs im Trainingsbereich. Das hieß:
+ * zwei Tipps bis zur Bibliothek, und die Startseite trug drei Tabs, die auf
+ * jeder ihrer Seiten mitliefen. Jetzt hat jeder Bereich seinen eigenen Platz.
+ *
+ * Der Start-Knopf steht bewusst nicht in dieser Liste: er führt nicht auf eine
+ * Seite, die man „besuchen" kann, sondern beginnt (oder setzt fort) eine
+ * Einheit. Die untere Leiste setzt ihn deshalb selbst in die Mitte.
  */
 export const NAV_LINKS: NavLink[] = [
-  { href: "/", label: "Training", icon: Dumbbell },
+  // „Übersicht" und nicht „Start": den Namen trägt schon der Knopf in der Mitte.
+  { href: "/", label: "Übersicht", icon: House },
+  { href: "/plaene", label: "Pläne", icon: CalendarDays },
   { href: "/statistik", label: "Statistik", icon: BarChart3 },
-  { href: "/koerper", label: "Körper", icon: HeartPulse },
+  { href: "/uebungen", label: "Übungen", icon: List },
 ];
 
-/** Die Seiten im Trainingsbereich. Die laufende Einheit ist keine davon — sie
- *  kommt vom Start-Knopf und hat keinen Tab. */
-export const TRAINING_TABS: readonly SubTab[] = [
-  { href: "/", label: "Übersicht" },
-  { href: "/plaene", label: "Pläne" },
-  { href: "/uebungen", label: "Übungen" },
-];
-
+/**
+ * Die Seiten im Statistikbereich. „Körper" hängt hier und nicht mehr an einem
+ * eigenen Hauptbereich: Körperkarte und Sätze pro Woche beantworten „wie
+ * verteilt sich meine Arbeit", und das ist eine Frage der Statistik. Gewicht
+ * und Körperfett sind Verläufe wie die anderen auch.
+ */
 export const STATISTIK_TABS: readonly SubTab[] = [
   { href: "/statistik", label: "Verlauf" },
   { href: "/statistik/progression", label: "Je Übung" },
+  { href: "/statistik/koerper", label: "Körper" },
 ];
 
-/** Welche Seiten unter welchem Bereich hängen. */
-const TRAINING_PREFIXES = ["/plaene", "/uebungen", "/session", "/einheit"];
+/** Seiten ohne eigenen Platz in der Leiste, die trotzdem irgendwo leuchten sollen. */
+const HOME_PREFIXES = ["/session", "/einheit"];
 
 export function isActiveLink(href: string, pathname: string): boolean {
   if (href === "/") {
-    return pathname === "/" || TRAINING_PREFIXES.some((p) => pathname.startsWith(p));
+    return pathname === "/" || HOME_PREFIXES.some((p) => pathname.startsWith(p));
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }

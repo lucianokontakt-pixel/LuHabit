@@ -23,12 +23,14 @@ const nextConfig: NextConfig = {
         destination: "/statistik/progression",
         permanent: true,
       },
+      // Körper ist keine eigene Ebene mehr, sondern ein Reiter der Statistik.
+      { source: "/koerper", destination: "/statistik/koerper", permanent: true },
       // Das Habit-System und alles, was daran hing.
       { source: "/training/emom", destination: "/", permanent: true },
       { source: "/stats", destination: "/statistik", permanent: true },
       { source: "/habits", destination: "/", permanent: true },
       { source: "/habit/:id", destination: "/", permanent: true },
-      { source: "/water", destination: "/koerper", permanent: true },
+      { source: "/water", destination: "/statistik/koerper", permanent: true },
       { source: "/coffee", destination: "/", permanent: true },
       { source: "/steps", destination: "/", permanent: true },
       { source: "/reading", destination: "/", permanent: true },

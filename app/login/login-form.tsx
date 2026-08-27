@@ -81,7 +81,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
       <div className="px-(--card-spacing)">
         <h1 className="font-display text-4xl leading-tight tracking-tight">LuHabit</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Melde dich an, um deine Habits und dein Training zu sehen.
+          Melde dich an, um dein Training zu sehen.
         </p>
       </div>
 

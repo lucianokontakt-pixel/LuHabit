@@ -5,10 +5,8 @@ import { useMemo } from "react";
 import { Play, CalendarDays, Dumbbell, Timer } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
-import { SectionTabs } from "@/components/section-tabs";
 import { WeekCard } from "@/components/training/week-card";
 import { WelcomeCard } from "@/components/training/welcome-card";
-import { TRAINING_TABS } from "@/lib/nav-links";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
 import { measuredOn, nextDayFor, sessionVolume, MUSCLE_LABELS } from "@/lib/training";
@@ -40,7 +38,6 @@ export default function TrainingOverviewPage() {
         </h1>
       </div>
 
-      <SectionTabs tabs={TRAINING_TABS} />
 
       {error && (
         <Card className="gap-1">
