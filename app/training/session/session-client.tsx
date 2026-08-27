@@ -13,6 +13,7 @@ import {
   Lightbulb,
   TrendingUp,
   TrendingDown,
+  Plus,
   X,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -31,12 +32,14 @@ import { RestTimer } from "@/components/training/rest-timer";
 import { SetRow, type SessionSet } from "@/components/training/set-row";
 import { SessionSummary } from "@/components/training/session-summary";
 import { ExerciseDetail, ExerciseMedia } from "@/components/training/exercise-media";
+import { ExercisePicker } from "@/components/training/exercise-picker";
 import { summarizeSession } from "@/lib/session-stats";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
 import { saveSession } from "@/lib/api-training";
 import { addEntry } from "@/lib/api-client";
 import { addDaysISO, isoDateDaysAgo, todayISO } from "@/lib/habits";
+import { newId } from "@/lib/ids";
 import { formatClock, formatDayLabel, formatNumber } from "@/lib/format";
 import {
   computeTargets,
@@ -55,6 +58,7 @@ import {
   type SetAdjustment,
   type SetTarget,
   type WorkoutPlan,
+  type WorkoutSet,
 } from "@/lib/training";
 import { needsWarmup, warmupWeight, WARMUP_REPS } from "@/lib/warmup";
 import { useSignalSound } from "@/lib/use-signal-sound";
@@ -68,7 +72,101 @@ type Draft = {
   sets: Record<string, SessionSet[]>;
   /** Weggetippte Vorschläge — sonst stünden sie nach einem Reload wieder da. */
   dismissed?: string[];
+  /**
+   * Übungen, die während der Einheit dazukamen. Sie stehen in keinem Plan, also
+   * kennt sie nach einem Reload nur der Entwurf — ohne sie stünden ihre Sätze
+   * verwaist im Speicher.
+   */
+  extras?: PlanExercise[];
 };
+
+/**
+ * Was die Progression für eine Übung vorschlägt, aufbereitet für die Ansicht.
+ * Eigene Funktion, weil zwei Wege hier hereinkommen: der Aufbau der Einheit und
+ * eine Übung, die mitten drin dazukommt.
+ */
+type Target = {
+  weight: number;
+  reps: number;
+  /**
+   * Ziel je Satz. Nach einer Einheit mit 8/9/10 Wiederholungen steht hier auch
+   * 8/9/10 — nicht dreimal die Acht. Sonst zöge der Vorschlag jeden Satz auf
+   * die Untergrenze zurück, und wer ihn abhakt, protokolliert einen
+   * Rückschritt, der die Progression dauerhaft blockiert.
+   */
+  perSet: SetTarget[];
+  progressed: boolean;
+  progressionKind: "weight" | "reps" | null;
+  isFirstTime: boolean;
+  step: number;
+  /** Welche Regel den Vorschlag gemacht hat. */
+  kind: ProgressionResult["kind"];
+  /** Warum genau diese Zahlen — wird bei jeder Übung angezeigt. */
+  why: string;
+  sets: number;
+  /** Worauf ein Rückschritt ginge — die Entscheidung bleibt beim Nutzer. */
+  deload: number | null;
+};
+
+function targetFor(
+  exercise: Exercise,
+  planExercise: PlanExercise,
+  history: WorkoutSet[][],
+  bodyweight: number | null
+): Target {
+  const result = computeTargets({ exercise, planExercise, history, bodyweight });
+  return {
+    weight: result.targets[0]?.weight ?? 0,
+    reps: result.targets[0]?.reps ?? planExercise.repMin,
+    perSet: result.targets,
+    progressed: result.progressed,
+    progressionKind: result.progressionKind,
+    isFirstTime: result.isFirstTime,
+    step: incrementFor(exercise, planExercise),
+    kind: result.kind,
+    why: result.why,
+    // Die Eigengewichts-Progression darf die Satzzahl wachsen lassen.
+    sets: result.sets ?? planExercise.sets,
+    deload: result.deload ?? null,
+  };
+}
+
+/**
+ * Die Satzzeilen einer Übung beim Start: die Ziele der Progression, davor bei
+ * Bedarf ein Aufwärmsatz.
+ */
+function buildRows({
+  exercise,
+  planExercise,
+  target,
+  isFirst,
+}: {
+  exercise: Exercise | undefined;
+  planExercise: PlanExercise;
+  target: Target | undefined;
+  isFirst: boolean;
+}): SessionSet[] {
+  // Die Eigengewichts-Progression darf einen Satz anhängen — dann zählt ihre
+  // Satzzahl, nicht die des Plans.
+  const rowCount = target?.sets ?? planExercise.sets;
+  const perSet = expandTargets(target?.perSet ?? [], rowCount);
+  const workingRows = Array.from({ length: rowCount }, (_, i) => ({
+    weight: perSet[i]?.weight ?? 0,
+    reps: perSet[i]?.reps ?? planExercise.repMin,
+    done: false,
+    warmup: false,
+  }));
+
+  const firstWeight = workingRows[0]?.weight ?? 0;
+  const rampWeight =
+    exercise && needsWarmup({ exercise, isFirst, weight: firstWeight })
+      ? warmupWeight(firstWeight, incrementFor(exercise, planExercise))
+      : null;
+
+  return rampWeight !== null
+    ? [{ weight: rampWeight, reps: WARMUP_REPS, done: false, warmup: true }, ...workingRows]
+    : workingRows;
+}
 
 function clearDraft() {
   try {
@@ -118,6 +216,9 @@ export function SessionClient() {
   const bodyweight = weightEntries[weightEntries.length - 1]?.value ?? null;
 
   const [setsByExercise, setSetsByExercise] = useState<Record<string, SessionSet[]>>({});
+  /** Übungen, die während der Einheit dazukamen — nur für heute. */
+  const [extras, setExtras] = useState<PlanExercise[]>([]);
+  const [picking, setPicking] = useState(false);
   const [startedAt, setStartedAt] = useState<number>(() => Date.now());
   const [elapsed, setElapsed] = useState(0);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
@@ -148,60 +249,26 @@ export function SessionClient() {
 
   const day = located?.day ?? null;
 
+  /**
+   * Die Übungen dieser einen Einheit: die des Plans, dahinter alles, was
+   * spontan dazukam. Der Plan selbst bleibt unangetastet — was hier steht, gilt
+   * für heute und sonst nirgends.
+   */
+  const exercises = useMemo(
+    () => [...(day?.exercises ?? []), ...extras],
+    [day, extras]
+  );
+
   // Zielvorgaben aus der letzten Einheit — einmal pro geladener Übungsliste.
   const targets = useMemo(() => {
-    if (!day) return {};
-    const map: Record<
-      string,
-      {
-        weight: number;
-        reps: number;
-        /**
-         * Ziel je Satz. Nach einer Einheit mit 8/9/10 Wiederholungen steht hier
-         * auch 8/9/10 — nicht dreimal die Acht. Sonst zöge der Vorschlag jeden
-         * Satz auf die Untergrenze zurück, und wer ihn abhakt, protokolliert
-         * einen Rückschritt, der die Progression dauerhaft blockiert.
-         */
-        perSet: SetTarget[];
-        progressed: boolean;
-        progressionKind: "weight" | "reps" | null;
-        isFirstTime: boolean;
-        step: number;
-        /** Welche Regel den Vorschlag gemacht hat. */
-        kind: ProgressionResult["kind"];
-        /** Warum genau diese Zahlen — wird bei jeder Übung angezeigt. */
-        why: string;
-        sets: number;
-        /** Worauf ein Rückschritt ginge — die Entscheidung bleibt beim Nutzer. */
-        deload: number | null;
-      }
-    > = {};
-    for (const pe of day.exercises) {
+    const map: Record<string, Target> = {};
+    for (const pe of exercises) {
       const exercise = exerciseById[pe.exerciseId];
       if (!exercise) continue;
-      const result = computeTargets({
-        exercise,
-        planExercise: pe,
-        history: historyFor(pe.exerciseId),
-        bodyweight,
-      });
-      map[pe.id] = {
-        weight: result.targets[0]?.weight ?? 0,
-        reps: result.targets[0]?.reps ?? pe.repMin,
-        perSet: result.targets,
-        progressed: result.progressed,
-        progressionKind: result.progressionKind,
-        isFirstTime: result.isFirstTime,
-        step: incrementFor(exercise, pe),
-        kind: result.kind,
-        why: result.why,
-        // Die Eigengewichts-Progression darf die Satzzahl wachsen lassen.
-        sets: result.sets ?? pe.sets,
-        deload: result.deload ?? null,
-      };
+      map[pe.id] = targetFor(exercise, pe, historyFor(pe.exerciseId), bodyweight);
     }
     return map;
-  }, [day, exerciseById, historyFor, bodyweight]);
+  }, [exercises, exerciseById, historyFor, bodyweight]);
 
   // Startzustand: entweder ein unterbrochener Entwurf oder frische Zielwerte.
   useEffect(() => {
@@ -218,34 +285,16 @@ export function SessionClient() {
       setSetsByExercise(draft.sets);
       setStartedAt(draft.startedAt);
       setDismissed(new Set(draft.dismissed ?? []));
+      setExtras(draft.extras ?? []);
     } else {
       const initial: Record<string, SessionSet[]> = {};
       day.exercises.forEach((pe, exerciseIndex) => {
-        const target = targets[pe.id];
-        // Die Eigengewichts-Progression darf einen Satz anhängen — dann zählt
-        // ihre Satzzahl, nicht die des Plans.
-        const rowCount = target?.sets ?? pe.sets;
-        const perSet = expandTargets(target?.perSet ?? [], rowCount);
-        const workingRows = Array.from({ length: rowCount }, (_, i) => ({
-          weight: perSet[i]?.weight ?? 0,
-          reps: perSet[i]?.reps ?? pe.repMin,
-          done: false,
-          warmup: false,
-        }));
-
-        const exercise = exerciseById[pe.exerciseId];
-        const firstWeight = workingRows[0]?.weight ?? 0;
-        const wantsWarmup =
-          exercise &&
-          needsWarmup({ exercise, isFirst: exerciseIndex === 0, weight: firstWeight });
-        const rampWeight = wantsWarmup
-          ? warmupWeight(firstWeight, incrementFor(exercise, pe))
-          : null;
-
-        initial[pe.id] =
-          rampWeight !== null
-            ? [{ weight: rampWeight, reps: WARMUP_REPS, done: false, warmup: true }, ...workingRows]
-            : workingRows;
+        initial[pe.id] = buildRows({
+          exercise: exerciseById[pe.exerciseId],
+          planExercise: pe,
+          target: targets[pe.id],
+          isFirst: exerciseIndex === 0,
+        });
       });
       setSetsByExercise(initial);
       setStartedAt(Date.now());
@@ -262,12 +311,13 @@ export function SessionClient() {
         startedAt,
         sets: setsByExercise,
         dismissed: [...dismissed],
+        extras,
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } catch {
       // Speicher voll oder gesperrt — die Einheit läuft trotzdem weiter
     }
-  }, [day, setsByExercise, startedAt, dismissed]);
+  }, [day, setsByExercise, startedAt, dismissed, extras]);
 
   useEffect(() => {
     // Nach dem Abschluss läuft keine Einheit mehr — die Uhr würde den
@@ -354,7 +404,7 @@ export function SessionClient() {
    */
   const suggestions = useMemo(() => {
     const map: Record<string, SetAdjustment | null> = {};
-    for (const pe of day?.exercises ?? []) {
+    for (const pe of exercises) {
       // Ohne bekannten Gewichtssprung gibt es nichts zu raten — das passiert
       // nur, wenn die Übung aus der Bibliothek verschwunden ist.
       const step = targets[pe.id]?.step;
@@ -368,10 +418,10 @@ export function SessionClient() {
         : null;
     }
     return map;
-  }, [day, setsByExercise, targets]);
+  }, [exercises, setsByExercise, targets]);
 
   /** Reihenfolge der Übungen im Tag — Grundlage fürs Weiterschalten. */
-  const order = useMemo(() => day?.exercises.map((pe) => pe.id) ?? [], [day]);
+  const order = useMemo(() => exercises.map((pe) => pe.id), [exercises]);
   const scrollTargetRef = useRef<string | null>(null);
 
   /**
@@ -392,6 +442,56 @@ export function SessionClient() {
     },
     [order]
   );
+
+  /**
+   * Eine Übung mitten in der Einheit dazunehmen. Sie gilt nur für heute — im
+   * Plan steht danach kein Wort mehr davon. Satzzahl und Wiederholungsbereich
+   * sind dieselben Vorgaben, die auch der Plan-Editor einer frisch
+   * hinzugefügten Übung gibt; Gewicht und Sätze kommen aus der Progression, die
+   * die Übung ja aus früheren Einheiten kennen kann.
+   */
+  const addExercise = useCallback(
+    (exercise: Exercise) => {
+      const planExercise: PlanExercise = {
+        id: newId("extra"),
+        exerciseId: exercise.id,
+        position: 999,
+        sets: 3,
+        repMin: 8,
+        repMax: 12,
+        restSeconds: 120,
+        increment: null,
+        startWeight: null,
+      };
+      const target = targetFor(
+        exercise,
+        planExercise,
+        historyFor(exercise.id),
+        bodyweight
+      );
+      setExtras((prev) => [...prev, planExercise]);
+      setSetsByExercise((prev) => ({
+        ...prev,
+        // Nie die erste Übung des Tages: die Rampe für den kalten Körper ist
+        // längst gelaufen, wenn hier jemand etwas dazunimmt.
+        [planExercise.id]: buildRows({ exercise, planExercise, target, isFirst: false }),
+      }));
+      setActiveExercise(planExercise.id);
+      scrollTargetRef.current = planExercise.id;
+    },
+    [historyFor, bodyweight]
+  );
+
+  /** Wieder weg damit — die Sätze der Übung gehen mit. */
+  const removeExercise = useCallback((planExerciseId: string) => {
+    setExtras((prev) => prev.filter((pe) => pe.id !== planExerciseId));
+    setSetsByExercise((prev) => {
+      const next = { ...prev };
+      delete next[planExerciseId];
+      return next;
+    });
+    setActiveExercise((cur) => (cur === planExerciseId ? null : cur));
+  }, []);
 
   const dismissSuggestion = useCallback(
     (planExerciseId: string, index: number) => {
@@ -485,7 +585,7 @@ export function SessionClient() {
   const volume = useMemo(() => {
     const onDay = measuredOn(sessionDate, weightEntries);
     let total = 0;
-    for (const pe of day?.exercises ?? []) {
+    for (const pe of exercises) {
       const exercise = exerciseById[pe.exerciseId];
       for (const s of setsByExercise[pe.id] ?? []) {
         if (!s.done || s.warmup) continue;
@@ -493,7 +593,7 @@ export function SessionClient() {
       }
     }
     return total;
-  }, [day, setsByExercise, exerciseById, sessionDate, weightEntries]);
+  }, [exercises, setsByExercise, exerciseById, sessionDate, weightEntries]);
 
   const finishedSummary = useMemo(() => {
     if (!finishedId) return null;
@@ -510,7 +610,7 @@ export function SessionClient() {
 
     setSaving(true);
     try {
-      const payloadSets = day.exercises.flatMap((pe) =>
+      const payloadSets = exercises.flatMap((pe) =>
         (setsByExercise[pe.id] ?? [])
           .map((s, i) => ({
             exerciseId: pe.exerciseId,
@@ -717,7 +817,7 @@ export function SessionClient() {
       )}
 
       <div className="flex flex-col gap-3">
-        {day.exercises.map((pe, exerciseIndex) => {
+        {exercises.map((pe, exerciseIndex) => {
           const exercise = exerciseById[pe.exerciseId];
           const sets = setsByExercise[pe.id] ?? [];
           const target = targets[pe.id];
@@ -741,6 +841,7 @@ export function SessionClient() {
           // Marke, gegen die jeder einzelne Satz antritt, und wird nicht
           // falsch, nur weil einer davon schon steht.
           const lastLogged = lastLoggedFor(pe.exerciseId);
+          const isExtra = extras.some((e) => e.id === pe.id);
 
           return (
             <Card
@@ -770,6 +871,7 @@ export function SessionClient() {
                     {exercise?.name ?? pe.exerciseId}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
+                    {isExtra && "Zusatz · "}
                     {pe.sets} × {pe.repMin}–{pe.repMax}
                     {target ? ` · ${formatNumber(target.weight)} kg` : ""} · {doneCount}/
                     {workingRows.length} erledigt
@@ -944,6 +1046,16 @@ export function SessionClient() {
                         Letzten entfernen
                       </Button>
                     )}
+                    {isExtra && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-auto text-muted-foreground"
+                        onClick={() => removeExercise(pe.id)}
+                      >
+                        Übung entfernen
+                      </Button>
+                    )}
                   </div>
                 </>
               )}
@@ -951,6 +1063,13 @@ export function SessionClient() {
           );
         })}
       </div>
+
+      {/* Was nicht im Plan steht, aber heute trotzdem drankommt. Der Plan
+          bleibt davon unberührt — die Übung gilt für diese Einheit. */}
+      <Button variant="outline" className="w-full" onClick={() => setPicking(true)}>
+        <Plus />
+        Übung hinzufügen
+      </Button>
 
       {/* Pausentimer und Abschluss teilen sich einen Stapel, damit sie sich
           nicht gegenseitig überdecken. */}
@@ -994,6 +1113,13 @@ export function SessionClient() {
       <ExerciseDetail
         exercise={detail}
         onOpenChange={(open) => !open && setDetail(null)}
+      />
+
+      <ExercisePicker
+        open={picking}
+        onOpenChange={setPicking}
+        onPick={addExercise}
+        excludeIds={exercises.map((pe) => pe.exerciseId)}
       />
 
       <AlertDialog open={confirmAbort} onOpenChange={setConfirmAbort}>
