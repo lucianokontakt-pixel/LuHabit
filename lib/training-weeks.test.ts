@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { trainingHabitSummary } from "@/lib/training-habit";
+import { trainingWeekSummary } from "@/lib/training-weeks";
 import type { Exercise, WorkoutSession, WorkoutSet } from "@/lib/training";
 
 const bench: Exercise = {
@@ -42,14 +42,14 @@ function session(id: string, date: string, sets: WorkoutSet[] = [set()]): Workou
 // fallen aus dem Fenster.
 const today = new Date("2026-03-19T12:00:00");
 
-describe("trainingHabitSummary", () => {
+describe("trainingWeekSummary", () => {
   it("zählt trainierte Tage der laufenden Woche, nicht Einheiten", () => {
     const sessions = [
       session("a", "2026-03-16"),
       session("b", "2026-03-16"), // zweite Einheit am selben Tag
       session("c", "2026-03-18"),
     ];
-    const summary = trainingHabitSummary(sessions, exerciseById, 3, 4, today);
+    const summary = trainingWeekSummary(sessions, exerciseById, 3, 4, today);
     expect(summary.thisWeekCount).toBe(2);
   });
 
@@ -59,7 +59,7 @@ describe("trainingHabitSummary", () => {
       session("b", "2026-03-17"),
       session("c", "2026-03-18"),
     ];
-    const summary = trainingHabitSummary(sessions, exerciseById, 3, 4, today);
+    const summary = trainingWeekSummary(sessions, exerciseById, 3, 4, today);
     expect(summary.weeks[summary.weeks.length - 1].goalMet).toBe(true);
   });
 
@@ -74,7 +74,7 @@ describe("trainingHabitSummary", () => {
       session("w2c", "2026-03-11"),
       session("w3a", "2026-03-16"),
     ];
-    const summary = trainingHabitSummary(sessions, exerciseById, 3, 4, today);
+    const summary = trainingWeekSummary(sessions, exerciseById, 3, 4, today);
     expect(summary.currentStreak).toBe(2);
   });
 
@@ -88,13 +88,13 @@ describe("trainingHabitSummary", () => {
       session("w3b", "2026-03-17"),
       session("w3c", "2026-03-18"),
     ];
-    const summary = trainingHabitSummary(sessions, exerciseById, 3, 4, today);
+    const summary = trainingWeekSummary(sessions, exerciseById, 3, 4, today);
     expect(summary.currentStreak).toBe(1);
   });
 
   it("rechnet Volumen aus den Sätzen der laufenden Woche", () => {
     const sessions = [session("a", "2026-03-16", [set({ weight: 80, reps: 8 })])];
-    const summary = trainingHabitSummary(sessions, exerciseById, 3, 4, today);
+    const summary = trainingWeekSummary(sessions, exerciseById, 3, 4, today);
     expect(summary.volumeThisWeek).toBe(640);
     expect(summary.setsThisWeek).toBe(1);
   });
@@ -106,7 +106,7 @@ describe("trainingHabitSummary", () => {
         set({ weight: 80, reps: 8 }),
       ]),
     ];
-    const summary = trainingHabitSummary(sessions, exerciseById, 3, 4, today);
+    const summary = trainingWeekSummary(sessions, exerciseById, 3, 4, today);
     expect(summary.setsThisWeek).toBe(1);
     expect(summary.volumeThisWeek).toBe(640);
   });
@@ -116,20 +116,20 @@ describe("trainingHabitSummary", () => {
       session("prev", "2026-03-09", [set({ weight: 100, reps: 8 })]),
       session("curr", "2026-03-16", [set({ weight: 120, reps: 8 })]),
     ];
-    const summary = trainingHabitSummary(sessions, exerciseById, 3, 4, today);
+    const summary = trainingWeekSummary(sessions, exerciseById, 3, 4, today);
     // 960 -> 800: +20 %
     expect(summary.volumeDeltaPercent).toBe(20);
   });
 
   it("liefert null ohne Vorwochen-Volumen", () => {
     const sessions = [session("curr", "2026-03-16")];
-    const summary = trainingHabitSummary(sessions, exerciseById, 3, 4, today);
+    const summary = trainingWeekSummary(sessions, exerciseById, 3, 4, today);
     expect(summary.volumeDeltaPercent).toBeNull();
   });
 
   it("erkennt trainedToday unabhängig vom Fenster", () => {
     const sessions = [session("a", "2026-03-19")];
-    const summary = trainingHabitSummary(sessions, exerciseById, 3, 4, today);
+    const summary = trainingWeekSummary(sessions, exerciseById, 3, 4, today);
     expect(summary.trainedToday).toBe(true);
   });
 
@@ -139,7 +139,7 @@ describe("trainingHabitSummary", () => {
       session("b", "2026-03-17"),
       session("c", "2026-03-18"),
     ];
-    const summary = trainingHabitSummary(sessions, exerciseById, null, 4, today);
+    const summary = trainingWeekSummary(sessions, exerciseById, null, 4, today);
     expect(summary.weeks.every((w) => !w.goalMet)).toBe(true);
     expect(summary.currentStreak).toBe(0);
   });

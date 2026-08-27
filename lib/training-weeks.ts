@@ -18,7 +18,7 @@ export type TrainingWeek = {
   goalMet: boolean;
 };
 
-export type TrainingHabitSummary = {
+export type TrainingWeekSummary = {
   /** Aufsteigend, eine Zeile je Woche im Fenster, die laufende Woche zuletzt. */
   weeks: TrainingWeek[];
   /**
@@ -55,7 +55,7 @@ function weekLabel(iso: string): string {
  * sondern in Kalenderwochen gegen das Wochenziel des aktiven Plans — sonst
  * risse an jedem geplanten Ruhetag die Serie.
  */
-export function trainingHabitSummary(
+export function trainingWeekSummary(
   sessions: WorkoutSession[],
   exerciseById: Record<string, Exercise>,
   weeklyTarget: number | null,
@@ -63,7 +63,7 @@ export function trainingHabitSummary(
   today = new Date(),
   /** Gemessene Körpergewichte, aufsteigend — für Eigengewichtsübungen. */
   weights: { date: string; value: number }[] = []
-): TrainingHabitSummary {
+): TrainingWeekSummary {
   const weeks = recentWeeks(weekCount, today);
   const windowStart = weeks[0];
   const todayISO = toISO(today);

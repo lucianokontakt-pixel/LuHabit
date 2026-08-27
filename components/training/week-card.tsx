@@ -5,7 +5,7 @@ import { Area, AreaChart, CartesianGrid } from "recharts";
 import { Flame } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
-import { trainingHabitSummary } from "@/lib/training-habit";
+import { trainingWeekSummary } from "@/lib/training-weeks";
 import { muscleProgress } from "@/lib/muscle-stats";
 import type { Exercise, WorkoutSession } from "@/lib/training";
 import { StatValue } from "@/components/stat-value";
@@ -37,7 +37,7 @@ export function WeekCard({
   weights: { date: string; value: number }[];
 }) {
   const summary = useMemo(
-    () => trainingHabitSummary(sessions, exerciseById, weeklyTarget, 12, new Date(), weights),
+    () => trainingWeekSummary(sessions, exerciseById, weeklyTarget, 12, new Date(), weights),
     [sessions, exerciseById, weeklyTarget, weights]
   );
 
