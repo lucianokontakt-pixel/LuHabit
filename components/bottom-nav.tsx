@@ -2,13 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSyncExternalStore } from "react";
 import { Dumbbell, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_LINKS, isActiveLink } from "@/lib/nav-links";
-import { useTraining } from "@/lib/training-store";
-import { nextDayFor } from "@/lib/training";
-import { abonniereEntwurf, keinEntwurf, offenerEntwurfTag } from "@/lib/session-draft";
+import { useStartZiel } from "@/lib/use-start-ziel";
 
 /**
  * Die untere Leiste: vier Bereiche und dazwischen der Start-Knopf.
@@ -20,27 +17,9 @@ import { abonniereEntwurf, keinEntwurf, offenerEntwurfTag } from "@/lib/session-
  */
 export function BottomNav() {
   const pathname = usePathname();
-  const { activePlan, sessions } = useTraining();
-
-  /**
-   * Läuft schon eine Einheit? Der Entwurf liegt in localStorage — ein externer
-   * Speicher, für den es useSyncExternalStore gibt. Auf dem Server kommt null
-   * heraus, im Browser der echte Stand; damit weicht die Hydration nicht ab,
-   * und beim nächsten Rendern (etwa nach einem Seitenwechsel) stimmt die
-   * Beschriftung von selbst.
-   */
-  const offenerTag = useSyncExternalStore(abonniereEntwurf, offenerEntwurfTag, keinEntwurf);
+  const { ziel, laeuft } = useStartZiel();
 
   if (pathname === "/login") return null;
-
-  const naechster = activePlan ? nextDayFor(activePlan, sessions[0]) : null;
-  // Ein offener Entwurf schlägt den Vorschlag: wer mitten in einer Einheit
-  // steht, will dorthin zurück und keine neue anfangen.
-  const zielTag = offenerTag ?? naechster?.id ?? null;
-  // Ohne Plan gibt es nichts zu starten — dann führt der Knopf dorthin, wo man
-  // einen anlegt, statt in eine Seite, die "Tag nicht gefunden" sagt.
-  const ziel = zielTag ? `/session?day=${encodeURIComponent(zielTag)}` : "/plaene";
-  const laeuft = offenerTag !== null;
 
   const links = [...NAV_LINKS];
   const mitte = Math.ceil(links.length / 2);

@@ -61,12 +61,6 @@ export async function enqueue(op: WriteOp): Promise<void> {
   await announce();
 }
 
-/** Wie viele Änderungen noch auf Netz warten. */
-export async function pendingCount(): Promise<number> {
-  const pending = await queueAll().catch(() => []);
-  return pending.length;
-}
-
 /**
  * Die wartenden Änderungen erneut auf den lokalen Bestand legen.
  *

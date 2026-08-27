@@ -1,4 +1,4 @@
-import { readAll, readOne } from "@/lib/local-db";
+import { readAll } from "@/lib/local-db";
 import { entryKey } from "@/lib/sync-payload";
 import { enqueue, flushQueue } from "@/lib/write-queue";
 import { ensureLocalData } from "@/lib/sync";
@@ -22,10 +22,6 @@ export type MetricEntry = { habit: string; date: string; value: number };
  * weiter, damit der Stand aktuell bleibt.
  */
 let cached: MetricEntry[] | null = null;
-
-export function getCachedMetrics(): MetricEntry[] | null {
-  return cached;
-}
 
 /**
  * Lässt Aufrufe mit demselben Schlüssel nacheinander statt gleichzeitig laufen.
@@ -92,10 +88,3 @@ export async function setMetric(params: {
   });
 }
 
-/** Der zuletzt vor oder an diesem Tag gemessene Wert. */
-export async function readMetricOn(
-  metric: Metric,
-  date: string
-): Promise<MetricEntry | null> {
-  return (await readOne<MetricEntry>("entries", entryKey(metric, date))) ?? null;
-}

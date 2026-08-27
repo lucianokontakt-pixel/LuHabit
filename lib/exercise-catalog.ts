@@ -126,26 +126,6 @@ export function mergeOne(record: ExerciseRecord): Exercise {
   };
 }
 
-/**
- * Nur die Zeilen, die überhaupt gespeichert werden müssen. Eine Katalogübung,
- * an der nichts verstellt ist, braucht keinen Datenbankeintrag.
- */
-export function isPlainCatalogEntry(row: ExerciseRecord): boolean {
-  const entry = BY_ID.get(row.id);
-  if (!entry || row.isCustom) return false;
-  const base = fromCatalog(entry);
-  return (
-    row.name === base.name &&
-    row.muscle === base.muscle &&
-    row.equipment === base.equipment &&
-    row.hidden === false &&
-    row.increment === null &&
-    row.warmup === null &&
-    row.bodyweightFactor === base.bodyweightFactor &&
-    row.loadFactor === base.loadFactor
-  );
-}
-
 const MEDIA_BASE = "/uebungen";
 
 /** Das animierte GIF einer Übung, oder null bei einer eigenen Übung. */

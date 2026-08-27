@@ -39,10 +39,6 @@ export function formatClock(totalSeconds: number): string {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-export function formatWeight(kg: number): string {
-  return `${NUMBER_FORMAT.format(kg)} kg`;
-}
-
 const WEEKDAYS = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 
 export function weekdayShort(iso: string): string {

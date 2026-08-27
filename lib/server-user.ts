@@ -140,14 +140,6 @@ export async function seedStarterPlan(userId: string): Promise<void> {
   );
 }
 
-export async function findUserById(id: string): Promise<DbUser | null> {
-  const rows = await d1Query<DbUser>(
-    `SELECT id, email, name, picture FROM users WHERE id = ?`,
-    [id]
-  );
-  return rows[0] ?? null;
-}
-
 /**
  * Löst ein Webhook-Secret (aus /einstellungen, users.webhook_secret) auf ein
  * Konto auf — für externe Quellen wie iOS Shortcuts, die keine Session haben.

@@ -8,24 +8,15 @@ import { UserMenu } from "@/components/user-menu";
 import { SyncStatus } from "@/components/sync-status";
 import { NAV_LINKS, isActiveLink } from "@/lib/nav-links";
 import { buttonVariants } from "@/components/ui/button";
-import { useTraining } from "@/lib/training-store";
-import { nextDayFor } from "@/lib/training";
-import { abonniereEntwurf, keinEntwurf, offenerEntwurfTag } from "@/lib/session-draft";
+import { useStartZiel } from "@/lib/use-start-ziel";
 import { Dumbbell, Play } from "lucide-react";
-import { useSyncExternalStore } from "react";
 
 export function Nav() {
   const pathname = usePathname();
-  const { activePlan, sessions } = useTraining();
-  const offenerTag = useSyncExternalStore(abonniereEntwurf, offenerEntwurfTag, keinEntwurf);
+  const { ziel, laeuft } = useStartZiel();
 
   // Auf der Login-Seite gibt es noch nichts zu navigieren.
   if (pathname === "/login") return null;
-
-  const naechster = activePlan ? nextDayFor(activePlan, sessions[0]) : null;
-  const zielTag = offenerTag ?? naechster?.id ?? null;
-  const ziel = zielTag ? `/session?day=${encodeURIComponent(zielTag)}` : "/plaene";
-  const laeuft = offenerTag !== null;
 
   return (
     // steep's nav is whisper-quiet: no border, no shadow, just the logo and links.
