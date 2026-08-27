@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { readBodyProfile } from "@/lib/local-db";
 
 export type Gender = "male" | "female";
 
@@ -55,15 +56,38 @@ export function useBodyProfile() {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/body-profile")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { profile: ProfileResponse } | null) => {
-        if (!active) return;
-        setProfile(fromResponse(data?.profile ?? null));
-      })
-      .finally(() => {
-        if (active) setHydrated(true);
-      });
+
+    /**
+     * Erst das Netz, dann der lokale Bestand.
+     *
+     * Der Abgleich legt das Profil längst in IndexedDB ab — ohne diesen
+     * Rückgriff blieben BMI und Kalorienbedarf offline auf „—" stehen, obwohl
+     * die Werte auf dem Gerät liegen.
+     */
+    async function load(): Promise<BodyProfile> {
+      try {
+        const res = await fetch("/api/body-profile");
+        if (res.ok) {
+          const data = (await res.json()) as { profile: ProfileResponse };
+          return fromResponse(data?.profile ?? null);
+        }
+      } catch {
+        // Kein Netz — unten weiter.
+      }
+      try {
+        const local = await readBodyProfile<ProfileResponse>();
+        if (local) return fromResponse(local);
+      } catch {
+        // Kein lokaler Bestand — dann eben die Standardwerte.
+      }
+      return DEFAULT_PROFILE;
+    }
+
+    load().then((next) => {
+      if (!active) return;
+      setProfile(next);
+      setHydrated(true);
+    });
     return () => {
       active = false;
     };

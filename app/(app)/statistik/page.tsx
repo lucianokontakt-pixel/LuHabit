@@ -10,14 +10,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatValue } from "@/components/stat-value";
 import { SectionTabs } from "@/components/section-tabs";
 import { STATISTIK_TABS } from "@/lib/nav-links";
-import { MuscleGrid } from "@/components/training/muscle-grid";
 import { TrainingCalendar } from "@/components/training/training-calendar";
 import { TrainingHeatmap } from "@/components/training/training-heatmap";
-import { MuscleMap } from "@/components/training/muscle-map";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
 import { measuredOn, sessionVolume, workingSets } from "@/lib/training";
-import { muscleProgress, weekStartISO } from "@/lib/muscle-stats";
+import { weekStartISO } from "@/lib/muscle-stats";
 import { summarizeSession } from "@/lib/session-stats";
 import { formatCompact, formatDateLong, formatNumber } from "@/lib/format";
 import { isoDateDaysAgo } from "@/lib/datum";
@@ -103,12 +101,6 @@ export default function TrainingStatsPage() {
     const hit = [...perWeek.values()].filter((days) => days.size >= weeklyTarget).length;
     return { hit, weeks: Math.round(weeksInRange) };
   }, [inRange, weeklyTarget, weeksInRange]);
-
-  const progress = useMemo(
-    () =>
-      muscleProgress(sessions, exerciseById, config.days === 7 ? 8 : 12, new Date(), weights),
-    [sessions, exerciseById, config.days, weights]
-  );
 
   async function handleDelete(id: string) {
     setDeleting(id);
@@ -230,14 +222,6 @@ export default function TrainingStatsPage() {
             Körper (Klimmzüge, Dips, Liegestütze) gehen mit dem Anteil deines Körpergewichts ins
             Volumen ein, den sie tatsächlich bewegen.
           </p>
-
-          <MuscleGrid progress={progress} />
-
-          <MuscleMap
-            sessions={inRange}
-            exerciseById={exerciseById}
-            caption={config.caption}
-          />
 
           <TrainingHeatmap sessions={sessions} />
 
