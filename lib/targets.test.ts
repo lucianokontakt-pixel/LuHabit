@@ -9,6 +9,7 @@ import {
   effectiveLoad,
   measuredOn,
   bestEffortLabel,
+  bestOneRepMax,
   formatLoggedSets,
   setLabels,
   sessionVolume,
@@ -738,6 +739,44 @@ describe("setLabels", () => {
       "W",
       "2",
     ]);
+  });
+});
+
+describe("bestOneRepMax", () => {
+  it("nimmt die höchste Schätzung, nicht das höchste Gewicht", () => {
+    const best = bestOneRepMax([
+      { date: "2026-08-01", sets: sets(1, 100, 1) },
+      { date: "2026-08-08", sets: sets(1, 90, 6) },
+    ]);
+    // 90 × (1 + 6/30) = 108 schlägt die 100 aus dem Einzelsatz.
+    expect(best).toEqual({ est: 108, weight: 90, reps: 6, date: "2026-08-08" });
+  });
+
+  it("ignoriert Sätze über der Wiederholungsgrenze", () => {
+    const best = bestOneRepMax([
+      { date: "2026-08-01", sets: sets(1, 60, 8) },
+      { date: "2026-08-08", sets: sets(1, 60, 20) },
+    ]);
+    expect(best?.reps).toBe(8);
+  });
+
+  it("lässt Aufwärmsätze und offene Sätze außen vor", () => {
+    const best = bestOneRepMax([
+      {
+        date: "2026-08-01",
+        sets: [
+          set({ setIndex: 0, weight: 200, reps: 5, warmup: true }),
+          set({ setIndex: 1, weight: 180, reps: 5, done: false }),
+          set({ setIndex: 2, weight: 60, reps: 8 }),
+        ],
+      },
+    ]);
+    expect(best?.weight).toBe(60);
+  });
+
+  it("sagt nichts ohne brauchbaren Satz", () => {
+    expect(bestOneRepMax([])).toBe(null);
+    expect(bestOneRepMax([{ date: "2026-08-01", sets: sets(3, 0, 12) }])).toBe(null);
   });
 });
 

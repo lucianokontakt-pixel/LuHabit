@@ -7,6 +7,9 @@ import { subscribeQueue } from "@/lib/write-queue";
 import { workingSets } from "@/lib/training";
 import type { Exercise, WorkoutPlan, WorkoutSession, WorkoutSet } from "@/lib/training";
 
+/** Eine Einheit aus Sicht einer einzelnen Übung. */
+export type LoggedSession = { date: string; sets: WorkoutSet[] };
+
 type TrainingContextValue = {
   exercises: Exercise[];
   exerciseById: Record<string, Exercise>;
@@ -23,6 +26,8 @@ type TrainingContextValue = {
   replaceSession: (session: WorkoutSession) => void;
   removeSession: (id: string) => Promise<void>;
   upsertExercise: (exercise: Exercise) => void;
+  /** Jede Einheit mit dieser Übung — jüngste zuerst, mit Datum und allen Sätzen. */
+  loggedFor: (exerciseId: string) => LoggedSession[];
   /** Die jüngste Einheit mit dieser Übung — Datum und Arbeitssätze. */
   lastLoggedFor: (exerciseId: string) => { date: string; sets: WorkoutSet[] } | null;
   /** Alle Einheiten mit dieser Übung, älteste zuerst — Basis der Progression. */
@@ -96,7 +101,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
 
   const addSession = useCallback((session: WorkoutSession) => {
     // Einsortieren statt vorne anhängen: eine nachgetragene Einheit ist nicht
-    // die neueste. lastSetsFor und damit die ganze Progression verlassen sich
+    // die neueste. loggedFor und damit die ganze Progression verlassen sich
     // darauf, dass die Liste absteigend nach Datum steht — genau wie das ORDER
     // BY der API. sort ist stabil, gleichdatierte Einheiten bleiben also in der
     // Reihenfolge, in der sie hinzukamen.
@@ -106,7 +111,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
   /**
    * Eine bearbeitete Einheit an ihren Platz setzen. Das Datum kann sich beim
    * Bearbeiten geändert haben, deshalb wird danach wie in addSession sortiert —
-   * lastSetsFor und die ganze Progression verlassen sich auf absteigende Daten.
+   * loggedFor und die ganze Progression verlassen sich auf absteigende Daten.
    */
   const replaceSession = useCallback((session: WorkoutSession) => {
     setSessions((prev) =>
@@ -128,36 +133,43 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const lastLoggedFor = useCallback(
-    (exerciseId: string) => {
-      // sessions ist absteigend nach Datum sortiert — die erste Einheit mit
-      // dieser Übung ist die jüngste. Aufwärmsätze bleiben außen vor: die
-      // Rampe ist keine Leistung, gegen die man antritt.
-      for (const session of sessions) {
-        const sets = workingSets(session.sets).filter((s) => s.exerciseId === exerciseId);
-        if (sets.length > 0) return { date: session.date, sets };
-      }
-      return null;
-    },
+  /**
+   * Der Verlauf einer Übung an einer Stelle: jede Einheit, in der sie
+   * tatsächlich protokolliert wurde, jüngste zuerst, mit Datum und allen
+   * Sätzen — Aufwärmzeilen und offene Sätze inklusive, denn wer davon was
+   * braucht, entscheidet der Aufrufer. sessions ist absteigend nach Datum
+   * sortiert, also ist die erste Einheit die jüngste.
+   */
+  const loggedFor = useCallback(
+    (exerciseId: string): LoggedSession[] =>
+      sessions
+        .map((session) => ({
+          date: session.date,
+          sets: session.sets.filter((s) => s.exerciseId === exerciseId),
+        }))
+        .filter((entry) => entry.sets.some((s) => s.done && !s.warmup)),
     [sessions]
   );
 
+  const lastLoggedFor = useCallback(
+    (exerciseId: string) => {
+      const latest = loggedFor(exerciseId)[0];
+      // Aufwärmsätze bleiben außen vor: die Rampe ist keine Leistung, gegen
+      // die man antritt.
+      return latest ? { date: latest.date, sets: workingSets(latest.sets) } : null;
+    },
+    [loggedFor]
+  );
+
   /**
-   * Jede Einheit, in der die Übung vorkam — älteste zuerst, je Eintrag die
-   * Sätze dieser einen Einheit. Die Progression leitet ihren Vorschlag jedes
-   * Mal daraus ab, statt auf einen mitgeführten Zähler zu bauen: so genügt
-   * eine Korrektur an einem alten Satz, damit die nächste Vorgabe stimmt.
+   * Nur die Sätze, älteste Einheit zuerst. Die Progression leitet ihren
+   * Vorschlag jedes Mal daraus ab, statt auf einen mitgeführten Zähler zu
+   * bauen: so genügt eine Korrektur an einem alten Satz, damit die nächste
+   * Vorgabe stimmt.
    */
   const historyFor = useCallback(
-    (exerciseId: string) => {
-      const out: WorkoutSet[][] = [];
-      for (const session of sessions) {
-        const sets = session.sets.filter((s) => s.exerciseId === exerciseId);
-        if (sets.some((s) => s.done && !s.warmup)) out.push(sets);
-      }
-      return out.reverse();
-    },
-    [sessions]
+    (exerciseId: string) => loggedFor(exerciseId).map((entry) => entry.sets).reverse(),
+    [loggedFor]
   );
 
   const value: TrainingContextValue = {
@@ -175,6 +187,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     replaceSession,
     removeSession,
     upsertExercise,
+    loggedFor,
     lastLoggedFor,
     historyFor,
   };

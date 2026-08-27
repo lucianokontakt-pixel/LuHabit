@@ -149,7 +149,7 @@ describe("readSyncPayload — Einheiten als Dokument", () => {
 
 describe("readSyncPayload — Sortierschlüssel bilden die Reihenfolge des Servers nach", () => {
   it("trennt zwei Einheiten am selben Tag nach ihrer Startzeit", () => {
-    // Genau hier hängt die Progression dran: lastSetsFor nimmt die erste
+    // Genau hier hängt die Progression dran: loggedFor nimmt die erste
     // Einheit mit dieser Übung, absteigend sortiert. Ohne die Startzeit wäre
     // bei gleichem Datum offen, welche das ist.
     const snap = readSyncPayload(

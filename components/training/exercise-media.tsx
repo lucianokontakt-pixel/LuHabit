@@ -10,8 +10,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { OneRepMaxCalculator } from "@/components/training/one-rep-max";
 import { gifUrl, imageUrl, loadInstructions } from "@/lib/exercise-catalog";
-import { EQUIPMENT_LABELS, MUSCLE_LABELS, type Exercise } from "@/lib/training";
+import { useTraining } from "@/lib/training-store";
+import {
+  EQUIPMENT_LABELS,
+  MUSCLE_LABELS,
+  bestEffortLabel,
+  bestOneRepMax,
+  formatLoggedSets,
+  workingSets,
+  type Exercise,
+} from "@/lib/training";
+import { formatDayLabel } from "@/lib/format";
+import { todayISO } from "@/lib/habits";
 import { cn } from "@/lib/utils";
 
 /**
@@ -181,9 +193,13 @@ export function ExerciseMedia({
 }
 
 /**
- * Die Übung in groß: die Animation zeigt die Bewegung, darunter steht die
- * Anleitung. Sie kommt aus einer eigenen Datei und wird erst hier geladen —
- * 600 KB Text gehören nicht in jeden Seitenaufruf.
+ * Die Übung in groß: die Animation zeigt die Bewegung, darunter stehen deine
+ * Zahlen, der Maximum-Rechner und die Anleitung.
+ *
+ * Die Zahlen kommen vor die Anleitung: wie eine Übung geht, schlägt man einmal
+ * nach — wo man bei ihr steht, immer wieder. Die Anleitung selbst liegt in
+ * einer eigenen Datei und wird erst hier geladen, 600 KB Text gehören nicht in
+ * jeden Seitenaufruf.
  */
 export function ExerciseDetail({
   exercise,
@@ -208,8 +224,21 @@ export function ExerciseDetail({
     };
   }, [exercise]);
 
+  const { loggedFor } = useTraining();
+  const today = todayISO();
+
   const steps = exercise && loaded?.id === exercise.id ? loaded.steps : [];
   const gif = exercise ? gifUrl(exercise) : null;
+
+  const history = exercise ? loggedFor(exercise.id) : [];
+  const best = bestOneRepMax(history);
+  const bestLabel = bestEffortLabel(history.map((h) => h.sets));
+  const last = history[0];
+  const lastSets = last ? workingSets(last.sets) : [];
+  // Der Rechner startet bei dem Satz, der die beste Schätzung hergibt; sonst
+  // beim letzten protokollierten, sonst bei etwas, das man drehen kann.
+  const startWeight = best?.weight ?? lastSets[0]?.weight ?? 20;
+  const startReps = best?.reps ?? lastSets[0]?.reps ?? 5;
 
   return (
     <Dialog open={exercise !== null} onOpenChange={onOpenChange}>
@@ -225,30 +254,60 @@ export function ExerciseDetail({
               </DialogDescription>
             </DialogHeader>
 
-            {gif && (
-              <div className="relative aspect-square w-full overflow-hidden rounded-card bg-muted">
-                <Image
-                  src={gif}
-                  alt={`Bewegungsablauf: ${exercise.name}`}
-                  fill
-                  sizes="(max-width: 640px) 100vw, 480px"
-                  className="object-contain"
-                  unoptimized
-                />
-              </div>
-            )}
+            {/* Der Dialog selbst ist ein Grid mit begrenzter Höhe. Darin
+                schrumpft die Medienbox mit, sobald der Inhalt darunter wächst —
+                sie hat nur ein Seitenverhältnis und keine eigene Höhe, an der
+                sich das Grid festhalten könnte, und lief dann über die Zahlen.
+                Eine Flex-Spalte mit shrink-0 an der Box hält alles gestapelt. */}
+            <div className="flex min-w-0 flex-col gap-4">
+              {gif && (
+                <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-card bg-muted">
+                  <Image
+                    src={gif}
+                    alt={`Bewegungsablauf: ${exercise.name}`}
+                    fill
+                    sizes="(max-width: 640px) 100vw, 480px"
+                    className="object-contain"
+                    unoptimized
+                  />
+                </div>
+              )}
 
-            {steps.length > 0 && (
-              <ol className="flex list-decimal flex-col gap-2 pl-5 text-sm text-muted-foreground">
-                {steps.map((step, i) => (
-                  <li key={i}>{step}</li>
-                ))}
-              </ol>
-            )}
+              {(bestLabel || last) && (
+                <div className="flex flex-col gap-1 text-sm">
+                  {bestLabel && (
+                    <p className="text-muted-foreground">
+                      Bestwert <span className="nums text-foreground">{bestLabel}</span>
+                    </p>
+                  )}
+                  {last && (
+                    <p className="text-muted-foreground">
+                      Letztes Mal ({formatDayLabel(last.date, today)}):{" "}
+                      <span className="nums text-foreground">{formatLoggedSets(lastSets)}</span>
+                    </p>
+                  )}
+                </div>
+              )}
 
-            {exercise.en && exercise.en !== exercise.name && (
-              <p className="text-xs text-muted-foreground">Original: {exercise.en}</p>
-            )}
+              <OneRepMaxCalculator
+                key={exercise.id}
+                startWeight={startWeight}
+                startReps={startReps}
+                best={best}
+              />
+
+              {steps.length > 0 && (
+                <ol className="flex list-decimal flex-col gap-2 pl-5 text-sm text-muted-foreground">
+                  {steps.map((step, i) => (
+                    <li key={i}>{step}</li>
+                  ))}
+                </ol>
+              )}
+
+              {exercise.en && exercise.en !== exercise.name && (
+                <p className="text-xs text-muted-foreground">Original: {exercise.en}</p>
+              )}
+            </div>
           </>
         )}
       </DialogContent>

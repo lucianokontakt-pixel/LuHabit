@@ -12,7 +12,12 @@ export type SessionSet = {
   warmup: boolean;
 };
 
-function Stepper({
+/**
+ * Plus/Minus um eine Zahl. Liegt hier, weil die Satzzeile der Hauptnutzer ist —
+ * geteilt mit dem Rechner im Übungsblatt, damit ein Schrittfeld überall gleich
+ * aussieht und sich gleich anfühlt.
+ */
+export function Stepper({
   label,
   value,
   suffix,
