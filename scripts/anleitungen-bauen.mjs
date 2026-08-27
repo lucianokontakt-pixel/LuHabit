@@ -14,7 +14,7 @@
  * Übungen bleiben deshalb vorerst ganz englisch.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 
 const ENGLISCH = "public/uebungen/anleitungen.json";
 const WOERTERBUCH = "scripts/anleitungen-woerterbuch.json";
@@ -62,10 +62,14 @@ console.log(`${vollstaendig} von ${gesamtUebungen} Übungen vollständig auf Deu
 console.log(`${fehlendeSaetze.size} verschiedene Sätze fehlen noch im Wörterbuch`);
 console.log(`→ ${ZIEL} (${(JSON.stringify(deutsch).length / 1024).toFixed(0)} KB)`);
 
+const FEHLEND = "scripts/anleitungen-fehlend.json";
+
 if (fehlendeSaetze.size > 0) {
-  writeFileSync(
-    "scripts/anleitungen-fehlend.json",
-    JSON.stringify([...fehlendeSaetze], null, 2) + "\n"
-  );
-  console.log("   Was noch fehlt: scripts/anleitungen-fehlend.json");
+  writeFileSync(FEHLEND, JSON.stringify([...fehlendeSaetze], null, 2) + "\n");
+  console.log(`   Was noch fehlt: ${FEHLEND}`);
+} else if (existsSync(FEHLEND)) {
+  // Sonst bliebe die Liste des vorletzten Durchgangs liegen und behauptete
+  // weiter, es fehle etwas — wer sie später öffnet, glaubt das.
+  rmSync(FEHLEND);
+  console.log(`   Nichts offen — ${FEHLEND} entfernt.`);
 }
