@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { SectionTabs } from "@/components/section-tabs";
 import { WeekCard } from "@/components/training/week-card";
+import { WelcomeCard } from "@/components/training/welcome-card";
 import { TRAINING_TABS } from "@/lib/nav-links";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
@@ -52,6 +53,11 @@ export default function TrainingOverviewPage() {
 
       {loading ? (
         <div className="h-44 animate-pulse rounded-card bg-card" />
+      ) : nextDay && activePlan && sessions.length === 0 ? (
+        // Noch nie trainiert: der Plan kommt aus dem Startpaket, nicht aus
+        // eigener Wahl — das sagt die Willkommenskarte und bietet den Wechsel
+        // gleich an. Nach der ersten Einheit übernimmt die normale Karte.
+        <WelcomeCard plan={activePlan} day={nextDay} />
       ) : nextDay && activePlan ? (
         <Card variant="blush" className="gap-5">
           <div className="flex flex-col gap-1 px-(--card-spacing)">
