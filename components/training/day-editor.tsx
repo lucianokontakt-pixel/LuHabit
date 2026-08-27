@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NumberField } from "@/components/training/number-field";
 import { ExercisePicker } from "@/components/training/exercise-picker";
+import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
 import { useDragSort } from "@/lib/use-drag-sort";
 import { useTraining } from "@/lib/training-store";
 import {
   EQUIPMENT_LABELS,
-  MUSCLE_LABELS,
   WEEKDAY_NAMES,
   defaultIncrement,
   type Exercise,
@@ -48,6 +48,10 @@ export function DayEditor({
   const { exerciseById } = useTraining();
   const [picking, setPicking] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  // Beim Zusammenstellen eines Plans steht man oft vor einem Namen, den man aus
+  // der Bibliothek übernommen, aber nie ausgeführt hat. Das Vorschaubild zeigt,
+  // welche Übung gemeint ist, das Antippen die Animation und die Anleitung.
+  const [detail, setDetail] = useState<Exercise | null>(null);
 
   const order = day.exercises.map((e) => e.key);
 
@@ -174,19 +178,45 @@ export function DayEditor({
                   <GripVertical className="size-4" />
                 </span>
 
+                {/* Eigener Knopf statt Teil der Zeile: die Zeile klappt die
+                    Vorgaben auf, das Bild zeigt die Übung. Zwei verschiedene
+                    Absichten, also zwei Ziele. */}
+                <button
+                  type="button"
+                  onClick={() => exercise && setDetail(exercise)}
+                  disabled={!exercise}
+                  aria-label={`${exercise?.name ?? "Übung"} ansehen`}
+                  className="shrink-0 rounded-md transition-opacity hover:opacity-80 disabled:opacity-100"
+                >
+                  <ExerciseThumb
+                    exercise={exercise ?? { id: entry.exerciseId, name: "", media: null }}
+                    className="size-10"
+                  />
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setExpanded(isOpen ? null : key)}
                   className="flex min-w-0 flex-1 items-center gap-2 text-left"
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium">
+                    {/* Umbrechen statt abschneiden: "Schulterdrücken (sitzend,
+                        Kurzhantel)" braucht 253 px, die Spalte hat auf einem
+                        375er-Handy 151. Abgeschnitten fehlt genau der Teil, der
+                        die Übung von ihren Geschwistern unterscheidet — das
+                        Gerät steht am Ende des Namens. */}
+                    <span className="line-clamp-2 text-sm font-medium">
                       {exercise?.name ?? entry.exerciseId}
                     </span>
+                    {/* Nur Sätze und Pause stehen immer da. Sprung und
+                        Startgewicht erscheinen erst, wenn sie vom Standard
+                        abweichen — sonst schöbe eine Zeile aus lauter
+                        Selbstverständlichkeiten das Wesentliche aus dem Bild.
+                        Die Muskelgruppe sagt jetzt das Vorschaubild. */}
                     <span className="block truncate text-xs text-muted-foreground">
-                      {entry.sets} × {entry.repMin}–{entry.repMax} · {entry.restSeconds}s Pause ·
-                      +{increment} kg
-                      {exercise ? ` · ${MUSCLE_LABELS[exercise.muscle]}` : ""}
+                      {entry.sets} × {entry.repMin}–{entry.repMax} · {entry.restSeconds}s Pause
+                      {entry.increment !== null ? ` · +${entry.increment} kg` : ""}
+                      {entry.startWeight !== null ? ` · ab ${entry.startWeight} kg` : ""}
                     </span>
                   </span>
                   <ChevronDown
@@ -303,6 +333,8 @@ export function DayEditor({
         onPick={addExercise}
         excludeIds={day.exercises.map((e) => e.exerciseId)}
       />
+
+      <ExerciseDetail exercise={detail} onOpenChange={(open) => !open && setDetail(null)} />
     </Card>
   );
 }
