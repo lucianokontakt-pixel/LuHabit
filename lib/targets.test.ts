@@ -8,6 +8,7 @@ import {
   expandTargets,
   effectiveLoad,
   measuredOn,
+  formatLoggedSets,
   setLabels,
   sessionVolume,
   workingSets,
@@ -736,6 +737,35 @@ describe("setLabels", () => {
       "W",
       "2",
     ]);
+  });
+});
+
+describe("formatLoggedSets", () => {
+  it("schreibt jeden Satz einzeln hin", () => {
+    expect(
+      formatLoggedSets([
+        { weight: 57.5, reps: 10 },
+        { weight: 57.5, reps: 9 },
+        { weight: 57.5, reps: 10 },
+      ])
+    ).toBe("57,5×10 · 57,5×9 · 57,5×10");
+  });
+
+  it("lässt bei Eigengewicht das Gewicht weg statt 0 zu schreiben", () => {
+    expect(
+      formatLoggedSets([
+        { weight: 0, reps: 12 },
+        { weight: 0, reps: 10 },
+      ])
+    ).toBe("12 · 10");
+  });
+
+  it("zeigt Zusatzgewicht auch bei Eigengewichtsübungen", () => {
+    expect(formatLoggedSets([{ weight: 10, reps: 8 }])).toBe("10×8");
+  });
+
+  it("bleibt bei einer leeren Liste leer", () => {
+    expect(formatLoggedSets([])).toBe("");
   });
 });
 

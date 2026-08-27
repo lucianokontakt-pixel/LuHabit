@@ -44,6 +44,7 @@ import {
   expandTargets,
   incrementFor,
   measuredOn,
+  formatLoggedSets,
   setLabels,
   sessionVolume,
   suggestAdjustment,
@@ -103,8 +104,16 @@ export function SessionClient() {
   const earliestSessionDate = isoDateDaysAgo(30);
   const isSessionToday = sessionDate === today;
 
-  const { plans, exerciseById, sessions, pendingIds, historyFor, addSession, loading } =
-    useTraining();
+  const {
+    plans,
+    exerciseById,
+    sessions,
+    pendingIds,
+    historyFor,
+    lastLoggedFor,
+    addSession,
+    loading,
+  } = useTraining();
   const { entries: weightEntries, loading: weightLoading } = useMetricData("weight");
   const bodyweight = weightEntries[weightEntries.length - 1]?.value ?? null;
 
@@ -686,9 +695,14 @@ export function SessionClient() {
         </div>
       </div>
 
+      {/* Der ganze Trainingstag, nicht die einzelne Übung — die hat ihre eigene
+          Zeile weiter unten. Deshalb steht hier der Tag und nicht „Letztes Mal",
+          sonst behaupten zwei Zeilen dasselbe und meinen Verschiedenes. */}
       {previousSession && (
         <p className="text-xs text-muted-foreground">
-          Letztes Mal: {previousSession.date} ·{" "}
+          {/* „zuletzt: Gestern" statt „zuletzt am Gestern" — die Beschriftung
+              ist mal ein Datum und mal ein Wort, ein Doppelpunkt trägt beides. */}
+          Dieser Trainingstag zuletzt: {formatDayLabel(previousSession.date, today)} ·{" "}
           {formatNumber(
             Math.round(
               sessionVolume(
@@ -723,6 +737,10 @@ export function SessionClient() {
           // Sobald ein Satz steht, reden die Hinweise aus der letzten Einheit
           // an der Gegenwart vorbei — dann zählt nur noch, was gerade war.
           const started = doneCount > 0;
+          // Das Ergebnis vom letzten Mal bleibt dagegen stehen: es ist die
+          // Marke, gegen die jeder einzelne Satz antritt, und wird nicht
+          // falsch, nur weil einer davon schon steht.
+          const lastLogged = lastLoggedFor(pe.exerciseId);
 
           return (
             <Card
@@ -776,6 +794,15 @@ export function SessionClient() {
                       exercise={exercise}
                       onOpenDetail={() => setDetail(exercise)}
                     />
+                  )}
+
+                  {lastLogged && (
+                    <p className="mx-(--card-spacing) text-xs text-muted-foreground">
+                      Letztes Mal ({formatDayLabel(lastLogged.date, today)}):{" "}
+                      <span className="nums text-foreground">
+                        {formatLoggedSets(lastLogged.sets)}
+                      </span>
+                    </p>
                   )}
 
                   {suggestionOpen && (

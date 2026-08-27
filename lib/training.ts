@@ -548,6 +548,20 @@ export function setLabels(sets: { warmup: boolean }[]): string[] {
 }
 
 /**
+ * Was eine Übung in einer Einheit ergeben hat, als eine Zeile:
+ * „57,5×10 · 57,5×9 · 57,5×10".
+ *
+ * Ohne Gewicht steht nur die Wiederholungszahl. „0×10" würde einen Satz ohne
+ * Last behaupten und sagt nichts — bei Eigengewicht ist die Wiederholung die
+ * ganze Leistung.
+ */
+export function formatLoggedSets(sets: { weight: number; reps: number }[]): string {
+  return sets
+    .map((s) => (s.weight > 0 ? `${formatNumber(s.weight)}×${s.reps}` : String(s.reps)))
+    .join(" · ");
+}
+
+/**
  * Zielwerte auf die geplante Satzzahl ausrollen.
  *
  * Existiert, damit die Live-Session die Liste aus computeTargets vollständig

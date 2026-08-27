@@ -23,8 +23,8 @@ type TrainingContextValue = {
   replaceSession: (session: WorkoutSession) => void;
   removeSession: (id: string) => Promise<void>;
   upsertExercise: (exercise: Exercise) => void;
-  /** Zuletzt protokollierte Sätze einer Übung. */
-  lastSetsFor: (exerciseId: string) => WorkoutSet[];
+  /** Die jüngste Einheit mit dieser Übung — Datum und Arbeitssätze. */
+  lastLoggedFor: (exerciseId: string) => { date: string; sets: WorkoutSet[] } | null;
   /** Alle Einheiten mit dieser Übung, älteste zuerst — Basis der Progression. */
   historyFor: (exerciseId: string) => WorkoutSet[][];
 };
@@ -128,15 +128,16 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const lastSetsFor = useCallback(
+  const lastLoggedFor = useCallback(
     (exerciseId: string) => {
       // sessions ist absteigend nach Datum sortiert — die erste Einheit mit
-      // dieser Übung ist die jüngste.
+      // dieser Übung ist die jüngste. Aufwärmsätze bleiben außen vor: die
+      // Rampe ist keine Leistung, gegen die man antritt.
       for (const session of sessions) {
         const sets = workingSets(session.sets).filter((s) => s.exerciseId === exerciseId);
-        if (sets.length > 0) return sets;
+        if (sets.length > 0) return { date: session.date, sets };
       }
-      return [];
+      return null;
     },
     [sessions]
   );
@@ -174,7 +175,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     replaceSession,
     removeSession,
     upsertExercise,
-    lastSetsFor,
+    lastLoggedFor,
     historyFor,
   };
 
