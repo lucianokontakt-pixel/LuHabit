@@ -10,7 +10,7 @@
  * fliegen alle Caches mit anderem Namen raus.
  */
 
-const VERSION = "v7";
+const VERSION = "v8";
 const STATIC_CACHE = `luhabit-static-${VERSION}`;
 const PAGE_CACHE = `luhabit-pages-${VERSION}`;
 const KEEP = [STATIC_CACHE, PAGE_CACHE];
@@ -118,11 +118,18 @@ self.addEventListener("message", (event) => {
   }
 });
 
-/** Gehashte Build-Dateien ändern sich nie unter derselben Adresse. */
+/**
+ * Dateien, die sich unter derselben Adresse nie ändern.
+ *
+ * Die Übungs-GIFs gehören dazu: sie liegen unter /uebungen/gif/<id>.gif und
+ * werden nie überschrieben. Ohne .gif in dieser Liste liefen sie über
+ * networkFirst — jede Anzeige hätte einen Netzweg gekostet (95 KB im
+ * Gym-WLAN), und sie hätten den Seiten-Cache gefüllt statt den für Bilder.
+ */
 function isImmutable(url) {
   return (
     url.pathname.startsWith("/_next/static/") ||
-    /\.(?:woff2?|png|jpe?g|svg|ico)$/.test(url.pathname)
+    /\.(?:woff2?|png|jpe?g|gif|svg|ico)$/.test(url.pathname)
   );
 }
 

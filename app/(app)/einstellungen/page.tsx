@@ -1,11 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "next-themes";
-import { Moon, Sun, Laptop, User, Copy, RefreshCw, Download, RotateCcw } from "lucide-react";
+import {
+  Bell,
+  Copy,
+  Download,
+  ImageDown,
+  Laptop,
+  LogOut,
+  Moon,
+  RefreshCw,
+  RotateCcw,
+  Smartphone,
+  Sun,
+  Trash2,
+  User,
+  Webhook,
+} from "lucide-react";
 import { toast } from "sonner";
-import { Card } from "@/components/ui/card";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Section } from "@/components/ui/section";
+import { Row } from "@/components/ui/row";
+import { Segmented } from "@/components/ui/segmented";
+import { Switch } from "@/components/ui/switch";
+import { buttonVariants } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,13 +34,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { cn } from "@/lib/utils";
+import { useTraining } from "@/lib/training-store";
+import { useSignalSound } from "@/lib/use-signal-sound";
+import { raeumeAbmeldungAuf } from "@/lib/abmelden";
+import { ladeMedienVor, type VorladeFortschritt } from "@/lib/medien-vorladen";
 
 type Me = { email: string; name: string | null; picture: string | null };
 
-function webhookUrl(habit: string, secret: string): string {
+function webhookUrl(metric: string, secret: string): string {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return `${origin}/api/entries/webhook?habit=${habit}&secret=${secret}`;
+  return `${origin}/api/entries/webhook?habit=${metric}&secret=${secret}`;
 }
 
 function copy(text: string) {
@@ -47,7 +68,7 @@ const RESETS = [
   {
     scope: "setup",
     label: "Einrichtung zurücksetzen",
-    hint: "Komplette Übungsbibliothek und der Push/Pull/Legs-Plan — so wie bei einem frisch angelegten Konto.",
+    hint: "Übungsbibliothek und Push/Pull/Legs wie bei einem frischen Konto. Körperwerte und Einheiten bleiben.",
     title: "Einrichtung auf Werkszustand zurücksetzen?",
     description:
       "Deine Übungen, Trainingspläne und dein Körperprofil gehen auf den Ausgangszustand zurück. Eigene Pläne und Übungen verschwinden dabei — außer eigenen Übungen, zu denen es protokollierte Sätze gibt, sonst stünden in alten Einheiten nur noch nackte IDs. Körperwerte und Trainingseinheiten bleiben vollständig erhalten.",
@@ -57,7 +78,7 @@ const RESETS = [
   {
     scope: "body-values",
     label: "Alle Körperwerte löschen",
-    hint: "Jede eingetragene Messung von Gewicht und Körperfett.",
+    hint: "Jede Messung von Gewicht und Körperfett.",
     title: "Alle Körperwerte löschen?",
     description:
       "Gewichts- und Körperfettverlauf sind danach leer, BMI und Kalorienrechner rechnen mit nichts mehr, und die Gewichtsvorschläge für Eigengewichtsübungen fallen auf null. Deine Einstellungen und Trainingseinheiten bleiben. Das lässt sich nicht rückgängig machen; exportiere vorher, wenn du sie behalten willst.",
@@ -87,6 +108,20 @@ export default function EinstellungenPage() {
   const [generating, setGenerating] = useState(false);
   const [pendingReset, setPendingReset] = useState<ResetScope | null>(null);
   const [resetting, setResetting] = useState(false);
+  const [preload, setPreload] = useState<VorladeFortschritt | null>(null);
+  const logoutForm = useRef<HTMLFormElement>(null);
+
+  const { enabled: soundOn, toggle: toggleSound } = useSignalSound();
+  const { activePlan, exerciseById } = useTraining();
+
+  /** Die Übungen des aktiven Plans, jede nur einmal. */
+  const planExercises = useMemo(() => {
+    if (!activePlan) return [];
+    const ids = new Set(
+      activePlan.days.flatMap((day) => day.exercises.map((pe) => pe.exerciseId))
+    );
+    return [...ids].map((id) => exerciseById[id]).filter((e) => e !== undefined);
+  }, [activePlan, exerciseById]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Standardmuster für next-themes Hydration-Fix
@@ -100,6 +135,7 @@ export default function EinstellungenPage() {
     fetch("/api/webhook-secret")
       .then((res) => (res.ok ? res.json() : null))
       .then((data: { secret: string | null } | null) => setSecret(data?.secret ?? null))
+      .catch(() => {})
       .finally(() => setSecretLoading(false));
   }, []);
 
@@ -118,6 +154,14 @@ export default function EinstellungenPage() {
     }
   }
 
+  async function runPreload() {
+    setPreload({ fertig: 0, gesamt: planExercises.length * 2 + 1 });
+    const { geladen, fehler } = await ladeMedienVor(planExercises, setPreload);
+    setPreload(null);
+    if (fehler > 0) toast.error(`${geladen} Dateien geladen, ${fehler} nicht erreichbar`);
+    else toast.success(`${geladen} Dateien liegen jetzt auf dem Gerät`);
+  }
+
   async function runReset(scope: ResetScope) {
     const config = RESETS.find((r) => r.scope === scope)!;
     setResetting(true);
@@ -129,8 +173,8 @@ export default function EinstellungenPage() {
       });
       if (!res.ok) throw new Error();
       toast.success(config.success);
-      // Vieles hängt an geladenen Client-Zuständen (Habits, Pläne, Einträge) —
-      // ein voller Reload ist hier ehrlicher als ein halb aktualisierter Baum.
+      // Vieles hängt an geladenen Client-Zuständen — ein voller Reload ist
+      // hier ehrlicher als ein halb aktualisierter Baum.
       window.location.reload();
     } catch {
       toast.error("Zurücksetzen fehlgeschlagen");
@@ -138,10 +182,21 @@ export default function EinstellungenPage() {
     }
   }
 
+  /**
+   * Abmelden über ein echtes Formular, nicht per fetch: die Route antwortet mit
+   * einer Weiterleitung und einem gelöschten Cookie, und ein voller Seitenwechsel
+   * ist hier genau richtig — danach darf kein Client-Zustand des alten Kontos
+   * mehr im Speicher liegen.
+   */
+  async function logout() {
+    await raeumeAbmeldungAuf();
+    logoutForm.current?.submit();
+  }
+
   const pending = RESETS.find((r) => r.scope === pendingReset);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
       <div>
         <p className="text-sm text-muted-foreground">Konto, Darstellung &amp; Daten</p>
         <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">
@@ -149,177 +204,184 @@ export default function EinstellungenPage() {
         </h1>
       </div>
 
-      <Card className="gap-4">
-        <div className="px-(--card-spacing)">
-          <h2 className="text-sm font-medium">Konto</h2>
-        </div>
-        <div className="flex items-center gap-3 px-(--card-spacing)">
-          <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-pill bg-elevated text-sm font-medium">
-            {me?.picture ? (
-              // eslint-disable-next-line @next/next/no-img-element -- externes Google-Bild, kein Loader nötig
-              <img src={me.picture} alt="" className="size-full object-cover" referrerPolicy="no-referrer" />
-            ) : (
-              <User className="size-5 text-muted-foreground" />
-            )}
-          </div>
-          <div className="min-w-0">
-            {me?.name && <p className="truncate text-sm font-medium">{me.name}</p>}
-            <p className="truncate text-xs text-muted-foreground">{me?.email ?? "Nicht angemeldet"}</p>
-          </div>
-        </div>
-      </Card>
+      <Section title="Konto">
+        <Row
+          icon={User}
+          iconTint="var(--chart-2)"
+          title={me?.name ?? me?.email ?? "Nicht angemeldet"}
+          subtitle={me?.name ? me.email : undefined}
+        />
+        {me && (
+          <>
+            <form ref={logoutForm} action="/api/auth/logout" method="post" className="hidden" />
+            <Row
+              icon={LogOut}
+              iconTint="var(--destructive)"
+              title="Abmelden"
+              danger
+              onClick={logout}
+            />
+          </>
+        )}
+      </Section>
 
-      <Card className="gap-4">
-        <div className="px-(--card-spacing)">
-          <h2 className="text-sm font-medium">Darstellung</h2>
+      {/* Drei Wahlmöglichkeiten mit Icon passen auf 375 px nicht neben eine
+          Beschriftung — also über die ganze Breite statt in eine Zeile. */}
+      <Section title="Darstellung">
+        <div className="px-(--card-spacing) py-3">
+          <Segmented
+            options={THEME_OPTIONS}
+            value={mounted ? ((theme ?? "system") as (typeof THEME_OPTIONS)[number]["value"]) : null}
+            onChange={setTheme}
+          />
         </div>
-        <div className="flex gap-2 px-(--card-spacing)">
-          {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setTheme(value)}
-              aria-pressed={mounted && theme === value}
-              className={cn(
-                "flex h-10 flex-1 items-center justify-center gap-1.5 rounded-pill text-sm font-medium transition-colors",
-                mounted && theme === value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-elevated text-muted-foreground ring-1 ring-foreground/8 hover:text-foreground"
-              )}
+      </Section>
+
+      <Section
+        title="Beim Training"
+        footer={
+          planExercises.length > 0
+            ? `Die Bewegungen deines Plans (${planExercises.length} Übungen) einmal aufs Gerät holen — danach sind sie auch ohne Netz da. Die ganze Bibliothek wären 120 MB und passt nicht.`
+            : "Ohne aktiven Plan gibt es nichts vorzuladen."
+        }
+      >
+        <Row
+          icon={Bell}
+          iconTint="var(--chart-1)"
+          title="Signalton"
+          subtitle="Am Ende der Pause und beim Rundenwechsel."
+        >
+          <Switch checked={soundOn} onCheckedChange={toggleSound} />
+        </Row>
+        <Row
+          icon={ImageDown}
+          iconTint="var(--chart-3)"
+          title="Übungsbilder aufs Gerät laden"
+          subtitle={
+            preload
+              ? `${preload.fertig} von ${preload.gesamt} …`
+              : "Bewegungen und Anleitungen für den aktiven Plan."
+          }
+          onClick={preload ? undefined : runPreload}
+          disabled={planExercises.length === 0 || preload !== null}
+          accessory={preload ? "none" : "chevron"}
+        />
+      </Section>
+
+      <Section
+        title="Automatischer Sync"
+        footer="Für Automationen — etwa einen iOS-Shortcut, der dein Gewicht aus Apple Health schickt. Nicht weitergeben: wer das Secret kennt, kann Werte auf dein Konto schreiben."
+      >
+        {secretLoading ? (
+          <Row icon={Webhook} title="Lädt …" />
+        ) : secret ? (
+          <>
+            <Row
+              icon={Webhook}
+              iconTint="var(--chart-5)"
+              title="Secret"
+              subtitle={<span className="block truncate font-mono">{secret}</span>}
+              onClick={() => copy(secret)}
             >
-              <Icon className="size-3.5" />
-              {label}
-            </button>
-          ))}
-        </div>
-      </Card>
+              <Copy className="size-4 shrink-0 text-muted-foreground" />
+            </Row>
+            {[
+              { metric: "weight", label: "Gewicht" },
+              { metric: "bodyfat", label: "Körperfett" },
+            ].map(({ metric, label }) => (
+              <Row
+                key={metric}
+                title={`${label}-URL kopieren`}
+                subtitle={
+                  <span className="block truncate">{webhookUrl(metric, secret)}</span>
+                }
+                onClick={() => copy(webhookUrl(metric, secret))}
+              >
+                <Copy className="size-4 shrink-0 text-muted-foreground" />
+              </Row>
+            ))}
+            <Row
+              icon={RefreshCw}
+              title="Neues Secret erzeugen"
+              subtitle="Macht alle bisherigen URLs ungültig."
+              onClick={generateSecret}
+              disabled={generating}
+              accessory="chevron"
+            />
+          </>
+        ) : (
+          <Row
+            icon={Webhook}
+            iconTint="var(--chart-5)"
+            title="Secret erzeugen"
+            onClick={generateSecret}
+            disabled={generating}
+            accessory="chevron"
+          />
+        )}
+      </Section>
 
-      <Card className="gap-4">
-        <div className="px-(--card-spacing)">
-          <h2 className="text-sm font-medium">Automatischer Sync</h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Secret für externe Automationen — etwa einen iOS-Shortcut, der dein Gewicht aus
-            Apple Health schickt. Nicht weitergeben: wer es kennt, kann Werte auf dein Konto
-            schreiben.
-          </p>
-        </div>
-
-        <div className="px-(--card-spacing)">
-          {secretLoading ? (
-            <p className="text-sm text-muted-foreground">Lädt …</p>
-          ) : secret ? (
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <code className="rounded-lg bg-elevated px-3 py-1.5 text-xs break-all">
-                  {secret}
-                </code>
-                <Button variant="outline" size="sm" onClick={generateSecret} disabled={generating}>
-                  <RefreshCw className="size-3.5" />
-                  Neu generieren
-                </Button>
-              </div>
-              <div className="flex flex-col gap-2">
-                {[
-                  { habit: "weight", label: "Gewicht" },
-                  { habit: "bodyfat", label: "Körperfett" },
-                ].map(({ habit, label }) => {
-                  const url = webhookUrl(habit, secret);
-                  return (
-                    <div key={habit} className="flex items-center gap-2">
-                      <div className="min-w-0 flex-1 rounded-lg bg-elevated px-3 py-1.5">
-                        <p className="text-[11px] text-muted-foreground">{label}</p>
-                        <p className="truncate text-xs">{url}</p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label={`${label}-URL kopieren`}
-                        onClick={() => copy(url)}
-                      >
-                        <Copy className="size-3.5" />
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <Button onClick={generateSecret} disabled={generating}>
-              Secret generieren
-            </Button>
-          )}
-        </div>
-      </Card>
-
-      <Card className="gap-4">
-        <div className="px-(--card-spacing)">
-          <h2 className="text-sm font-medium">Daten exportieren</h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Alles, was zu deinem Konto gehört — zum Mitnehmen oder Aufheben. Die JSON-Datei
-            enthält den vollständigen Bestand, die CSV-Dateien öffnen sich direkt in einer
-            Tabelle. Das Webhook-Secret bleibt draußen.
-          </p>
-        </div>
-
+      <Section
+        title="Daten"
+        footer="Die JSON-Datei enthält den vollständigen Bestand, die CSV-Dateien öffnen sich direkt in einer Tabelle. Das Webhook-Secret bleibt draußen."
+      >
         {/* Echte Links statt fetch: der Server schickt die Datei mit
             Content-Disposition, das funktioniert auch in iOS Safari. */}
-        <div className="flex flex-wrap gap-2 px-(--card-spacing)">
-          <a href="/api/export" download className={buttonVariants({ variant: "default" })}>
+        <div className="flex flex-wrap gap-2 px-(--card-spacing) py-3">
+          <a href="/api/export" download className={buttonVariants({ variant: "default", size: "sm" })}>
             <Download className="size-3.5" />
             Alles als JSON
           </a>
           <a
             href="/api/export?format=koerper"
             download
-            className={buttonVariants({ variant: "outline" })}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             <Download className="size-3.5" />
-            Körperwerte als CSV
+            Körperwerte
           </a>
           <a
             href="/api/export?format=training"
             download
-            className={buttonVariants({ variant: "outline" })}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             <Download className="size-3.5" />
-            Training als CSV
+            Training
           </a>
         </div>
-      </Card>
+      </Section>
 
-      <Card className="gap-4">
-        <div className="px-(--card-spacing)">
-          <h2 className="text-sm font-medium">Zurücksetzen</h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Die Einrichtung und deine Daten sind getrennt. Der erste Knopf stellt den Auslieferungs­zustand
-            her, ohne dass ein einziger Wert verloren geht — die beiden anderen löschen wirklich.
-          </p>
-        </div>
+      <Section
+        title="Zurücksetzen"
+        footer="Einrichtung und Daten sind getrennt: der erste Knopf stellt den Auslieferungszustand her, ohne dass ein einziger Wert verloren geht — die beiden anderen löschen wirklich."
+      >
+        {RESETS.map((reset) => (
+          <Row
+            key={reset.scope}
+            icon={reset.scope === "setup" ? RotateCcw : Trash2}
+            iconTint={reset.scope === "setup" ? undefined : "var(--destructive)"}
+            title={reset.label}
+            subtitle={reset.hint}
+            danger={reset.scope !== "setup"}
+            disabled={resetting}
+            onClick={() => setPendingReset(reset.scope)}
+            accessory="chevron"
+          />
+        ))}
+      </Section>
 
-        <div className="flex flex-col gap-2 px-(--card-spacing)">
-          {RESETS.map((reset) => (
-            <div
-              key={reset.scope}
-              className="flex flex-col gap-2.5 rounded-panel bg-elevated p-3.5 ring-1 ring-foreground/8 sm:flex-row sm:items-center sm:gap-4"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{reset.label}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{reset.hint}</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={resetting}
-                onClick={() => setPendingReset(reset.scope)}
-                className="shrink-0 sm:w-auto"
-              >
-                <RotateCcw className="size-3.5" />
-                {reset.scope === "setup" ? "Zurücksetzen" : "Löschen"}
-              </Button>
-            </div>
-          ))}
-        </div>
-      </Card>
+      <Section title="Tipp">
+        <Row
+          icon={Smartphone}
+          iconTint="var(--chart-2)"
+          title="Auf den Home-Bildschirm legen"
+          subtitle="In Safari über Teilen → Zum Home-Bildschirm. Dann startet die App ohne Adressleiste und funktioniert offline."
+        />
+      </Section>
+
+      <p className="px-1 text-xs text-muted-foreground">
+        LuHabit · Übungsdaten und Körperkarte stammen aus fremden Quellen, siehe NOTICE.md
+      </p>
 
       <AlertDialog
         open={pendingReset !== null}

@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { clearLocalDb } from "@/lib/local-db";
+import { raeumeAbmeldungAuf } from "@/lib/abmelden";
 
 type Me = { email: string; name: string | null; picture: string | null };
 
@@ -69,17 +69,7 @@ export function UserMenu() {
         <form ref={logoutForm} action="/api/auth/logout" method="post" className="hidden" />
         <DropdownMenuItem
           onClick={async () => {
-            // Cache und lokaler Bestand gehören dem angemeldeten Konto — beides
-            // muss weg, bevor sich jemand anderes anmeldet. Der lokale Bestand
-            // zuerst und abgewartet: die Navigation danach würde ihn sonst
-            // mitten im Löschen abschneiden.
-            navigator.serviceWorker?.controller?.postMessage("luhabit-clear-cache");
-            try {
-              await clearLocalDb();
-            } catch {
-              // Lässt sie sich nicht leeren, ist das Abmelden trotzdem richtig —
-              // der nächste vollständige Abgleich schreibt sie ohnehin neu.
-            }
+            await raeumeAbmeldungAuf();
             logoutForm.current?.submit();
           }}
         >

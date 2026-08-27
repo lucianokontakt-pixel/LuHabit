@@ -1,6 +1,10 @@
 # LuHabit
 
-Habit-Tracker für Schritte, Wasser, Kaffee und Training — mit Streaks, Wochen-Charts und einer Contribution-Heatmap.
+Trainings-App: Pläne, Progression und Verlauf, dazu Gewicht, Körperfett und eine
+Körperkarte. 1295 Übungen mit Bewegungs-GIF, offline nutzbar.
+
+Drei Bereiche: **Training** (was mache ich), **Statistik** (wie läuft es),
+**Körper** (wo stehe ich).
 
 **Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Cloudflare D1 (Datenbank) · Cloudflare Workers via OpenNext (Hosting)
 
@@ -12,7 +16,7 @@ cp .env.local.example .env.local
 npm run dev
 ```
 
-Ohne gesetzte `CLOUDFLARE_*`-Variablen startet die App trotzdem (Werte bleiben bei 0), Speichern schlägt aber fehl — die Datenbank muss zuerst eingerichtet werden.
+Ohne gesetzte `CLOUDFLARE_*`-Variablen startet die App trotzdem (leer), Speichern schlägt aber fehl — die Datenbank muss zuerst eingerichtet werden.
 
 ## 1. Cloudflare D1 einrichten
 
@@ -37,8 +41,8 @@ Die App spricht D1 über Cloudflares HTTP-Query-API an (`lib/d1.ts`), nicht übe
 
 ## 2. Anmeldung
 
-LuHabit ist mehrbenutzerfähig: jedes Konto sieht nur seine eigenen Habits,
-Pläne und Trainingseinheiten. Ohne gesetzte `GOOGLE_CLIENT_ID` bleibt die App
+LuHabit ist mehrbenutzerfähig: jedes Konto sieht nur seine eigenen Pläne,
+Übungen, Einheiten und Körperwerte. Ohne gesetzte `GOOGLE_CLIENT_ID` bleibt die App
 offen und alle Zugriffe laufen auf das Owner-Konto — praktisch lokal, in
 Produktion muss sie gesetzt sein.
 
@@ -96,32 +100,14 @@ Wegwerf-Datenbank und lässt jedes Statement der API mit `EXPLAIN` vorbereiten:
 node scripts/audit-sql.mjs
 ```
 
-## 3. Schritte automatisch aus der iOS Health-App
-
-Browser können Health-Daten nicht direkt lesen. Lösung: ein iOS-Shortcut, das die Schritte automatisch täglich an die App schickt.
-
-Der ursprüngliche Weg, inzwischen serverweit statt pro Konto (siehe Abschnitt 4 für
-den neueren, kontobezogenen Webhook — funktioniert für `steps` genauso):
-
-1. `STEPS_WEBHOOK_SECRET` als Worker-Secret setzen (`npx wrangler secret put STEPS_WEBHOOK_SECRET`), ein beliebiges langes Zufalls-Secret
-2. Shortcuts-App → neuer Shortcut:
-   - Aktion **„Gesundheitsprobe abrufen“** → Schritte, heute
-   - Aktion **„URL-Inhalt abrufen“**:
-     - URL: `https://luhabit.luhabit.workers.dev/api/steps/webhook?secret=DEIN_SECRET`
-     - Methode: POST
-     - Anfragetext (JSON): `{ "steps": [Schritte-Wert aus Schritt 1] }`
-3. Unter **Automation** eine tägliche Automation anlegen (z. B. 22:00 Uhr, oder „App geöffnet“), die diesen Shortcut lautlos ausführt
-
-Bis dahin einfach die Schritte manuell auf der `/steps`-Seite eintragen.
-
-## 4. Gewicht automatisch von der Renpho-Waage
+## 3. Gewicht automatisch von der Renpho-Waage
 
 Browser können weder Bluetooth zur Waage noch Health-Daten direkt lesen (vor allem in iOS Safari
-nicht). Lösung wie bei den Schritten: die Renpho-App synct Gewicht (und Körperfett) automatisch
-nach Apple Health, ein iOS-Shortcut liest den Wert aus Health und schickt ihn an LuHabit.
+nicht). Lösung: die Renpho-App synct Gewicht (und Körperfett) automatisch nach Apple Health, ein
+iOS-Shortcut liest den Wert aus Health und schickt ihn an LuHabit.
 
-Anders als beim Schritte-Webhook ist das hier **pro Nutzer**: jedes Konto hat sein eigenes
-Secret, das gleichzeitig festlegt, auf welches Konto der Wert geschrieben wird.
+Der Webhook gilt **pro Nutzer**: jedes Konto hat sein eigenes Secret, das
+gleichzeitig festlegt, auf welches Konto der Wert geschrieben wird.
 
 1. In der Renpho-App: Health-Sync für Gewicht (und optional Körperfett) aktivieren.
 2. In LuHabit einloggen, über das Konto-Menü **„Einstellungen“** öffnen (`/einstellungen`),
@@ -139,7 +125,7 @@ Secret, das gleichzeitig festlegt, auf welches Konto der Wert geschrieben wird.
 
 Bis dahin bzw. alternativ einfach manuell auf der `/koerper`-Seite eintragen.
 
-## 5. Deploy auf Cloudflare Workers
+## 4. Deploy auf Cloudflare Workers
 
 Die App läuft selbst als Cloudflare Worker (via [OpenNext](https://opennext.js.org/cloudflare)),
 nicht nur die Datenbank. Konfiguration liegt in `wrangler.jsonc`.
@@ -181,7 +167,7 @@ npx wrangler secret put AUTH_SECRET
 (entsprechend für die anderen). Die bleiben über Redeploys hinweg erhalten,
 müssen also nicht bei jedem Deploy neu gesetzt werden.
 
-## 6. Als App installieren
+## 5. Als App installieren
 
 LuHabit hat ein Web-App-Manifest (`app/manifest.ts`) und ist damit installierbar:
 
@@ -193,15 +179,26 @@ kein Zertifikat, kein Ablaufdatum — das betrifft nur nativ signierte Apps.
 
 ### Offline im Gym
 
-`public/sw.js` legt Seiten, Build-Dateien und die zuletzt geladenen API-Antworten
-in den Cache, angemeldet wird er von `components/service-worker.tsx` (nur im
-fertigen Build, siehe Kommentar dort). Die App startet damit auch ohne Empfang,
-mit dem letzten bekannten Stand.
+Die App ist local-first: alle Lesewege gehen an IndexedDB (`lib/local-db.ts`),
+nie ans Netz. Ein einziger Endpunkt `/api/sync` gleicht mit dem Server ab
+(`lib/sync.ts`). Schreibvorgänge landen zuerst lokal und dann in einer
+Warteschlange (`lib/write-queue.ts`, `lib/write-ops.ts`); sie gehen raus, sobald
+Netz da ist. Jede Operation beschreibt einen Zustand, keinen Zuwachs — ein
+zweiter Versuch ist deshalb folgenlos.
 
-Eine Einheit, die ohne Netz beendet wird, landet in `lib/outbox.ts` im
-localStorage statt verloren zu gehen. `components/outbox-sync.tsx` schickt sie
-nach, sobald die Verbindung zurück ist oder die App wieder in den Vordergrund
-kommt; der Trainings-Store führt sie bis dahin wie eine gespeicherte Einheit mit.
+Einheit starten, protokollieren und abschließen geht damit vollständig ohne
+Empfang. Der Zwischenstand einer laufenden Einheit liegt zusätzlich als Entwurf
+im localStorage und überlebt sogar einen Neustart mitten im Training.
+
+`public/sw.js` cacht die Seitenhüllen (Liste `WARMUP`) und die Build-Dateien;
+angemeldet wird er von `components/service-worker.tsx` — nur im fertigen Build,
+im `npm run dev` also bewusst nicht.
+
+**Die Übungsbilder sind die Ausnahme.** Alle 1295 GIFs liegen zwar lokal unter
+`public/uebungen/` (rund 120 MB), aber auf dem *Server*. Auf dem Gerät landen
+nur die, die man angesehen hat — oder die, die der Knopf „Übungsbilder aufs
+Gerät laden" in den Einstellungen für den aktiven Plan vorlädt. Alles
+vorzuladen würde auf iOS an der Speicherquote scheitern.
 
 Ändert sich die Cache-Strategie, muss `VERSION` in `public/sw.js` hochgezählt
 werden — sonst behalten installierte Geräte die alten Regeln.

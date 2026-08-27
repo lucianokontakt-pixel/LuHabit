@@ -167,11 +167,20 @@ export function imageUrl(exercise: { id: string; media: string | null }): string
  */
 let instructionsCache: Record<string, string[]> | null = null;
 
+/** Alle Anleitungen in einer Datei — ein Abruf reicht für die ganze Bibliothek. */
+export const INSTRUCTIONS_URL = `${MEDIA_BASE}/anleitungen.json`;
+
 export async function loadInstructions(id: string): Promise<string[]> {
   if (!instructionsCache) {
-    const response = await fetch(`${MEDIA_BASE}/anleitungen.json`);
-    if (!response.ok) return [];
-    instructionsCache = (await response.json()) as Record<string, string[]>;
+    try {
+      const response = await fetch(INSTRUCTIONS_URL);
+      if (!response.ok) return [];
+      instructionsCache = (await response.json()) as Record<string, string[]>;
+    } catch {
+      // Ohne Netz und ohne Zwischenspeicher gibt es keine Anleitung — die
+      // Übung bleibt trotzdem benutzbar, also still bleiben statt werfen.
+      return [];
+    }
   }
   return instructionsCache[id] ?? [];
 }
