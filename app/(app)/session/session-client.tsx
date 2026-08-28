@@ -12,7 +12,6 @@ import {
   ChevronRight,
   Ellipsis,
   Flame,
-  Info,
   Lightbulb,
   Minus,
   TrendingUp,
@@ -1081,30 +1080,27 @@ export function SessionClient() {
               className={cn("gap-3", allDone && "opacity-70")}
               variant={isActive ? "float" : "default"}
             >
-              <button
-                type="button"
-                onClick={() => setActiveExercise(isActive ? null : pe.id)}
-                className="flex items-center gap-3 px-(--card-spacing) text-left"
-              >
-                {/* Das Standbild statt der laufenden Nummer: welche Übung als
-                    Nächstes kommt, erkennt man am Bild schneller als am Namen —
-                    genau wie in der Bibliothek. Die Nummer sagte ohnehin nur,
-                    was die Reihenfolge der Karten schon zeigt, und sobald die
-                    Übung fertig war, wich sie dem Haken. Der sitzt jetzt in der
-                    Ecke des Bildes, damit er nicht wieder Platz kostet. */}
-                {exercise && !isActive ? (
-                  <span className="relative shrink-0">
+              <div className="flex items-center gap-3 px-(--card-spacing)">
+                {/* Das Standbild bleibt an seinem Platz, offen wie geschlossen
+                    — es sagt immer, welche Übung das ist, nicht nur die
+                    Nummer. Ein eigener Knopf, getrennt vom Rest der Zeile:
+                    hier tippt man für die Anleitung, daneben fürs Auf- und
+                    Zuklappen. */}
+                {exercise ? (
+                  <button
+                    type="button"
+                    onClick={() => setDetail(exercise)}
+                    aria-label={`${exercise.name} — Ausführung und Infos`}
+                    className="relative shrink-0"
+                  >
                     <ExerciseThumb exercise={exercise} />
                     {allDone && (
                       <span className="absolute right-0 bottom-0 flex size-5 items-center justify-center rounded-tl-md bg-blush text-blush-foreground">
                         <Check className="size-3" />
                       </span>
                     )}
-                  </span>
+                  </button>
                 ) : (
-                  // In der offenen Übung läuft die Bewegung direkt darunter —
-                  // zweimal dasselbe Bild im Abstand von zwei Zeilen wäre
-                  // Dopplung. Dort steht wieder die Nummer.
                   <span
                     className={cn(
                       "flex size-11 shrink-0 items-center justify-center rounded-md text-sm font-medium",
@@ -1117,59 +1113,53 @@ export function SessionClient() {
                   </span>
                 )}
 
-                <span className="min-w-0 flex-1">
-                  <span className="block line-clamp-2 text-body font-medium">
-                    {exercise?.name ?? pe.exerciseId}
+                <button
+                  type="button"
+                  onClick={() => setActiveExercise(isActive ? null : pe.id)}
+                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block line-clamp-2 text-body font-medium">
+                      {exercise?.name ?? pe.exerciseId}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {isExtra && "Zusatz · "}
+                      {pe.sets} × {pe.repMin}–{pe.repMax}
+                      {target ? ` · ${formatNumber(target.weight)} kg` : ""} · {doneCount}/
+                      {workingRows.length} erledigt
+                    </span>
                   </span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {isExtra && "Zusatz · "}
-                    {pe.sets} × {pe.repMin}–{pe.repMax}
-                    {target ? ` · ${formatNumber(target.weight)} kg` : ""} · {doneCount}/
-                    {workingRows.length} erledigt
-                  </span>
-                </span>
 
-                <ChevronRight
-                  className={cn(
-                    "size-4 shrink-0 text-muted-foreground transition-transform",
-                    isActive && "rotate-90"
-                  )}
-                />
-              </button>
+                  <ChevronRight
+                    className={cn(
+                      "size-4 shrink-0 text-muted-foreground transition-transform",
+                      isActive && "rotate-90"
+                    )}
+                  />
+                </button>
+              </div>
 
               {isActive && (
                 <>
-                  {/* Wie in der Bibliothek: ein Standbild, kein Video, das
-                      neben den Sätzen mitläuft. Ein Tipp öffnet dieselbe
-                      Anleitung mit Bewegungsablauf, Bestwert und Schritten —
-                      wer nachschauen will, tut das einmal, nicht die ganze
-                      Zeit nebenbei. */}
-                  {exercise && (
-                    <button
-                      type="button"
-                      onClick={() => setDetail(exercise)}
-                      aria-label={`${exercise.name} — Ausführung und Infos`}
-                      className="mx-(--card-spacing) flex items-center gap-3 rounded-panel bg-card p-2 text-left transition-colors active:bg-foreground/5"
-                    >
-                      <ExerciseThumb exercise={exercise} />
-                      <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs text-muted-foreground">
-                        {best && (
-                          <span>
-                            Bestwert <span className="nums text-foreground">{best}</span>
+                  {/* Was war, und was das Beste war — die Anleitung samt
+                      Bewegungsablauf öffnet jetzt das Bild oben in der Zeile,
+                      diese Zahlen sind keine eigene Fläche mehr wert. */}
+                  {(best || lastLogged) && (
+                    <div className="mx-(--card-spacing) flex flex-col gap-0.5 text-xs text-muted-foreground">
+                      {best && (
+                        <p>
+                          Bestwert <span className="nums text-foreground">{best}</span>
+                        </p>
+                      )}
+                      {lastLogged && (
+                        <p>
+                          Letztes Mal ({formatDayLabel(lastLogged.date, today)}):{" "}
+                          <span className="nums text-foreground">
+                            {formatLoggedSets(lastLogged.sets)}
                           </span>
-                        )}
-                        {lastLogged && (
-                          <span>
-                            Letztes Mal ({formatDayLabel(lastLogged.date, today)}):{" "}
-                            <span className="nums text-foreground">
-                              {formatLoggedSets(lastLogged.sets)}
-                            </span>
-                          </span>
-                        )}
-                        {!best && !lastLogged && <span>Ausführung &amp; Infos ansehen</span>}
-                      </span>
-                      <Info className="size-4 shrink-0 text-muted-foreground" />
-                    </button>
+                        </p>
+                      )}
+                    </div>
                   )}
 
                   {suggestionOpen && (

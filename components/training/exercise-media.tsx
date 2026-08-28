@@ -139,15 +139,19 @@ export function ExerciseDetail({
                 schrumpft die Medienbox mit, sobald der Inhalt darunter wächst —
                 sie hat nur ein Seitenverhältnis und keine eigene Höhe, an der
                 sich das Grid festhalten könnte, und lief dann über die Zahlen.
-                Eine Flex-Spalte mit shrink-0 an der Box hält alles gestapelt. */}
+                Eine Flex-Spalte mit shrink-0 an der Box hält alles gestapelt.
+
+                Feste Höhe statt aspect-square: ein quadratisches Bild über die
+                volle Breite füllte auf dem Handy fast den ganzen Dialog — für
+                ein Popup, das man kurz aufruft und wieder schließt, zu viel. */}
             <div className="flex min-w-0 flex-col gap-4">
               {gif && (
-                <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-card bg-muted">
+                <div className="relative h-48 w-full shrink-0 overflow-hidden rounded-card bg-muted">
                   <Image
                     src={gif}
                     alt={`Bewegungsablauf: ${exercise.name}`}
                     fill
-                    sizes="(max-width: 640px) 100vw, 480px"
+                    sizes="(max-width: 640px) 100vw, 384px"
                     className="object-contain"
                     unoptimized
                   />
