@@ -42,6 +42,8 @@ export function ExercisePicker({
   onPick,
   excludeIds = [],
   initialCreate = false,
+  title = "Übung hinzufügen",
+  description = "Aus der Bibliothek wählen oder eine eigene Übung anlegen.",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -49,6 +51,12 @@ export function ExercisePicker({
   excludeIds?: string[];
   /** Öffnet direkt das Formular für eine eigene Übung statt der Bibliothek. */
   initialCreate?: boolean;
+  /**
+   * Überschrift und Erklärung. Derselbe Wähler dient zwei Zwecken — dazunehmen
+   * und tauschen —, und wer tauschen wollte, soll nicht „hinzufügen" lesen.
+   */
+  title?: string;
+  description?: string;
 }) {
   const { exercises, upsertExercise } = useTraining();
   const [query, setQuery] = useState("");
@@ -132,10 +140,8 @@ export function ExercisePicker({
     >
       <DialogContent className="flex max-h-[85vh] flex-col rounded-card sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Übung hinzufügen</DialogTitle>
-          <DialogDescription>
-            Aus der Bibliothek wählen oder eine eigene Übung anlegen.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         {creating ? (

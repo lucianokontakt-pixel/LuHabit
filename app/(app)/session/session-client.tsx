@@ -67,7 +67,7 @@ import {
 import { needsWarmup, warmupWeight, WARMUP_REPS } from "@/lib/warmup";
 import { useSignalSound } from "@/lib/use-signal-sound";
 import { cn } from "@/lib/utils";
-import { DRAFT_KEY } from "@/lib/session-draft";
+import { DRAFT_KEY, uebungenDerEinheit } from "@/lib/session-draft";
 
 
 type Draft = {
@@ -82,6 +82,15 @@ type Draft = {
    * verwaist im Speicher.
    */
   extras?: PlanExercise[];
+  /**
+   * Abweichungen vom Plan, die nur für heute gelten: null heißt ausgelassen,
+   * eine Übung heißt dagegen getauscht. Ohne den Entwurf stünde die
+   * ausgelassene Übung nach einem Reload wieder da.
+   */
+  ersatz?: Record<string, PlanExercise | null>;
+  /** Läuft gerade eine Pause? Ein absoluter Zeitpunkt, damit sie weiterläuft. */
+  restEndsAt?: number | null;
+  restTotal?: number;
 };
 
 /**
@@ -222,7 +231,11 @@ export function SessionClient() {
   const [setsByExercise, setSetsByExercise] = useState<Record<string, SessionSet[]>>({});
   /** Übungen, die während der Einheit dazukamen — nur für heute. */
   const [extras, setExtras] = useState<PlanExercise[]>([]);
+  /** Ausgelassen (null) oder getauscht — je Platz im Plan, nur für heute. */
+  const [ersatz, setErsatz] = useState<Record<string, PlanExercise | null>>({});
   const [picking, setPicking] = useState(false);
+  /** Für welchen Platz der Wähler gerade offen ist — null heißt: dazunehmen. */
+  const [tauschFuer, setTauschFuer] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<number>(() => Date.now());
   const [elapsed, setElapsed] = useState(0);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
@@ -254,13 +267,39 @@ export function SessionClient() {
   const day = located?.day ?? null;
 
   /**
-   * Die Übungen dieser einen Einheit: die des Plans, dahinter alles, was
-   * spontan dazukam. Der Plan selbst bleibt unangetastet — was hier steht, gilt
-   * für heute und sonst nirgends.
+   * Die Übungen dieser einen Einheit: die des Plans — abzüglich des heute
+   * Ausgelassenen, mit dem Getauschten an derselben Stelle — dahinter alles,
+   * was spontan dazukam. Der Plan selbst bleibt unangetastet: was hier steht,
+   * gilt für heute und sonst nirgends.
    */
   const exercises = useMemo(
-    () => [...(day?.exercises ?? []), ...extras],
-    [day, extras]
+    () => uebungenDerEinheit(day?.exercises ?? [], ersatz, extras),
+    [day, ersatz, extras]
+  );
+
+  /**
+   * Welche Übung auf welchem Platz des Plans steht. Bei einer getauschten sind
+   * das zwei verschiedene IDs, und „auslassen" und „tauschen" meinen immer den
+   * Platz — sonst ließe sich eine schon getauschte Übung nicht noch einmal
+   * anfassen.
+   */
+  const slotVon = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const slot of day?.exercises ?? []) {
+      const dafuer = ersatz[slot.id];
+      if (dafuer === undefined) map[slot.id] = slot.id;
+      else if (dafuer) map[dafuer.id] = slot.id;
+    }
+    return map;
+  }, [day, ersatz]);
+
+  /** Was heute ausgelassen wurde — für die Zeile zum Zurückholen. */
+  const ausgelassen = useMemo(
+    () =>
+      (day?.exercises ?? []).filter(
+        (pe) => pe.id in ersatz && ersatz[pe.id] === null
+      ),
+    [day, ersatz]
   );
 
   // Zielvorgaben aus der letzten Einheit — einmal pro geladener Übungsliste.
@@ -290,6 +329,13 @@ export function SessionClient() {
       setStartedAt(draft.startedAt);
       setDismissed(new Set(draft.dismissed ?? []));
       setExtras(draft.extras ?? []);
+      setErsatz(draft.ersatz ?? {});
+      // Eine abgelaufene Pause gehört nicht zurück — wer eine Stunde später
+      // wiederkommt, soll keinen Timer auf 0 vorfinden.
+      if (draft.restEndsAt && draft.restEndsAt > Date.now()) {
+        setRestEndsAt(draft.restEndsAt);
+        setRestTotal(draft.restTotal ?? 0);
+      }
     } else {
       const initial: Record<string, SessionSet[]> = {};
       day.exercises.forEach((pe, exerciseIndex) => {
@@ -303,7 +349,15 @@ export function SessionClient() {
       setSetsByExercise(initial);
       setStartedAt(Date.now());
     }
-    setActiveExercise(day.exercises[0]?.id ?? null);
+    // Die erste Übung, die auch wirklich dasteht: hat der Entwurf die erste des
+    // Plans ausgelassen, zeigte day.exercises[0] sonst auf eine Karte, die es
+    // nicht gibt.
+    const sichtbar = uebungenDerEinheit(
+      day.exercises,
+      draft?.ersatz ?? {},
+      draft?.extras ?? []
+    );
+    setActiveExercise(sichtbar[0]?.id ?? null);
   }, [day, loading, targets, weightLoading, exerciseById]);
 
   // Entwurf sichern, damit ein Reload im Gym nichts kostet.
@@ -316,12 +370,15 @@ export function SessionClient() {
         sets: setsByExercise,
         dismissed: [...dismissed],
         extras,
+        ersatz,
+        restEndsAt,
+        restTotal,
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } catch {
       // Speicher voll oder gesperrt — die Einheit läuft trotzdem weiter
     }
-  }, [day, setsByExercise, startedAt, dismissed, extras]);
+  }, [day, setsByExercise, startedAt, dismissed, extras, ersatz, restEndsAt, restTotal]);
 
   useEffect(() => {
     // Nach dem Abschluss läuft keine Einheit mehr — die Uhr würde den
@@ -496,6 +553,93 @@ export function SessionClient() {
     });
     setActiveExercise((cur) => (cur === planExerciseId ? null : cur));
   }, []);
+
+  /**
+   * Eine geplante Übung heute auslassen. Gerät besetzt, Schulter zwickt — die
+   * Übung fällt für diese Einheit weg, im Plan steht sie morgen wieder.
+   *
+   * Angeboten wird das nur, solange kein Arbeitssatz abgehakt ist; sonst
+   * verlöre ein Tipp Protokolliertes. Zurückholen geht über die Zeile unter der
+   * Liste, damit ein Fehltipp nicht bis zum Ende der Einheit bestehen bleibt.
+   */
+  const skipExercise = useCallback((slotId: string) => {
+    setErsatz((prev) => ({ ...prev, [slotId]: null }));
+    setSetsByExercise((prev) => {
+      const next = { ...prev };
+      delete next[slotId];
+      return next;
+    });
+    setActiveExercise((cur) => (cur === slotId ? null : cur));
+  }, []);
+
+  /**
+   * Doch wieder mitmachen — der Platz kehrt an seine Stelle im Plan zurück.
+   *
+   * Die Satzzeilen müssen dabei neu gebaut werden: das Auslassen hat sie
+   * weggeräumt, und der Aufbau beim Start läuft nur ein einziges Mal. Ohne das
+   * stünde die Übung wieder da, aber ohne einen einzigen Satz.
+   */
+  const unskipExercise = useCallback(
+    (slotId: string) => {
+      const slot = day?.exercises.find((pe) => pe.id === slotId);
+      const exercise = slot ? exerciseById[slot.exerciseId] : undefined;
+
+      setErsatz((prev) => {
+        const next = { ...prev };
+        delete next[slotId];
+        return next;
+      });
+
+      if (!slot || !exercise) return;
+      const target = targetFor(exercise, slot, historyFor(slot.exerciseId), bodyweight);
+      setSetsByExercise((prev) => ({
+        ...prev,
+        [slot.id]: buildRows({
+          exercise,
+          planExercise: slot,
+          target,
+          isFirst: day?.exercises[0]?.id === slotId,
+        }),
+      }));
+    },
+    [day, exerciseById, historyFor, bodyweight]
+  );
+
+  /**
+   * Eine geplante Übung gegen eine andere tauschen.
+   *
+   * Der Ersatz erbt die Vorgabe des Platzes — Sätze, Wiederholungsbereich,
+   * Pause. Getauscht wird die Bewegung, nicht die Programmierung. Nicht geerbt
+   * werden `increment` und `startWeight`: die waren auf die alte Übung
+   * eingestellt, und null heißt „nimm, was die Übung selbst mitbringt".
+   */
+  const swapExercise = useCallback(
+    (slotId: string, exercise: Exercise) => {
+      const slot = day?.exercises.find((pe) => pe.id === slotId);
+      if (!slot) return;
+
+      const planExercise: PlanExercise = {
+        ...slot,
+        id: newId("tausch"),
+        exerciseId: exercise.id,
+        increment: null,
+        startWeight: null,
+      };
+      const target = targetFor(exercise, planExercise, historyFor(exercise.id), bodyweight);
+      const isFirst = day?.exercises[0]?.id === slotId;
+
+      setErsatz((prev) => ({ ...prev, [slotId]: planExercise }));
+      setSetsByExercise((prev) => {
+        const next = { ...prev };
+        delete next[slotId];
+        next[planExercise.id] = buildRows({ exercise, planExercise, target, isFirst });
+        return next;
+      });
+      setActiveExercise(planExercise.id);
+      scrollTargetRef.current = planExercise.id;
+    },
+    [day, historyFor, bodyweight]
+  );
 
   const dismissSuggestion = useCallback(
     (planExerciseId: string, index: number) => {
@@ -866,6 +1010,10 @@ export function SessionClient() {
           const lastLogged = lastLoggedFor(pe.exerciseId);
           const best = bestEffortLabel(historyFor(pe.exerciseId));
           const isExtra = extras.some((e) => e.id === pe.id);
+          // Der Platz im Plan, auf dem diese Übung steht — bei einer
+          // getauschten ein anderer als ihre eigene ID. Bei spontan
+          // Dazugenommenem gibt es keinen.
+          const slotId = slotVon[pe.id];
 
           return (
             <Card
@@ -1108,6 +1256,32 @@ export function SessionClient() {
                         Übung entfernen
                       </Button>
                     )}
+                    {/* Nur solange nichts abgehakt ist: sonst nähme ein Tipp
+                        Protokolliertes mit. Wer doch wechseln will, hakt erst
+                        wieder ab. */}
+                    {slotId && doneCount === 0 && (
+                      <div className="ml-auto flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground"
+                          onClick={() => {
+                            setTauschFuer(slotId);
+                            setPicking(true);
+                          }}
+                        >
+                          Tauschen
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground"
+                          onClick={() => skipExercise(slotId)}
+                        >
+                          Auslassen
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -1115,6 +1289,31 @@ export function SessionClient() {
           );
         })}
       </div>
+
+      {/* Ausgelassenes bleibt sichtbar, statt spurlos zu verschwinden: ein
+          Fehltipp soll nicht bis zum Ende der Einheit halten. */}
+      {ausgelassen.length > 0 && (
+        <div className="flex flex-col gap-1">
+          {ausgelassen.map((pe) => (
+            <div
+              key={pe.id}
+              className="flex items-center gap-2 px-1 text-xs text-muted-foreground"
+            >
+              <span className="min-w-0 flex-1 truncate">
+                {exerciseById[pe.exerciseId]?.name ?? pe.exerciseId} — heute ausgelassen
+              </span>
+              <Button
+                variant="ghost"
+                size="xs"
+                className="shrink-0"
+                onClick={() => unskipExercise(pe.id)}
+              >
+                Zurückholen
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Was nicht im Plan steht, aber heute trotzdem drankommt. Der Plan
           bleibt davon unberührt — die Übung gilt für diese Einheit. */}
@@ -1167,11 +1366,26 @@ export function SessionClient() {
         onOpenChange={(open) => !open && setDetail(null)}
       />
 
+      {/* Ein Wähler für zwei Wege: dazunehmen, oder einen Platz im Plan
+          ersetzen. tauschFuer sagt, welcher von beiden gemeint ist. */}
       <ExercisePicker
         open={picking}
-        onOpenChange={setPicking}
-        onPick={addExercise}
+        onOpenChange={(open) => {
+          setPicking(open);
+          if (!open) setTauschFuer(null);
+        }}
+        onPick={(exercise) => {
+          if (tauschFuer) swapExercise(tauschFuer, exercise);
+          else addExercise(exercise);
+          setTauschFuer(null);
+        }}
         excludeIds={exercises.map((pe) => pe.exerciseId)}
+        title={tauschFuer ? "Übung tauschen" : "Übung hinzufügen"}
+        description={
+          tauschFuer
+            ? "Der Ersatz behält Satzzahl, Wiederholungen und Pause des Plans. Nur für heute — der Plan bleibt, wie er ist."
+            : "Aus der Bibliothek wählen oder eine eigene Übung anlegen."
+        }
       />
 
       <AlertDialog open={confirmAbort} onOpenChange={setConfirmAbort}>

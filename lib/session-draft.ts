@@ -46,6 +46,31 @@ export function keinEntwurfRoh(): null {
   return null;
 }
 
+/**
+ * Die Übungen einer Einheit: die des Plans, dann alles spontan Dazugekommene.
+ *
+ * `ersatz` trägt beide Abweichungen vom Plan, die eine laufende Einheit kennt:
+ * ein Eintrag mit `null` heißt „heute ausgelassen", ein Eintrag mit einer Übung
+ * heißt „dagegen getauscht". Beides gilt nur für diese Einheit — der Plan
+ * bleibt unberührt.
+ *
+ * Der Ersatz steht an der Stelle der ausgetauschten Übung und nicht am Ende:
+ * wer die Bank gegen Kurzhanteldrücken tauscht, will sie als erste Übung
+ * behalten, nicht hinter den Seitheben wiederfinden.
+ */
+export function uebungenDerEinheit<T extends { id: string }>(
+  geplant: readonly T[],
+  ersatz: Readonly<Record<string, T | null>>,
+  extras: readonly T[]
+): T[] {
+  const ausPlan = geplant.flatMap((pe) => {
+    if (!(pe.id in ersatz)) return [pe];
+    const dafuer = ersatz[pe.id];
+    return dafuer ? [dafuer] : [];
+  });
+  return [...ausPlan, ...extras];
+}
+
 export type EntwurfStand = {
   dayId: string;
   /** Abgehakte Arbeitssätze. */
