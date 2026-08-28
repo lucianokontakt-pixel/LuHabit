@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Dumbbell, Info, Maximize2, Minimize2, Pause, Play } from "lucide-react";
+import { Dumbbell, Info, Maximize2, Minimize2, Pause, Play, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -223,9 +224,16 @@ export function ExerciseMedia({
 export function ExerciseDetail({
   exercise,
   onOpenChange,
+  onAddToPlan,
 }: {
   exercise: Exercise | null;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Optional: macht aus dem Nachschlagen ein Übernehmen. Nur die Bibliothek
+   * gibt das mit — in der laufenden Einheit oder im Plan-Editor steht man
+   * bereits dort, wo der Knopf hinführen würde.
+   */
+  onAddToPlan?: (exercise: Exercise) => void;
 }) {
   // Die geladene Anleitung trägt ihre Übungs-ID mit sich. Sonst stünde beim
   // Wechsel auf die nächste Übung kurz noch die Anleitung der vorigen da.
@@ -336,6 +344,20 @@ export function ExerciseDetail({
 
               {exercise.en && exercise.en !== exercise.name && (
                 <p className="text-xs text-muted-foreground">Original: {exercise.en}</p>
+              )}
+
+              {/* Ganz unten, nicht oben: wer hier landet, will erst wissen, wie
+                  die Übung geht — der Knopf ist die Antwort auf „die nehme
+                  ich", und die kommt nach dem Lesen. */}
+              {onAddToPlan && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => onAddToPlan(exercise)}
+                >
+                  <Plus />
+                  Zu einem Trainingstag hinzufügen
+                </Button>
               )}
             </div>
           </>

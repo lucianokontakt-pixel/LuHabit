@@ -35,6 +35,53 @@ export type DayInput = {
 };
 
 /**
+ * Einen Tag in die Form bringen, die updatePlan erwartet.
+ *
+ * updatePlan nimmt die Tage immer als vollständige Liste und baut sie neu auf.
+ * Wer nur eine Übung anhängen will, muss den unveränderten Rest also mitsenden
+ * — diese Umwandlung stand deshalb an zwei Stellen fast gleich da.
+ */
+export type DayLike = {
+  name: string;
+  weekday: number | null;
+  /**
+   * Nur die Vorgaben, keine IDs: der Plan-Editor arbeitet mit eigenen Zeilen
+   * ohne id und position (EditExercise), und für updatePlan zählt ohnehin nur,
+   * was hier steht — die Reihenfolge kommt aus dem Array.
+   */
+  exercises: readonly {
+    exerciseId: string;
+    sets: number;
+    repMin: number;
+    repMax: number;
+    restSeconds: number;
+    increment: number | null;
+    startWeight: number | null;
+  }[];
+};
+
+export function dayToInput(day: DayLike): DayInput {
+  return {
+    name: day.name,
+    weekday: day.weekday,
+    exercises: day.exercises.map((e) => ({
+      exerciseId: e.exerciseId,
+      sets: e.sets,
+      repMin: e.repMin,
+      repMax: e.repMax,
+      restSeconds: e.restSeconds,
+      increment: e.increment,
+      startWeight: e.startWeight,
+    })),
+  };
+}
+
+/** Alle Tage eines Plans, in ihrer Reihenfolge. */
+export function planToDayInputs(plan: WorkoutPlan): DayInput[] {
+  return [...plan.days].sort((a, b) => a.position - b.position).map(dayToInput);
+}
+
+/**
  * Der lokale Bestand hält nur noch, was von der Bibliothek abweicht — die
  * Bibliothek selbst kommt aus dem Katalog. Zusammengelegt sieht der Rest der
  * App weiterhin eine flache Liste (siehe lib/exercise-catalog.ts).

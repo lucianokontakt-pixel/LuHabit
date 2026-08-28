@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 import { DayEditor, type EditDay } from "@/components/training/day-editor";
 import { NumberField } from "@/components/training/number-field";
 import { useTraining } from "@/lib/training-store";
-import { updatePlan } from "@/lib/api-training";
+import { dayToInput, updatePlan } from "@/lib/api-training";
 import type { WorkoutPlan } from "@/lib/training";
 
 function toEditDays(plan: WorkoutPlan): EditDay[] {
@@ -79,19 +79,9 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
         id: plan.id,
         name: name.trim(),
         weeklyTarget,
-        days: days.map((d) => ({
-          name: d.name,
-          weekday: d.weekday,
-          exercises: d.exercises.map((e) => ({
-            exerciseId: e.exerciseId,
-            sets: e.sets,
-            repMin: e.repMin,
-            repMax: e.repMax,
-            restSeconds: e.restSeconds,
-            increment: e.increment,
-            startWeight: e.startWeight,
-          })),
-        })),
+        // Nicht planToDayInputs: hier zählt die Reihenfolge im Editor, die
+        // gerade per Ziehen geändert worden sein kann, nicht die gespeicherte.
+        days: days.map(dayToInput),
       });
       setPlans(next);
       setHydrated(false);

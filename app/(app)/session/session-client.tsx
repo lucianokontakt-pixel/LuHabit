@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -91,6 +93,7 @@ type Draft = {
   /** Läuft gerade eine Pause? Ein absoluter Zeitpunkt, damit sie weiterläuft. */
   restEndsAt?: number | null;
   restTotal?: number;
+  note?: string;
 };
 
 /**
@@ -236,6 +239,8 @@ export function SessionClient() {
   const [picking, setPicking] = useState(false);
   /** Für welchen Platz der Wähler gerade offen ist — null heißt: dazunehmen. */
   const [tauschFuer, setTauschFuer] = useState<string | null>(null);
+  /** Was zu dieser Einheit zu sagen war. Ging bisher erst hinterher. */
+  const [note, setNote] = useState("");
   const [startedAt, setStartedAt] = useState<number>(() => Date.now());
   const [elapsed, setElapsed] = useState(0);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
@@ -330,6 +335,7 @@ export function SessionClient() {
       setDismissed(new Set(draft.dismissed ?? []));
       setExtras(draft.extras ?? []);
       setErsatz(draft.ersatz ?? {});
+      setNote(draft.note ?? "");
       // Eine abgelaufene Pause gehört nicht zurück — wer eine Stunde später
       // wiederkommt, soll keinen Timer auf 0 vorfinden.
       if (draft.restEndsAt && draft.restEndsAt > Date.now()) {
@@ -373,12 +379,23 @@ export function SessionClient() {
         ersatz,
         restEndsAt,
         restTotal,
+        note,
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } catch {
       // Speicher voll oder gesperrt — die Einheit läuft trotzdem weiter
     }
-  }, [day, setsByExercise, startedAt, dismissed, extras, ersatz, restEndsAt, restTotal]);
+  }, [
+    day,
+    setsByExercise,
+    startedAt,
+    dismissed,
+    extras,
+    ersatz,
+    restEndsAt,
+    restTotal,
+    note,
+  ]);
 
   useEffect(() => {
     // Nach dem Abschluss läuft keine Einheit mehr — die Uhr würde den
@@ -805,6 +822,7 @@ export function SessionClient() {
         dayName: day.name,
         date: sessionDate,
         durationSeconds,
+        note: note.trim() || null,
         sets: payloadSets,
       };
 
@@ -1321,6 +1339,21 @@ export function SessionClient() {
         <Plus />
         Übung hinzufügen
       </Button>
+
+      {/* Die Notiz gehört dahin, wo sie entsteht: "Bank war besetzt", "Rücken
+          zwickt". Bisher gab es das Feld nur nachträglich in der fertigen
+          Einheit — also genau dann, wenn man es schon vergessen hat. */}
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="einheit-notiz" className="text-xs text-muted-foreground">
+          Notiz (optional)
+        </Label>
+        <Input
+          id="einheit-notiz"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Wie lief’s?"
+        />
+      </div>
 
       {/* Pausentimer und Abschluss teilen sich einen Stapel, damit sie sich
           nicht gegenseitig überdecken. */}
