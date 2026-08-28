@@ -413,3 +413,18 @@ export async function deleteSession(id: string): Promise<void> {
   await enqueue({ kind: "session.delete", id });
   void flushQueue();
 }
+
+/**
+ * Eine gelöschte Einheit zurückholen — unverändert, mit ihrer alten Kennung.
+ *
+ * saveSession taugt dafür nicht: es vergibt immer eine frische ID, und die
+ * zurückgeholte Einheit wäre eine andere als die gelöschte. Hier geht der
+ * ursprüngliche Datensatz Wort für Wort zurück in die Warteschlange. Die steht
+ * dann auf "erst löschen, dann wieder anlegen" und wird in dieser Reihenfolge
+ * abgearbeitet — am Ende liegt die Zeile wieder da, wo sie war, auch wenn das
+ * Löschen noch gar nicht rausgegangen war.
+ */
+export async function restoreSession(session: WorkoutSession): Promise<void> {
+  await enqueue({ kind: "session.save", session, isNew: true });
+  void flushQueue();
+}

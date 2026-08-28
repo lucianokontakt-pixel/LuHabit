@@ -25,6 +25,8 @@ type TrainingContextValue = {
   addSession: (session: WorkoutSession) => void;
   replaceSession: (session: WorkoutSession) => void;
   removeSession: (id: string) => Promise<void>;
+  /** Holt eine gelöschte Einheit unverändert zurück, mit ihrer alten Kennung. */
+  restoreSession: (session: WorkoutSession) => Promise<void>;
   upsertExercise: (exercise: Exercise) => void;
   /** Jede Einheit mit dieser Übung — jüngste zuerst, mit Datum und allen Sätzen. */
   loggedFor: (exerciseId: string) => LoggedSession[];
@@ -126,6 +128,24 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     setSessions((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
+  /**
+   * Eine gelöschte Einheit unverändert zurückholen.
+   *
+   * Was gelöscht wurde, hält der Aufrufer selbst fest — er hat die Einheit
+   * ohnehin in der Hand, wenn er den Papierkorb zeichnet. Der Store müsste sie
+   * sonst aus dem Zustand herausfischen, während er ihn gerade ändert.
+   */
+  const restoreSession = useCallback(async (session: WorkoutSession) => {
+    await api.restoreSession(session);
+    // Wieder einsortieren wie addSession: absteigend nach Datum, darauf
+    // verlassen sich loggedFor und die ganze Progression.
+    setSessions((prev) =>
+      [...prev.filter((s) => s.id !== session.id), session].sort((a, b) =>
+        b.date.localeCompare(a.date)
+      )
+    );
+  }, []);
+
   const upsertExercise = useCallback((exercise: Exercise) => {
     setExercises((prev) => {
       const without = prev.filter((e) => e.id !== exercise.id);
@@ -186,6 +206,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     addSession,
     replaceSession,
     removeSession,
+    restoreSession,
     upsertExercise,
     loggedFor,
     lastLoggedFor,

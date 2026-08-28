@@ -6,6 +6,16 @@ import { toast } from "sonner";
 import { ChevronRight, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatValue } from "@/components/stat-value";
 import { SectionTabs } from "@/components/section-tabs";
@@ -14,7 +24,12 @@ import { TrainingCalendar } from "@/components/training/training-calendar";
 import { TrainingHeatmap } from "@/components/training/training-heatmap";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
-import { measuredOn, sessionVolume, workingSets } from "@/lib/training";
+import {
+  measuredOn,
+  sessionVolume,
+  workingSets,
+  type WorkoutSession,
+} from "@/lib/training";
 import { weekStartISO } from "@/lib/muscle-stats";
 import { summarizeSession } from "@/lib/session-stats";
 import { formatCompact, formatDateLong, formatNumber } from "@/lib/format";
@@ -35,11 +50,14 @@ function uniqueWeeks(sessions: { date: string }[]): string[] {
 }
 
 export default function TrainingStatsPage() {
-  const { sessions, exerciseById, activePlan, removeSession, loading } = useTraining();
+  const { sessions, exerciseById, activePlan, removeSession, restoreSession, loading } =
+    useTraining();
   // Eigengewichtsübungen zählen mit dem Körpergewicht vom Tag der Einheit.
   const { entries: weights } = useMetricData("weight");
   const [range, setRange] = useState<Range>("month");
-  const [deleting, setDeleting] = useState<string | null>(null);
+  /** Die Einheit, für die gerade nachgefragt wird — null heißt: kein Dialog. */
+  const [zuLoeschen, setZuLoeschen] = useState<WorkoutSession | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
 
   const config = RANGES.find((r) => r.key === range) ?? RANGES[1];
   const from = config.days === null ? null : isoDateDaysAgo(config.days - 1);
@@ -102,15 +120,33 @@ export default function TrainingStatsPage() {
     return { hit, weeks: Math.round(weeksInRange) };
   }, [inRange, weeklyTarget, weeksInRange]);
 
-  async function handleDelete(id: string) {
-    setDeleting(id);
+  /**
+   * Löschen mit zwei Sicherungen: der Dialog fängt den Fehltipp — der
+   * Papierkorb sitzt direkt neben der Zeile, die man antippt, um die Einheit zu
+   * öffnen —, das „Rückgängig" fängt den Fall, dass man beim Bestätigen die
+   * falsche vor sich hatte. Eine Einheit ist das einzige in der App, das sich
+   * nicht nachbauen lässt.
+   */
+  async function handleDelete(session: WorkoutSession) {
+    setZuLoeschen(null);
+    setBusy(session.id);
     try {
-      await removeSession(id);
-      toast.success("Einheit gelöscht");
+      await removeSession(session.id);
+      toast.success("Einheit gelöscht", {
+        duration: 8000,
+        action: {
+          label: "Rückgängig",
+          onClick: () => {
+            void restoreSession(session).catch(() =>
+              toast.error("Konnte die Einheit nicht zurückholen")
+            );
+          },
+        },
+      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Konnte Einheit nicht löschen");
     } finally {
-      setDeleting(null);
+      setBusy(null);
     }
   }
 
@@ -275,8 +311,8 @@ export default function TrainingStatsPage() {
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        disabled={deleting === session.id}
-                        onClick={() => handleDelete(session.id)}
+                        disabled={busy === session.id}
+                        onClick={() => setZuLoeschen(session)}
                         aria-label={`Einheit vom ${session.date} löschen`}
                         className="shrink-0 hover:text-destructive"
                       >
@@ -290,6 +326,35 @@ export default function TrainingStatsPage() {
           </section>
         </>
       )}
+
+      <AlertDialog
+        open={zuLoeschen !== null}
+        onOpenChange={(open) => !open && setZuLoeschen(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {zuLoeschen?.dayName} vom {zuLoeschen && formatDateLong(zuLoeschen.date)} löschen?
+            </AlertDialogTitle>
+            {/* Die Zahlen stehen mit im Text: der Papierkorb sitzt neben der
+                Zeile, die zur Einheit führt, und wer danebentippt, soll hier
+                sehen, dass es die falsche ist. */}
+            <AlertDialogDescription>
+              {zuLoeschen
+                ? `${workingSets(zuLoeschen.sets).length} Sätze und ${formatNumber(
+                    Math.round(volumeOf(zuLoeschen))
+                  )} kg Volumen fallen aus Statistik und Progression heraus.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={() => zuLoeschen && handleDelete(zuLoeschen)}>
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

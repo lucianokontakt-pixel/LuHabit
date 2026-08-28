@@ -54,7 +54,8 @@ function toEditable(session: WorkoutSession): EditableExercise[] {
 
 export function SessionDetail({ id }: { id: string }) {
   const router = useRouter();
-  const { sessions, exerciseById, replaceSession, removeSession, loading } = useTraining();
+  const { sessions, exerciseById, replaceSession, removeSession, restoreSession, loading } =
+    useTraining();
   // Eigengewichtsübungen zählen mit dem Körpergewicht vom Tag der Einheit.
   const { entries: weights } = useMetricData("weight");
 
@@ -145,9 +146,22 @@ export function SessionDetail({ id }: { id: string }) {
 
   async function handleDelete() {
     if (!session) return;
+    // Die Einheit festhalten, bevor sie aus dem Bestand fällt — danach wäre sie
+    // nirgends mehr greifbar, und das Rückgängig hätte nichts zurückzugeben.
+    const geloescht = session;
     try {
-      await removeSession(session.id);
-      toast.success("Einheit gelöscht");
+      await removeSession(geloescht.id);
+      toast.success("Einheit gelöscht", {
+        duration: 8000,
+        action: {
+          label: "Rückgängig",
+          onClick: () => {
+            void restoreSession(geloescht)
+              .then(() => router.push(`/einheit/${geloescht.id}`))
+              .catch(() => toast.error("Konnte die Einheit nicht zurückholen"));
+          },
+        },
+      });
       router.push("/statistik");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Konnte Einheit nicht löschen");

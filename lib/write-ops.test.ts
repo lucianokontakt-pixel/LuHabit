@@ -144,6 +144,22 @@ describe("collapse", () => {
     expect(collapse(ops).map((q) => q.seq)).toEqual([2, 3]);
   });
 
+  it("macht aus Löschen und Zurückholen einer Einheit nur das Wiederanlegen", () => {
+    // Das trägt „Rückgängig" nach dem Löschen: restoreSession reiht dieselbe
+    // Einheit mit ihrer alten Kennung wieder ein. Beide Operationen zeigen auf
+    // denselben Datensatz, also bleibt nur die zweite — der Server sieht die
+    // Löschung nie, und die Zeile bleibt, wo sie war.
+    const zurueck: WriteOp = {
+      kind: "session.save",
+      isNew: true,
+      session: einheit("ws-1", "2026-08-26"),
+    };
+    const übrig = collapse(queued([{ kind: "session.delete", id: "ws-1" }, zurueck]));
+    expect(übrig).toHaveLength(1);
+    expect(übrig[0].op.kind).toBe("session.save");
+    expect((übrig[0].op as { session: WorkoutSession }).session.id).toBe("ws-1");
+  });
+
   it("kommt mit einer leeren Schlange klar", () => {
     expect(collapse([])).toEqual([]);
   });
