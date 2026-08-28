@@ -35,7 +35,7 @@ export function BottomNav() {
       <div className="flex items-center gap-2">
         <div className="flex h-16 min-w-0 flex-1 items-center justify-around rounded-pill bg-nav px-2 text-nav-foreground shadow-float">
           {NAV_LINKS.map((link) => {
-            const active = isActiveLink(link.href, pathname);
+            const active = isActiveLink(link.activePrefix ?? link.href, pathname);
             const Icon = link.icon;
             return (
               <Link

@@ -32,7 +32,7 @@ export function Nav() {
 
         <nav className="hidden items-center gap-1 sm:flex">
           {NAV_LINKS.map((link) => {
-            const active = isActiveLink(link.href, pathname);
+            const active = isActiveLink(link.activePrefix ?? link.href, pathname);
             return (
               <Link
                 key={link.href}

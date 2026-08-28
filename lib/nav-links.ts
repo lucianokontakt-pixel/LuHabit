@@ -1,6 +1,16 @@
 import { House, CalendarDays, BarChart3, List, type LucideIcon } from "lucide-react";
 
-export type NavLink = { href: string; label: string; icon: LucideIcon };
+export type NavLink = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  /**
+   * Woran sich entscheidet, ob der Reiter leuchtet — falls das Ziel tiefer
+   * liegt als der Bereich. Statistik zeigt auf /statistik/koerper, soll aber
+   * auch auf /statistik und /statistik/progression aktiv sein.
+   */
+  activePrefix?: string;
+};
 export type SubTab = { href: string; label: string };
 
 /**
@@ -20,7 +30,9 @@ export const NAV_LINKS: NavLink[] = [
   // wo er hinwollte, und nicht auf etwas anders Benanntem.
   { href: "/", label: "Training", icon: House },
   { href: "/plaene", label: "Pläne", icon: CalendarDays },
-  { href: "/statistik", label: "Statistik", icon: BarChart3 },
+  // Zeigt auf „Körper", nicht auf „Verlauf": dort trägt man etwas ein, und
+  // das ist die Handlung im Bereich. Der Rest ist Nachschlagen.
+  { href: "/statistik/koerper", label: "Statistik", icon: BarChart3, activePrefix: "/statistik" },
   { href: "/uebungen", label: "Übungen", icon: List },
 ];
 
@@ -31,10 +43,9 @@ export const NAV_LINKS: NavLink[] = [
  * und Körperfett sind Verläufe wie die anderen auch.
  */
 export const STATISTIK_TABS: readonly SubTab[] = [
-  // „Körper" steht vorn, weil dort der Wert eingetragen wird — das ist die
-  // Handlung im Bereich, der Rest ist Nachschlagen. Die Reihenfolge in dieser
-  // Liste bestimmt nur die Leiste, nicht die Startseite des Bereichs: die
-  // untere Navigation zeigt weiter auf /statistik.
+  // „Körper" steht vorn und ist zugleich das Ziel des Reiters in der unteren
+  // Leiste (siehe NAV_LINKS): dort trägt man etwas ein, der Rest ist
+  // Nachschlagen.
   { href: "/statistik/koerper", label: "Körper" },
   { href: "/statistik", label: "Verlauf" },
   { href: "/statistik/progression", label: "Je Übung" },
