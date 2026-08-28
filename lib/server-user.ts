@@ -26,6 +26,31 @@ function newUserId(): string {
 }
 
 /**
+ * Legt ein Konto an, das nur über einen Passkey erreichbar ist — ohne Google,
+ * ohne Mailadresse, wie bei openGym: Name eintippen, Face ID, fertig.
+ *
+ * Die Spalte `email` ist NOT NULL UNIQUE und bleibt es: ein Platzhalter nach
+ * demselben Muster wie der Owner-Datensatz aus Migration 0007 hält das
+ * Schema heil, ohne eine Adresse zu erfinden, die jemandem gehören könnte.
+ * Meldet sich dasselbe Konto später doch einmal per Google an, überschreibt
+ * upsertGoogleUser den Platzhalter nicht — das wären zwei getrennte Konten,
+ * und das ist ehrlicher als sie an einem geratenen Namen zusammenzuführen.
+ */
+export async function createPasskeyUser(name: string): Promise<DbUser> {
+  const id = newUserId();
+  const trimmed = name.trim().slice(0, 40) || "Profil";
+
+  await d1Query(
+    `INSERT INTO users (id, email, name, provider, last_login_at)
+     VALUES (?, ?, ?, 'passkey', datetime('now'))`,
+    [id, `${id}@passkey.luhabit.local`, trimmed]
+  );
+  await provisionNewUser(id);
+
+  return { id, email: `${id}@passkey.luhabit.local`, name: trimmed, picture: null };
+}
+
+/**
  * Meldet ein Google-Konto an: die konfigurierte Owner-Adresse übernimmt den
  * Datenbestand von vor dem Mehrbenutzer-Umbau, alle anderen bekommen ein
  * frisches Konto mit Standard-Habits und der Übungsbibliothek.

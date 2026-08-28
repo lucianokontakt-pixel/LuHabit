@@ -73,6 +73,43 @@ export async function registerPasskey(name?: string): Promise<PasskeyResult & { 
 }
 
 /**
+ * Legt ein neues Profil direkt von der Login-Seite aus an — ohne vorherige
+ * Anmeldung, ohne Mailadresse. Name, Face ID, drin.
+ */
+export async function signupWithPasskey(
+  name: string
+): Promise<PasskeyResult & { name?: string }> {
+  const optionsRes = await fetch("/api/auth/passkey/signup-options", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!optionsRes.ok) {
+    return { ok: false, error: await readError(optionsRes, "Konnte das Profil nicht anlegen.") };
+  }
+  const options = await optionsRes.json();
+
+  let attestation;
+  try {
+    attestation = await startRegistration({ optionsJSON: options });
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Abgebrochen." };
+  }
+
+  const verifyRes = await fetch("/api/auth/passkey/signup-verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ response: attestation }),
+  });
+  if (!verifyRes.ok) {
+    return { ok: false, error: await readError(verifyRes, "Das Profil konnte nicht angelegt werden.") };
+  }
+  const body = (await verifyRes.json()) as { name: string };
+  rememberPasskeyRegistered();
+  return { ok: true, name: body.name };
+}
+
+/**
  * Meldet ohne bekannte Kontokennung an: der Browser zeigt selbst, welche
  * Passkeys für diese Adresse gespeichert sind. Setzt bei Erfolg die
  * Sitzung — ein Neuladen der Seite danach reicht.

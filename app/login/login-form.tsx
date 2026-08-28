@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { KeyRound } from "lucide-react";
+import { KeyRound, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
-import { hasRegisteredPasskeyHere, loginWithPasskey } from "@/lib/passkey-client";
+import { loginWithPasskey, signupWithPasskey } from "@/lib/passkey-client";
+import { Input } from "@/components/ui/input";
 
 const ERRORS: Record<string, string> = {
   nicht_konfiguriert: "Google-Login ist auf dem Server noch nicht eingerichtet.",
@@ -77,27 +78,43 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   // serverseitig immer gleiches Ergebnis (etwa "true") gäbe es hier nicht,
   // ohne bei jedem alten Browser einen toten Knopf zu zeigen.
   const [passkeySupported, setPasskeySupported] = useState(false);
-  // Ob HIER schon einmal einer angelegt wurde: ohne das lief ein Antippen
-  // beim allerersten Besuch geradewegs in Safaris eigenes "Du hast keinen
-  // Passkey für diese Website"-Fenster — der Knopf bleibt bis dahin klein.
-  const [passkeyKnown, setPasskeyKnown] = useState(false);
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
+  /** Offen heißt: das Namensfeld fürs neue Profil steht statt der Knöpfe da. */
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Browser-Fähigkeit und lokaler Merker lassen sich erst nach dem Mount sicher abfragen
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Browser-Fähigkeit lässt sich erst nach dem Mount sicher abfragen
     setPasskeySupported(browserSupportsWebAuthn());
-    setPasskeyKnown(hasRegisteredPasskeyHere());
   }, []);
+
+  function enter() {
+    router.push(from);
+    router.refresh();
+  }
 
   async function handlePasskeyLogin() {
     setPasskeyBusy(true);
     setPasskeyError(null);
     const result = await loginWithPasskey();
-    if (result.ok) {
-      router.push(from);
-      router.refresh();
-    } else {
+    if (result.ok) enter();
+    else {
+      setPasskeyError(result.error);
+      setPasskeyBusy(false);
+    }
+  }
+
+  async function handlePasskeySignup() {
+    if (!newName.trim()) {
+      setPasskeyError("Bitte einen Namen eintragen.");
+      return;
+    }
+    setPasskeyBusy(true);
+    setPasskeyError(null);
+    const result = await signupWithPasskey(newName);
+    if (result.ok) enter();
+    else {
       setPasskeyError(result.error);
       setPasskeyBusy(false);
     }
@@ -139,54 +156,90 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
           <div className="px-(--card-spacing) text-sm text-muted-foreground">Meldet an …</div>
         ) : (
           <div className="flex flex-col gap-3 px-(--card-spacing)">
-            {/* Ein Passkey lässt sich hier nicht anlegen — das Anlegen hängt
-                an einer schon bestehenden Google-Sitzung (Einstellungen), sonst
-                könnte sich jede beliebige Person selbst einen Zugang schaffen,
-                ganz ohne die freigegebene Mailadresse. Ob DIESES Gerät schon
-                einen kennt, entscheidet, welcher Knopf hier der Hauptweg ist:
-                ein unbekanntes Gerät würde mit einem Login-Versuch nur in
-                Safaris "Du hast keinen Passkey für diese Website"-Fenster
-                laufen, bevor überhaupt einer existiert. */}
-            {passkeySupported && passkeyKnown ? (
+            {creating ? (
+              // Erst der Name, dann Face ID: der Browser braucht ihn schon
+              // beim Anlegen, damit der Passkey später wiedererkennbar in der
+              // Liste des Schlüsselbunds steht.
               <>
+                <Input
+                  autoFocus
+                  placeholder="Dein Name"
+                  maxLength={40}
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handlePasskeySignup();
+                  }}
+                  className="h-12 rounded-pill px-4 text-center"
+                />
                 <Button
                   type="button"
                   className="h-12 w-full rounded-pill text-sm font-medium"
-                  onClick={handlePasskeyLogin}
+                  onClick={handlePasskeySignup}
                   disabled={passkeyBusy}
                 >
-                  <KeyRound className="size-4" />
-                  {passkeyBusy ? "Meldet an …" : "Mit Passkey anmelden"}
+                  <Sparkles className="size-4" />
+                  {passkeyBusy ? "Legt an …" : "Passkey erstellen"}
                 </Button>
-                {passkeyError && <p className="text-xs text-destructive">{passkeyError}</p>}
-
-                <a
-                  href={`/api/auth/google/start?from=${encodeURIComponent(from)}`}
-                  className="flex h-12 w-full items-center justify-center gap-3 rounded-pill bg-elevated text-sm font-medium ring-1 ring-foreground/12 transition-colors hover:ring-foreground/30"
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-10 w-full rounded-pill text-sm"
+                  onClick={() => {
+                    setCreating(false);
+                    setPasskeyError(null);
+                  }}
+                  disabled={passkeyBusy}
                 >
-                  <GoogleMark />
-                  Mit Google anmelden
-                </a>
+                  Zurück
+                </Button>
               </>
             ) : (
               <>
+                {passkeySupported && (
+                  <>
+                    <Button
+                      type="button"
+                      className="h-12 w-full rounded-pill text-sm font-medium"
+                      onClick={handlePasskeyLogin}
+                      disabled={passkeyBusy}
+                    >
+                      <KeyRound className="size-4" />
+                      {passkeyBusy ? "Meldet an …" : "Mit Passkey anmelden"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-12 w-full rounded-pill text-sm font-medium"
+                      onClick={() => {
+                        setCreating(true);
+                        setPasskeyError(null);
+                      }}
+                      disabled={passkeyBusy}
+                    >
+                      <Sparkles className="size-4" />
+                      Neues Profil erstellen
+                    </Button>
+                  </>
+                )}
+
                 {/* Bewusst ein Link, kein fetch: der OAuth-Start ist eine echte
                     Navigation zu Google und darf nicht im Hintergrund passieren. */}
                 <a
                   href={`/api/auth/google/start?from=${encodeURIComponent(from)}`}
-                  className={buttonVariants({ className: "h-12 w-full rounded-pill text-sm font-medium" })}
+                  className={
+                    passkeySupported
+                      ? "flex h-12 w-full items-center justify-center gap-3 rounded-pill bg-elevated text-sm font-medium ring-1 ring-foreground/12 transition-colors hover:ring-foreground/30"
+                      : buttonVariants({ className: "h-12 w-full rounded-pill text-sm font-medium" })
+                  }
                 >
                   <GoogleMark />
                   Mit Google anmelden
                 </a>
-                {passkeySupported && (
-                  <p className="text-center text-xs text-muted-foreground">
-                    Noch keinen Passkey auf diesem Gerät — nach der Anmeldung unter
-                    Einstellungen einrichten.
-                  </p>
-                )}
               </>
             )}
+
+            {passkeyError && <p className="text-xs text-destructive">{passkeyError}</p>}
           </div>
         )
       ) : (

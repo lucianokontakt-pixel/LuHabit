@@ -29,7 +29,18 @@ export const PASSKEY_COOKIE = "luhabit_passkey_challenge";
  * Sitzung lesen muss — die kann sich zwischen den beiden Anfragen theoretisch
  * geändert haben.
  */
-export type PasskeyChallenge = { challenge: string; userId?: string };
+export type PasskeyChallenge = {
+  challenge: string;
+  /** Gesetzt beim Hinzufügen zu einem bestehenden, angemeldeten Konto. */
+  userId?: string;
+  /**
+   * Gesetzt beim Anlegen eines neuen Profils von der Login-Seite aus. Der Name
+   * reist mit im signierten Cookie statt im Request-Body der zweiten Anfrage,
+   * damit zwischen "Name eingeben" und "Face ID bestätigt" niemand einen
+   * anderen unterschieben kann.
+   */
+  signupName?: string;
+};
 
 export async function signChallenge(payload: PasskeyChallenge): Promise<string> {
   return signValue(btoa(JSON.stringify(payload)));
