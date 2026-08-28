@@ -9,9 +9,10 @@ import { SectionTabs } from "@/components/section-tabs";
 import { STATISTIK_TABS } from "@/lib/nav-links";
 import { ExerciseTrendChart } from "@/components/training/exercise-trend-chart";
 import { ExerciseProgress } from "@/components/training/exercise-progress";
+import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
 import { useTraining } from "@/lib/training-store";
 import { summarizeProgress, type ProgressSummary } from "@/lib/progression";
-import { MUSCLES, workingSets, type Muscle } from "@/lib/training";
+import { MUSCLES, workingSets, type Exercise, type Muscle } from "@/lib/training";
 import { formatNumber, formatSigned, formatDateLong } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +46,13 @@ function ChangeBadge({ change, unit }: { change: number | null; unit: string }) 
   );
 }
 
-function ProgressRow({ summary }: { summary: ProgressSummary }) {
+function ProgressRow({
+  summary,
+  onDetail,
+}: {
+  summary: ProgressSummary;
+  onDetail: (exercise: ProgressSummary["exercise"]) => void;
+}) {
   const [open, setOpen] = useState(false);
   const unit = summary.repsBased ? "Wdh" : "kg";
   const currentLabel = summary.repsBased
@@ -54,14 +61,28 @@ function ProgressRow({ summary }: { summary: ProgressSummary }) {
 
   return (
     <div className="border-b border-border last:border-0">
-      <button
+      <div className="flex items-center gap-3 py-3">
+        {/* Eigener Knopf: die Zeile klappt den Verlauf auf, das Bild zeigt die
+            Übung — zwei Absichten, zwei Ziele. Wie im Plan-Editor. */}
+        <button
+          type="button"
+          onClick={() => onDetail(summary.exercise)}
+          aria-label={`${summary.exercise.name} ansehen`}
+          className="shrink-0 rounded-md transition-opacity hover:opacity-80"
+        >
+          <ExerciseThumb exercise={summary.exercise} className="size-9" />
+        </button>
+
+        <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 py-3 text-left"
+        className="flex min-w-0 flex-1 items-center gap-3 text-left"
       >
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
-            <span className="truncate text-sm font-medium">{summary.exercise.name}</span>
+            {/* Umbrechen statt abschneiden — sonst fällt das Gerät am Ende weg,
+                und genau das unterscheidet die Übung von ihren Geschwistern. */}
+            <span className="line-clamp-2 text-sm font-medium">{summary.exercise.name}</span>
             {summary.stagnating && (
               <span className="shrink-0 rounded-pill bg-blush px-2 py-0.5 text-[10px] font-medium text-blush-foreground">
                 stagniert
@@ -87,13 +108,14 @@ function ProgressRow({ summary }: { summary: ProgressSummary }) {
           <ChangeBadge change={summary.changeIn(4)} unit={unit} />
         </span>
 
-        <ChevronDown
-          className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-transform",
-            open && "rotate-180"
-          )}
-        />
-      </button>
+          <ChevronDown
+            className={cn(
+              "size-4 shrink-0 text-muted-foreground transition-transform",
+              open && "rotate-180"
+            )}
+          />
+        </button>
+      </div>
 
       {open && (
         <div className="pb-4">
@@ -127,6 +149,8 @@ export default function ProgressionPage() {
       .filter((e) => trainedIds.has(e.id))
       .map((e) => summarizeProgress(e, sessions));
   }, [exercises, sessions]);
+
+  const [detail, setDetail] = useState<Exercise | null>(null);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -268,7 +292,7 @@ export default function ProgressionPage() {
                   </div>
                   <div className="flex flex-col px-(--card-spacing)">
                     {group.items.map((summary) => (
-                      <ProgressRow key={summary.exercise.id} summary={summary} />
+                      <ProgressRow key={summary.exercise.id} summary={summary} onDetail={setDetail} />
                     ))}
                   </div>
                 </Card>
@@ -291,7 +315,7 @@ export default function ProgressionPage() {
               </div>
               <div className="flex flex-col px-(--card-spacing)">
                 {visible.map((summary) => (
-                  <ProgressRow key={summary.exercise.id} summary={summary} />
+                  <ProgressRow key={summary.exercise.id} summary={summary} onDetail={setDetail} />
                 ))}
               </div>
             </Card>
@@ -308,6 +332,7 @@ export default function ProgressionPage() {
           <ExerciseProgress sessions={sessions} exerciseById={exerciseById} />
         </>
       )}
+      <ExerciseDetail exercise={detail} onOpenChange={(o) => !o && setDetail(null)} />
     </div>
   );
 }

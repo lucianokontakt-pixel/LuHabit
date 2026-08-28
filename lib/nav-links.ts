@@ -15,8 +15,10 @@ export type SubTab = { href: string; label: string };
  * Einheit. Die untere Leiste setzt ihn deshalb selbst in die Mitte.
  */
 export const NAV_LINKS: NavLink[] = [
-  // „Übersicht" und nicht „Start": den Namen trägt schon der Knopf in der Mitte.
-  { href: "/", label: "Übersicht", icon: House },
+  // Nicht „Start" — den Namen trägt der Knopf in der Mitte. „Training" heißt
+  // auch die Überschrift der Seite; wer den Reiter tippt, soll dort ankommen,
+  // wo er hinwollte, und nicht auf etwas anders Benanntem.
+  { href: "/", label: "Training", icon: House },
   { href: "/plaene", label: "Pläne", icon: CalendarDays },
   { href: "/statistik", label: "Statistik", icon: BarChart3 },
   { href: "/uebungen", label: "Übungen", icon: List },
