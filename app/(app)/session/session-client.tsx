@@ -31,7 +31,11 @@ import {
 import { RestTimer } from "@/components/training/rest-timer";
 import { SetRow, type SessionSet } from "@/components/training/set-row";
 import { SessionSummary } from "@/components/training/session-summary";
-import { ExerciseDetail, ExerciseMedia } from "@/components/training/exercise-media";
+import {
+  ExerciseDetail,
+  ExerciseMedia,
+  ExerciseThumb,
+} from "@/components/training/exercise-media";
 import { ExercisePicker } from "@/components/training/exercise-picker";
 import { summarizeSession } from "@/lib/session-stats";
 import { useTraining } from "@/lib/training-store";
@@ -875,19 +879,39 @@ export function SessionClient() {
                 onClick={() => setActiveExercise(isActive ? null : pe.id)}
                 className="flex items-center gap-3 px-(--card-spacing) text-left"
               >
-                <span
-                  className={cn(
-                    "flex size-9 shrink-0 items-center justify-center rounded-tile text-sm font-medium",
-                    allDone
-                      ? "bg-blush text-blush-foreground"
-                      : "bg-card text-muted-foreground"
-                  )}
-                >
-                  {allDone ? <Check className="size-4" /> : exerciseIndex + 1}
-                </span>
+                {/* Das Standbild statt der laufenden Nummer: welche Übung als
+                    Nächstes kommt, erkennt man am Bild schneller als am Namen —
+                    genau wie in der Bibliothek. Die Nummer sagte ohnehin nur,
+                    was die Reihenfolge der Karten schon zeigt, und sobald die
+                    Übung fertig war, wich sie dem Haken. Der sitzt jetzt in der
+                    Ecke des Bildes, damit er nicht wieder Platz kostet. */}
+                {exercise && !isActive ? (
+                  <span className="relative shrink-0">
+                    <ExerciseThumb exercise={exercise} />
+                    {allDone && (
+                      <span className="absolute right-0 bottom-0 flex size-5 items-center justify-center rounded-tl-md bg-blush text-blush-foreground">
+                        <Check className="size-3" />
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  // In der offenen Übung läuft die Bewegung direkt darunter —
+                  // zweimal dasselbe Bild im Abstand von zwei Zeilen wäre
+                  // Dopplung. Dort steht wieder die Nummer.
+                  <span
+                    className={cn(
+                      "flex size-11 shrink-0 items-center justify-center rounded-md text-sm font-medium",
+                      allDone
+                        ? "bg-blush text-blush-foreground"
+                        : "bg-card text-muted-foreground"
+                    )}
+                  >
+                    {allDone ? <Check className="size-4" /> : exerciseIndex + 1}
+                  </span>
+                )}
 
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-body font-medium">
+                  <span className="block line-clamp-2 text-body font-medium">
                     {exercise?.name ?? pe.exerciseId}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
