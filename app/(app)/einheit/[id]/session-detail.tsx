@@ -22,11 +22,12 @@ import {
 import { SessionSummary } from "@/components/training/session-summary";
 import { ExercisePicker } from "@/components/training/exercise-picker";
 import { SetRow, type SessionSet } from "@/components/training/set-row";
+import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
 import { updateSession } from "@/lib/api-training";
 import { summarizeSession } from "@/lib/session-stats";
-import { incrementFor, setLabels, type WorkoutSession } from "@/lib/training";
+import { incrementFor, setLabels, type Exercise, type WorkoutSession } from "@/lib/training";
 import { todayISO } from "@/lib/datum";
 import { formatDateLong } from "@/lib/format";
 
@@ -66,6 +67,7 @@ export function SessionDetail({ id }: { id: string }) {
   const [note, setNote] = useState("");
   const [picking, setPicking] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [detail, setDetail] = useState<Exercise | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const summary = useMemo(
@@ -240,7 +242,22 @@ export function SessionDetail({ id }: { id: string }) {
             return (
               <Card key={`${group.exerciseId}-${exerciseIndex}`} className="gap-3">
                 <div className="flex items-center gap-3 px-(--card-spacing)">
-                  <p className="min-w-0 flex-1 truncate text-body font-medium">
+                  {/* Wie überall sonst: Bild zeigt die Übung, Antippen die
+                      Anleitung. Auch beim Nachsehen einer alten Einheit will
+                      man wissen, was das eigentlich war. */}
+                  <button
+                    type="button"
+                    onClick={() => exercise && setDetail(exercise)}
+                    disabled={!exercise}
+                    aria-label={`${exercise?.name ?? "Übung"} ansehen`}
+                    className="shrink-0 rounded-md transition-opacity hover:opacity-80 disabled:opacity-100"
+                  >
+                    <ExerciseThumb
+                      exercise={exercise ?? { id: group.exerciseId, name: "", media: null }}
+                      className="size-9"
+                    />
+                  </button>
+                  <p className="line-clamp-2 min-w-0 flex-1 text-body font-medium">
                     {exercise?.name ?? group.exerciseId}
                   </p>
                   <Button
@@ -403,6 +420,8 @@ export function SessionDetail({ id }: { id: string }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ExerciseDetail exercise={detail} onOpenChange={(o) => !o && setDetail(null)} />
     </div>
   );
 }

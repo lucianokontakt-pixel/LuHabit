@@ -123,7 +123,7 @@ export function SessionSummary({
                 className="flex items-center gap-3 rounded-panel bg-elevated px-3.5 py-2.5"
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{exercise.name}</span>
+                  <span className="line-clamp-2 text-sm font-medium">{exercise.name}</span>
                   <span className="block text-xs text-muted-foreground">
                     {RECORD_LABELS[kind]}
                   </span>
@@ -201,7 +201,7 @@ export function SessionSummary({
               >
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium">{exercise.name}</span>
+                    <span className="line-clamp-2 text-sm font-medium">{exercise.name}</span>
                     {exercise.records.length > 0 && (
                       <Trophy className="size-3 shrink-0 text-muted-foreground" />
                     )}
