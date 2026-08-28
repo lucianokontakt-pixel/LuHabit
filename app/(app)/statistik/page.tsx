@@ -152,25 +152,30 @@ export default function TrainingStatsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-sm text-muted-foreground">Volumen, Frequenz &amp; Verlauf</p>
-          <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">
-            Statistik
-          </h1>
-        </div>
-        <Tabs value={range} onValueChange={(v) => setRange(v as Range)}>
-          <TabsList>
-            {RANGES.map((r) => (
-              <TabsTrigger key={r.key} value={r.key}>
-                {r.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+      <div>
+        <p className="text-sm text-muted-foreground">Volumen, Frequenz &amp; Verlauf</p>
+        <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">
+          Statistik
+        </h1>
       </div>
 
       <SectionTabs tabs={STATISTIK_TABS} />
+
+      {/* Zwei Leisten übereinander, und bis hierher sahen beide gleich aus:
+          dieselbe Pillengruppe, dasselbe angehobene Weiß. Man musste raten,
+          welche den Bereich wechselt und welche den Zeitraum. Die Pillen oben
+          sagen jetzt „wo bin ich", der Unterstrich hier „welcher Ausschnitt" —
+          und weil der Zeitraum zu den Zahlen darunter gehört, steht er auch
+          dort und nicht mehr neben der Überschrift. */}
+      <Tabs value={range} onValueChange={(v) => setRange(v as Range)} className="-mb-1">
+        <TabsList variant="line">
+          {RANGES.map((r) => (
+            <TabsTrigger key={r.key} value={r.key}>
+              {r.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {loading ? (
         <div className="h-32 animate-pulse rounded-card bg-card" />
@@ -214,44 +219,45 @@ export default function TrainingStatsPage() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Card size="sm" className="gap-0">
-              <div className="px-(--card-spacing)">
-                <StatValue label="Wiederholungen" value={formatCompact(totalReps)} />
+          {/* Die zweite Reihe war bis hierher noch einmal vier Kacheln in
+              derselben Größe wie die erste: acht gleich laute Flächen, keine
+              Leserichtung, nichts, was zuerst gelesen werden will. Sie sitzen
+              jetzt zu viert in einer Karte und eine Stufe kleiner — dieselben
+              Zahlen, aber als Fußnote zu den vier oben statt als deren
+              Zwilling.
+              Die Unterzeile erklärt bei jedem Wert den darüber ("insgesamt",
+              "über alle Muskeln"). Bei den Bestleistungen stand dort früher die
+              Wochenquote — eine ganz andere Zahl, die nur so aussah, als gehöre
+              sie dazu. Sie steht als Satz unter dem Raster. */}
+          <Card className="gap-0">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-5 px-(--card-spacing) sm:grid-cols-4">
+              <div>
+                <StatValue size="sm" label="Wiederholungen" value={formatCompact(totalReps)} />
                 <p className="mt-1 text-[11px] text-muted-foreground">insgesamt</p>
               </div>
-            </Card>
-            <Card size="sm" className="gap-0">
-              <div className="px-(--card-spacing)">
+              <div>
                 <StatValue
+                  size="sm"
                   label="Sätze pro Woche"
                   value={formatNumber(Math.round(setsPerWeek * 10) / 10)}
                 />
                 <p className="mt-1 text-[11px] text-muted-foreground">über alle Muskeln</p>
               </div>
-            </Card>
-            <Card size="sm" className="gap-0">
-              <div className="px-(--card-spacing)">
+              <div>
                 <StatValue
+                  size="sm"
                   label="Dichte"
                   value={density !== null ? formatNumber(Math.round(density)) : "—"}
                   unit={density !== null ? "kg/min" : undefined}
                 />
                 <p className="mt-1 text-[11px] text-muted-foreground">Volumen je Minute</p>
               </div>
-            </Card>
-            <Card size="sm" className="gap-0">
-              <div className="px-(--card-spacing)">
-                {/* Die Unterzeile erklärt bei jeder Kachel den Wert darüber
-                    ("abgehakt", "im Gym", "insgesamt"). Hier stand stattdessen
-                    die Wochenquote — eine ganz andere Zahl, die nur so aussah,
-                    als gehöre sie zu den Rekorden. Sie steht jetzt als Satz
-                    unter dem Raster. */}
-                <StatValue label="Bestleistungen" value={String(recordCount)} />
+              <div>
+                <StatValue size="sm" label="Bestleistungen" value={String(recordCount)} />
                 <p className="mt-1 text-[11px] text-muted-foreground">neue Rekorde</p>
               </div>
-            </Card>
-          </div>
+            </div>
+          </Card>
 
           {/* Ohne diesen Satz wirkt der Sprung im Volumen wie ein Fehler. */}
           <p className="-mt-3 text-xs text-muted-foreground">

@@ -538,6 +538,25 @@ export function computeTargets({
 }
 
 /**
+ * Der Übungsname ohne seinen Zusatz in Klammern: aus „Bankdrücken (breit,
+ * Langhantel)" wird „Bankdrücken".
+ *
+ * Für Stellen, an denen der Name eine Marke ist und keine Auskunft — die
+ * Pillen auf der Startseite etwa. Dort standen die vollen Namen, und weil
+ * „Rumänisches Kreuzheben (Langhantel)" allein schon eine Zeile füllt, wurde
+ * aus sechs Pillen ein sechszeiliger Block. Wer gleich startet, will den Tag
+ * wiedererkennen, nicht die Stangenvariante nachlesen; die steht in der
+ * Einheit selbst.
+ *
+ * Nur der letzte Klammerausdruck fällt weg, und nur wenn davor etwas
+ * übrigbleibt: „(Band)" als ganzer Name wäre sonst plötzlich leer.
+ */
+export function kurzerName(name: string): string {
+  const kurz = name.replace(/\s*\([^()]*\)\s*$/, "").trim();
+  return kurz || name;
+}
+
+/**
  * Beschriftung der Satz-Ziffern: Aufwärmsätze heißen „W", die Arbeitssätze
  * zählen davon unabhängig bei 1 los. Aus W, W, 1, 2, 3 wird also nicht
  * 1, 2, 3, 4, 5 — sonst wüsste niemand mehr, wie viele Arbeitssätze anstehen.

@@ -42,7 +42,10 @@ export function ExerciseThumb({
   return (
     <div
       className={cn(
-        "relative size-11 shrink-0 overflow-hidden rounded-md bg-muted",
+        // bg-elevated, nicht bg-muted: --muted und --card tragen denselben
+        // Wert (#f2f2f3), die Fläche wäre in einer Karte also unsichtbar —
+        // eine Übung ohne Bild hinterließe dort ein Loch statt eines Platzes.
+        "relative size-11 shrink-0 overflow-hidden rounded-md bg-elevated",
         className
       )}
     >

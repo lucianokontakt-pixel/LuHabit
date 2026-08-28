@@ -11,7 +11,13 @@ import { DayPicker } from "@/components/training/day-picker";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
 import { useEntwurf } from "@/lib/use-start-ziel";
-import { measuredOn, nextDayFor, sessionVolume, MUSCLE_LABELS } from "@/lib/training";
+import {
+  measuredOn,
+  nextDayFor,
+  sessionVolume,
+  kurzerName,
+  MUSCLE_LABELS,
+} from "@/lib/training";
 import { formatDateLong, formatNumber } from "@/lib/format";
 import { todayISO } from "@/lib/datum";
 import { cn } from "@/lib/utils";
@@ -78,14 +84,12 @@ export default function TrainingOverviewPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <p className="text-sm text-muted-foreground">Was heute dran ist</p>
-        <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">
-          Training
-        </h1>
-      </div>
-
-
+      {/* Kein eigener Seitenkopf mehr. Er trug „Was heute dran ist / Training"
+          in 36px Serif — und 130 Pixel darunter sagte die Karte „Als Nächstes
+          dran" in derselben Schrift, derselben Größe. Zwei Serif-Zeilen gleicher
+          Größe übereinander stritten um denselben Blick, und der Satz stand
+          zweimal da. Die Karte ist auf dieser Seite die Überschrift; welcher
+          Bereich das ist, sagt die Leiste unten. */}
       {error && (
         <Card className="gap-1">
           <p className="px-(--card-spacing) text-sm font-medium">
@@ -127,7 +131,7 @@ export default function TrainingOverviewPage() {
                 key={pe.id}
                 className="rounded-pill bg-current/10 px-2.5 py-1 text-xs"
               >
-                {exerciseById[pe.exerciseId]?.name ?? pe.exerciseId}
+                {kurzerName(exerciseById[pe.exerciseId]?.name ?? pe.exerciseId)}
               </span>
             ))}
           </div>

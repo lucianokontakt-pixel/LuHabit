@@ -34,16 +34,39 @@ const MONTHS = [
  * 100 kg Beinpresse gegen 10 kg Seitheben —, und die Dauer fehlt bei jeder
  * nachgetragenen Einheit. Sätze stehen immer da und sind vergleichbar.
  */
+/**
+ * Ab so vielen Trainingstagen ergibt das Raster ein Muster. Darunter ist es ein
+ * Feld aus leeren Kästchen mit einem Punkt darin — und der Kalender weiter
+ * unten sagt dasselbe, nur in lesbaren Daten.
+ */
+const MIN_TRAININGSTAGE = 6;
+
+/** So viele Wochen bleiben stehen, auch wenn nur die letzte etwas enthält. */
+const MIN_WOCHEN = 12;
+
 export function TrainingHeatmap({ sessions }: { sessions: WorkoutSession[] }) {
   const router = useRouter();
+
   const days = useMemo(() => heatmapDays(sessions, 365), [sessions]);
 
-  // Spalten sind Wochen, Zeilen Wochentage — Montag oben.
+  /**
+   * Spalten sind Wochen, Zeilen Wochentage — Montag oben.
+   *
+   * Vorne fallen die Wochen weg, in denen es nichts zu sehen gab. Ein festes
+   * Jahr hieß bei drei Monaten Verlauf, dass drei Viertel der Karte leer sind,
+   * und leere Fläche liest sich wie ein Fehler, nicht wie eine Pause. Zwölf
+   * Wochen bleiben in jedem Fall stehen, sonst schrumpfte das Raster bei einer
+   * frischen Woche auf eine einzelne Spalte.
+   */
   const weeks = useMemo(() => {
-    const out: (typeof days)[] = [];
-    for (let i = 0; i < days.length; i += 7) out.push(days.slice(i, i + 7));
-    return out;
+    const alle: (typeof days)[] = [];
+    for (let i = 0; i < days.length; i += 7) alle.push(days.slice(i, i + 7));
+    const spaeteste = Math.max(0, alle.length - MIN_WOCHEN);
+    const erste = alle.findIndex((week) => week.some((day) => day.sets > 0));
+    return alle.slice(erste < 0 ? spaeteste : Math.min(erste, spaeteste));
   }, [days]);
+
+  const gezeigt = useMemo(() => weeks.flat(), [weeks]);
 
   // Ein Monatsname über der ersten Woche, in der er beginnt. Sonst stünde über
   // jeder zweiten Spalte derselbe Name.
@@ -53,7 +76,7 @@ export function TrainingHeatmap({ sessions }: { sessions: WorkoutSession[] }) {
     return month !== previous ? MONTHS[month] : "";
   });
 
-  const trainedDays = days.filter((d) => d.sets > 0).length;
+  const trainedDays = gezeigt.filter((d) => d.sets > 0).length;
 
   // Ans rechte Ende springen: die laufende Woche ist die, die interessiert.
   // Zwölf Monate passen auf kein Telefon, also entscheidet der Startpunkt, was
@@ -64,13 +87,25 @@ export function TrainingHeatmap({ sessions }: { sessions: WorkoutSession[] }) {
     if (node) node.scrollLeft = node.scrollWidth;
   }, [weeks]);
 
+  // Erst wenn das Raster etwas zu rastern hat.
+  if (trainedDays < MIN_TRAININGSTAGE) return null;
+
+  /**
+   * Die Legende erklärt eine Skala. Kommen keine drei Stufen vor, erklärt sie
+   * nichts — dann sind fünf Kästchen unter der Karte nur eine weitere Zeile,
+   * die gelesen werden will.
+   */
+  const stufen = new Set(gezeigt.filter((d) => d.level > 0).map((d) => d.level));
+
+  const monate = Math.max(1, Math.round(weeks.length / 4.345));
+
   return (
     <Card className="gap-4">
       <div className="flex items-baseline justify-between gap-3 px-(--card-spacing)">
         <div>
           <h2 className="text-subheading font-display">Aktivität</h2>
           <p className="text-sm text-muted-foreground">
-            Letzte 12 Monate, nach Sätzen pro Tag
+            {monate === 1 ? "Letzter Monat" : `Letzte ${monate} Monate`}, nach Sätzen pro Tag
           </p>
         </div>
         <p className="shrink-0 text-xs text-muted-foreground">
@@ -111,13 +146,15 @@ export function TrainingHeatmap({ sessions }: { sessions: WorkoutSession[] }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 px-(--card-spacing) text-[11px] text-muted-foreground">
-        Weniger
-        {LEVEL_CLASSES.map((cls, i) => (
-          <span key={i} className={cn("size-3 rounded-[3px]", cls)} />
-        ))}
-        Mehr
-      </div>
+      {stufen.size >= 3 && (
+        <div className="flex items-center gap-1.5 px-(--card-spacing) text-[11px] text-muted-foreground">
+          Weniger
+          {LEVEL_CLASSES.map((cls, i) => (
+            <span key={i} className={cn("size-3 rounded-[3px]", cls)} />
+          ))}
+          Mehr
+        </div>
+      )}
     </Card>
   );
 }

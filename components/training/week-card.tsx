@@ -59,7 +59,13 @@ export function WeekCard({
     label: w.label,
     volume: Math.round(w.volume),
   }));
-  const hasVolume = chartData.some((d) => d.volume > 0);
+  /**
+   * Eine Kurve braucht mehr als einen Punkt. Bis hierher reichte eine einzige
+   * Woche mit Volumen, um das Diagramm zu zeigen — dann standen elf flache
+   * Wochen am Boden und ein Zacken ganz rechts: 90 Pixel Fläche für eine Zahl,
+   * die zwei Zeilen weiter oben schon als „Volumen" steht.
+   */
+  const hasVolume = chartData.filter((d) => d.volume > 0).length >= 3;
 
   return (
     <Card className="gap-4">

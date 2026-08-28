@@ -186,18 +186,26 @@ export default function PlansPage() {
                   <Copy />
                   Duplizieren
                 </Button>
-                {!plan.isActive && (
-                  <Button
-                    variant="secondary"
-                    className="min-w-[9rem] flex-1"
-                    onClick={() => handleActivate(plan.id)}
-                    disabled={busy}
-                  >
-                    <Check />
-                    Aktiv setzen
-                  </Button>
-                )}
               </div>
+
+              {/* Nicht als dritter gleich lauter Knopf neben den beiden oben:
+                  zu dritt passten sie nicht in eine Zeile, also brach der
+                  letzte um — und weil der aktive Plan ihn gar nicht hat, waren
+                  die Karten unterschiedlich hoch. Er ist ohnehin von anderer
+                  Art: „Bearbeiten" und „Duplizieren" tun etwas mit diesem Plan,
+                  „Aktiv setzen" ändert, welcher Plan überhaupt gilt. */}
+              {!plan.isActive && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mx-(--card-spacing) justify-center text-muted-foreground hover:text-foreground"
+                  onClick={() => handleActivate(plan.id)}
+                  disabled={busy}
+                >
+                  <Check />
+                  Als aktiven Plan setzen
+                </Button>
+              )}
             </Card>
           ))}
         </div>

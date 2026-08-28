@@ -39,6 +39,36 @@ const EQUIPMENT_KEYS = EQUIPMENT;
  */
 const VORSCHAU = 24;
 
+/**
+ * Die Zeile unter dem Übungsnamen — oder nichts.
+ *
+ * Das Gerät stand hier bis zuletzt immer, obwohl es bei fast jeder Übung schon
+ * im Namen steht: „Bankdrücken (breit, Langhantel)" mit „Langhantel"
+ * darunter. Damit war jede Zeile dreizeilig und sagte nichts, was zwei Zeilen
+ * höher nicht schon stand — bei 1295 Übungen ist das der Unterschied zwischen
+ * fünf und neun sichtbaren Treffern. Steht das Gerät ausnahmsweise nicht im
+ * Namen, steht es weiterhin hier.
+ *
+ * Alles andere ist ohnehin eine Ausnahme und darf bleiben: ein abweichender
+ * Sprung, der Lastanteil bei Eigengewicht, „eigene", „ausgeblendet".
+ */
+function zusatzZeile(exercise: Exercise): string | null {
+  const geraet = EQUIPMENT_LABELS[exercise.equipment];
+  const teile = [
+    exercise.name.toLowerCase().includes(geraet.toLowerCase()) ? null : geraet,
+    exercise.increment !== null ? `${exercise.increment} kg Sprung` : null,
+    // Der Lastanteil erklärt, warum eine Übung ohne Hantel überhaupt Volumen
+    // erzeugt.
+    exercise.loadFactor !== null && exercise.loadFactor > 0
+      ? `${Math.round(exercise.loadFactor * 100)} % Last`
+      : null,
+    exercise.isCustom ? "eigene" : null,
+    exercise.hidden ? "ausgeblendet" : null,
+  ].filter((teil): teil is string => teil !== null);
+
+  return teile.length > 0 ? teile.join(" · ") : null;
+}
+
 export default function ExercisesPage() {
   const { exercises, plans, setPlans, upsertExercise, reload, loading } = useTraining();
   const [query, setQuery] = useState("");
@@ -291,17 +321,11 @@ export default function ExercisesPage() {
                           des Namens und ist genau das, was die sechs
                           Bankdrück-Varianten voneinander unterscheidet. */}
                       <p className="line-clamp-2 text-sm">{exercise.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {EQUIPMENT_LABELS[exercise.equipment]}
-                        {exercise.increment !== null && ` · ${exercise.increment} kg Sprung`}
-                        {/* Der Lastanteil erklärt, warum eine Übung ohne Hantel
-                            überhaupt Volumen erzeugt. */}
-                        {exercise.loadFactor !== null &&
-                          exercise.loadFactor > 0 &&
-                          ` · ${Math.round(exercise.loadFactor * 100)} % Last`}
-                        {exercise.isCustom && " · eigene"}
-                        {exercise.hidden && " · ausgeblendet"}
-                      </p>
+                      {zusatzZeile(exercise) && (
+                        <p className="truncate text-xs text-muted-foreground">
+                          {zusatzZeile(exercise)}
+                        </p>
+                      )}
                       </div>
                     </button>
 

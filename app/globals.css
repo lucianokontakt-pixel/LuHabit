@@ -147,7 +147,13 @@
      chromatic accent but dimmed so it reads as warm, not neon. */
   --canvas: #101113;
   --fog: #16171a;
-  --elevated: #1c1e21;
+  /* Eine Stufe über der Karte — und im Dunkeln muss diese Stufe größer sein
+     als im Hellen, sonst ist sie keine. Hier standen #1c1e21 auf Karten in
+     #1a1c1f: zwei Farbwerte Unterschied, also nichts. Alles, was sich auf einer
+     Karte abheben soll, verschwand darin — die leeren Segmente des
+     Wochenbalkens, die Ruhetage im Kalender samt ihrem Legendenkästchen, die
+     Fläche hinter einem Übungsbild, das noch fehlt. */
+  --elevated: #26282c;
   --blush: #4a3226;
   --blush-foreground: #f4d3bd;
   --success: #7fae90;
