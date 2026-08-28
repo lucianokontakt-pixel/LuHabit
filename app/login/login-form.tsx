@@ -134,14 +134,14 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
           <div className="px-(--card-spacing) text-sm text-muted-foreground">Meldet an …</div>
         ) : (
           <div className="flex flex-col gap-3 px-(--card-spacing)">
-            {/* Zuerst der Passkey, wenn das Gerät kann: ein Fingerabdruck
-                oder Face ID ist weniger Weg als der Umweg über Google. Der
+            {/* Zuerst der Passkey, wenn das Gerät kann, und als Hauptknopf:
+                ein Fingerabdruck oder Face ID ist weniger Weg als der Umweg
+                über Google, das verdient den Vortritt auch optisch. Der
                 Knopf verschwindet auf Geräten ohne Unterstützung ganz, statt
                 dort tot dazustehen. */}
             {passkeySupported && (
               <Button
                 type="button"
-                variant="outline"
                 className="h-12 w-full rounded-pill text-sm font-medium"
                 onClick={handlePasskeyLogin}
                 disabled={passkeyBusy}
