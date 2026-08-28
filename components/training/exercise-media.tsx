@@ -148,8 +148,13 @@ export function ExerciseDetail({
                 volle Breite füllte auf dem Handy fast den ganzen Dialog — für
                 ein Popup, das man kurz aufruft und wieder schließt, zu viel. */}
             <div className="flex min-w-0 flex-col gap-3">
+              {/* bg-white statt bg-muted: die Illustrationen sind selbst
+                  weiß hinterlegt, nicht transparent — auf grauem Grund stand
+                  deshalb ein sichtbarer Rand um jedes Bild, als läge es in
+                  einer eigenen Box. Bewusst fest statt themefähig, aus
+                  demselben Grund wie im dunklen Modus des Bilds selbst. */}
               {gif && (
-                <div className="relative h-36 w-full shrink-0 overflow-hidden rounded-card bg-muted">
+                <div className="relative h-36 w-full shrink-0 overflow-hidden rounded-card bg-white">
                   <Image
                     src={gif}
                     alt={`Bewegungsablauf: ${exercise.name}`}
