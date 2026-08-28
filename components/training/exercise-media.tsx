@@ -123,7 +123,10 @@ export function ExerciseDetail({
 
   return (
     <Dialog open={exercise !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+      {/* 90dvh reichte bis an den Bildschirmrand — das sah nicht nach einem
+          Popup aus, das man kurz aufruft, sondern nach einer eigenen Seite.
+          70dvh lässt oben und unten sichtbar Luft, der Rest scrollt darin. */}
+      <DialogContent className="max-h-[70dvh] overflow-y-auto">
         {exercise && (
           <>
             <DialogHeader>
@@ -144,9 +147,9 @@ export function ExerciseDetail({
                 Feste Höhe statt aspect-square: ein quadratisches Bild über die
                 volle Breite füllte auf dem Handy fast den ganzen Dialog — für
                 ein Popup, das man kurz aufruft und wieder schließt, zu viel. */}
-            <div className="flex min-w-0 flex-col gap-4">
+            <div className="flex min-w-0 flex-col gap-3">
               {gif && (
-                <div className="relative h-48 w-full shrink-0 overflow-hidden rounded-card bg-muted">
+                <div className="relative h-36 w-full shrink-0 overflow-hidden rounded-card bg-muted">
                   <Image
                     src={gif}
                     alt={`Bewegungsablauf: ${exercise.name}`}
