@@ -22,7 +22,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       {/* Der untere Abstand ist gerechnet, nicht geraten: die Leiste wächst um
           die Safe-Area-Höhe des Geräts nach unten, sonst verschwände der
           letzte Inhalt darunter. */}
-      <main className="px-edge mx-auto w-full max-w-4xl flex-1 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:[--edge:1.5rem] sm:pb-9 sm:pt-6">
+      <main className="px-edge mx-auto w-full max-w-4xl flex-1 pt-4 pb-[calc(var(--bottom-nav-space)+1rem)] sm:[--edge:1.5rem] sm:pb-9 sm:pt-6">
         {children}
       </main>
       <BottomNav />

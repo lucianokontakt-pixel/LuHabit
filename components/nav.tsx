@@ -19,7 +19,8 @@ export function Nav() {
   if (pathname === "/login") return null;
 
   return (
-    // steep's nav is whisper-quiet: no border, no shadow, just the logo and links.
+    // Der Kopf hält sich zurück: keine Linie, kein Schatten, nur Name und
+    // Ziele. Die Farbe der App steckt in den Karten darunter, nicht hier oben.
     <header
       className="sticky top-0 z-40 bg-background/85 backdrop-blur-xl"
       style={{ paddingTop: "env(safe-area-inset-top)" }}

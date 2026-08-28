@@ -7,7 +7,7 @@ import { formatSigned } from "@/lib/format";
 export type DeltaDirection = "up-good" | "down-good" | "neutral";
 
 /**
- * Die steep-Signatur: große Kennzahl, darunter eine ruhige Delta-Zeile
+ * Die Signatur der App: große Kennzahl, darunter eine ruhige Delta-Zeile
  * ("↑ 5,5 % vs. letzte Woche"). Bewusst ohne Ampelfarben — die Richtung
  * trägt der Pfeil, die Farbe bleibt zurückhaltend.
  */

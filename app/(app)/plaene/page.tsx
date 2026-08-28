@@ -125,8 +125,13 @@ export default function PlansPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h2 className="truncate text-subheading font-display">{plan.name}</h2>
+                    {/* Die Ausnahme von „Zustände tragen die dunkle Füllung":
+                        der aktive Plan ist nicht bloß einer von mehreren
+                        Zuständen, sondern der eine Plan, auf den sich die
+                        halbe App bezieht — die Startseite, der Startknopf, der
+                        Vorschlag für morgen. Dafür die Leitfarbe. */}
                     {plan.isActive && (
-                      <span className="shrink-0 rounded-pill bg-blush px-2 py-0.5 text-[11px] font-medium text-blush-foreground">
+                      <span className="shrink-0 rounded-pill bg-tint-violet px-2 py-0.5 text-[11px] font-medium text-tint-violet-ink">
                         aktiv
                       </span>
                     )}

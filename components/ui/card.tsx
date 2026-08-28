@@ -1,28 +1,35 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { TINT_SURFACE, type Tint } from "@/lib/tints"
 
-// steep: content cards are flat mist at 24px radius — no border, no shadow.
-// Only "floating artifacts" (variant=float) earn elevation.
+// Inhaltskarten sind flächig und randlos, 28px rund, ohne Rahmen und ohne
+// Schatten. Erhöhung bekommt nur, was wirklich schwebt (variant=float).
+//
+// `tint` ist die farbige Karte: eine der fünf Tönungen als Fläche, darauf
+// immer das dunkle Ink. Welche Tönung wofür steht, entscheidet lib/tints.ts.
 function Card({
   className,
   size = "default",
   variant = "default",
+  tint = "violet",
   ...props
 }: React.ComponentProps<"div"> & {
   size?: "default" | "sm"
-  variant?: "default" | "float" | "blush" | "plain"
+  variant?: "default" | "float" | "tint" | "plain"
+  tint?: Tint
 }) {
   return (
     <div
       data-slot="card"
       data-size={size}
       data-variant={variant}
+      data-tint={variant === "tint" ? tint : undefined}
       className={cn(
         "group/card flex flex-col gap-(--card-spacing) rounded-card py-(--card-spacing) text-sm [--card-spacing:--spacing(4)] data-[size=sm]:[--card-spacing:--spacing(3)]",
         variant === "default" && "bg-card text-card-foreground",
         variant === "float" && "bg-elevated text-foreground shadow-float",
-        variant === "blush" && "bg-blush text-blush-foreground",
+        variant === "tint" && TINT_SURFACE[tint],
         variant === "plain" && "bg-transparent text-foreground",
         className
       )}
@@ -48,7 +55,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-title"
-      className={cn("text-body font-medium leading-snug", className)}
+      className={cn("text-body font-semibold leading-snug", className)}
       {...props}
     />
   )

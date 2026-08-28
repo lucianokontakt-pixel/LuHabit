@@ -76,6 +76,7 @@ import {
 import { needsWarmup, warmupWeight, WARMUP_REPS } from "@/lib/warmup";
 import { useSignalSound } from "@/lib/use-signal-sound";
 import { cn } from "@/lib/utils";
+import { STATE_DONE, STATE_HINT } from "@/lib/tints";
 import { DRAFT_KEY, uebungenDerEinheit } from "@/lib/session-draft";
 
 
@@ -1012,7 +1013,9 @@ export function SessionClient() {
       </div>
 
       {/* Wie weit die Einheit ist, ohne dass man zwei Zahlen im Kopf teilen
-          muss. Achromatisch — Peach gehört in dieser Ansicht der Pause. */}
+          muss. Ohne Farbe: im Training heißt Mint „erledigt" und Orange „läuft
+          gerade" — ein farbiger Balken hier oben würde in beides hineinreden,
+          obwohl er nur zählt. */}
       <div className="h-1 overflow-hidden rounded-pill bg-foreground/10">
         <div
           className="h-full rounded-pill bg-foreground transition-[width] duration-300 ease-out"
@@ -1095,7 +1098,7 @@ export function SessionClient() {
                   >
                     <ExerciseThumb exercise={exercise} />
                     {allDone && (
-                      <span className="absolute right-0 bottom-0 flex size-5 items-center justify-center rounded-tl-md bg-blush text-blush-foreground">
+                      <span className="absolute right-0 bottom-0 flex size-5 items-center justify-center rounded-tl-md bg-tint-mint text-tint-mint-ink">
                         <Check className="size-3" />
                       </span>
                     )}
@@ -1105,7 +1108,7 @@ export function SessionClient() {
                     className={cn(
                       "flex size-11 shrink-0 items-center justify-center rounded-md text-sm font-medium",
                       allDone
-                        ? "bg-blush text-blush-foreground"
+                        ? STATE_DONE
                         : "bg-card text-muted-foreground"
                     )}
                   >
@@ -1214,8 +1217,11 @@ export function SessionClient() {
                     <p
                       className={cn(
                         "mx-(--card-spacing) flex items-center gap-2 rounded-field px-3 py-2 text-xs",
+                        // Die App schlägt etwas vor — das ist ihre Leitfarbe,
+                        // nicht das Mint des Erledigten und nicht das Orange
+                        // des Jetzt.
                         target.kind === "up"
-                          ? "bg-blush text-blush-foreground"
+                          ? STATE_HINT
                           : "bg-card text-muted-foreground"
                       )}
                     >
@@ -1412,8 +1418,7 @@ export function SessionClient() {
       {/* Pausentimer und Abschluss teilen sich einen Stapel, damit sie sich
           nicht gegenseitig überdecken. */}
       <div
-        className="fixed inset-x-0 bottom-[var(--nav-offset)] z-30 sm:bottom-0"
-        style={{ ["--nav-offset" as string]: "calc(68px + env(safe-area-inset-bottom))" }}
+        className="fixed inset-x-0 bottom-[var(--bottom-nav-space)] z-30 sm:bottom-0"
       >
         {restEndsAt !== null && (
           <div className="mx-auto max-w-4xl px-4 pb-2 sm:px-6">

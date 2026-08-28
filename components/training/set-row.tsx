@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { STATE_DONE } from "@/lib/tints";
 import { formatNumber } from "@/lib/format";
 import { WeightSheet } from "@/components/training/weight-sheet";
 
@@ -107,7 +108,7 @@ export function SetRow({
     <div
       className={cn(
         "flex items-center gap-2 rounded-panel p-2 transition-colors",
-        set.done ? "bg-blush/40" : "bg-card"
+        set.done ? "bg-tint-mint/40" : "bg-card"
       )}
     >
       {/* Die Ziffer ist zugleich der Schalter für den Aufwärmsatz — die Zeile
@@ -125,7 +126,7 @@ export function SetRow({
         className={cn(
           "flex size-8 shrink-0 items-center justify-center rounded-pill text-xs font-medium transition-colors",
           set.warmup && "ring-1 ring-foreground/25",
-          set.done ? "bg-blush text-blush-foreground" : "bg-elevated text-muted-foreground"
+          set.done ? STATE_DONE : "bg-elevated text-muted-foreground"
         )}
       >
         {label}

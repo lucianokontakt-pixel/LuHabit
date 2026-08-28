@@ -20,7 +20,7 @@ function Tabs({
   )
 }
 
-// steep: range selectors are pill segments, quiet at rest, the active one
+// Zeitraumwähler sind Pillensegmente, im Ruhezustand still, das aktive
 // lifted onto the elevated white surface.
 const tabsListVariants = cva(
   "group/tabs-list inline-flex w-fit items-center justify-center rounded-pill p-1 text-muted-foreground group-data-horizontal/tabs:h-9 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col",

@@ -14,8 +14,11 @@ import { MUSCLES, MUSCLE_LABELS, type Exercise, type Muscle, type WorkoutSession
 import type { BodyPaths, BodyView } from "@/lib/body-paths";
 
 /**
- * Wie kräftig eine Fläche gefüllt wird. Achromatisch — der Kalender weiter
- * unten trägt die eine Farbfläche der Seite.
+ * Wie kräftig eine Fläche gefüllt wird. Bewusst ohne Farbe, obwohl hier
+ * Muskeln stehen und die App sonst genau dafür Tönungen hat: die Figur sagt
+ * schon, welcher Muskel gemeint ist — offen ist nur, wieviel. Dafür ist
+ * Deckkraft das richtige Mittel, und Pastell bei 13 Prozent wäre schlicht
+ * nicht mehr zu sehen.
  */
 const FILL = [0.13, 0.28, 0.45, 0.65, 0.92];
 /** Was zur Figur gehört, aber zu keiner Aussage. */

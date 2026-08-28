@@ -2,7 +2,8 @@
 
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import type { WorkoutSession } from "@/lib/training";
+import type { Exercise, WorkoutSession } from "@/lib/training";
+import { TINT_FAMILY_LABEL, TINT_FILL, TINTS, tintForMuscles, type Tint } from "@/lib/tints";
 
 const WEEKDAY_INITIALS = ["M", "D", "M", "D", "F", "S", "S"];
 
@@ -20,12 +21,19 @@ function monthMatrix(year: number, month: number): (string | null)[] {
 /**
  * Monatsraster: trainierte Tage tragen die Farbe, Ruhetage bleiben leer —
  * so sieht man Frequenz und Pausen im selben Bild.
+ *
+ * Die Farbe eines Tages ist nicht mehr überall dieselbe, sondern die seiner
+ * Muskelfamilie. Damit beantwortet dasselbe Raster eine zweite Frage, für die
+ * es vorher eine eigene Ansicht brauchte: nicht nur „wie oft", sondern „wie
+ * verteilt" — drei Wochen ohne einen einzigen blauen Tag sieht man sofort.
  */
 export function TrainingCalendar({
   sessions,
+  exerciseById,
   months = 3,
 }: {
   sessions: WorkoutSession[];
+  exerciseById: Record<string, Exercise>;
   months?: number;
 }) {
   const byDate = new Map<string, WorkoutSession[]>();
@@ -38,6 +46,17 @@ export function TrainingCalendar({
   const today = new Date();
   const todayISO = today.toLocaleDateString("sv-SE");
   const trainedDays = new Set([...byDate.keys()]);
+
+  /** Die Tönung je Tag, gezählt über die Sätze — wie überall sonst auch. */
+  const tintByDate = new Map<string, Tint>();
+  for (const [date, daySessions] of byDate) {
+    const muskeln = daySessions
+      .flatMap((s) => s.sets.map((set) => exerciseById[set.exerciseId]?.muscle))
+      .filter((m): m is NonNullable<typeof m> => Boolean(m));
+    tintByDate.set(date, tintForMuscles(muskeln));
+  }
+  /** Nur die Familien zeigen, die im sichtbaren Zeitraum wirklich vorkommen. */
+  const vorhandeneTints = TINTS.filter((t) => [...tintByDate.values()].includes(t));
 
   /**
    * Nur die Monate, in denen es etwas zu sehen gibt. Bis hierher standen immer
@@ -135,7 +154,7 @@ export function TrainingCalendar({
                       "flex items-center justify-center rounded-[7px] transition-colors",
                       einzeln ? "aspect-square text-xs" : "size-6 text-[10px]",
                       daySessions
-                        ? "bg-blush font-medium text-blush-foreground"
+                        ? cn(TINT_FILL[tintByDate.get(date) ?? "violet"], "font-medium text-tint-violet-ink")
                         : isFuture
                           ? "text-muted-foreground/25"
                           : "bg-elevated text-muted-foreground/60",
@@ -151,11 +170,16 @@ export function TrainingCalendar({
         ))}
       </div>
 
-      <div className="flex items-center gap-4 px-(--card-spacing) text-[11px] text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <span className="size-3 rounded-[4px] bg-blush" />
-          Training
-        </span>
+      {/* Die Legende nennt Familien, keine Farben — „Drücken" sagt etwas,
+          „Violett" nicht. Und sie zeigt nur, was im Zeitraum vorkommt: eine
+          Legende für eine Farbe, die nirgends steht, ist eine Behauptung. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-(--card-spacing) text-[11px] text-muted-foreground">
+        {vorhandeneTints.map((tint) => (
+          <span key={tint} className="flex items-center gap-1.5">
+            <span className={cn("size-3 rounded-[4px]", TINT_FILL[tint])} />
+            {TINT_FAMILY_LABEL[tint]}
+          </span>
+        ))}
         <span className="flex items-center gap-1.5">
           <span className="size-3 rounded-[4px] bg-elevated" />
           Ruhetag

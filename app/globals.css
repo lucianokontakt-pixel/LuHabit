@@ -12,7 +12,9 @@
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-display);
 
-  /* steep type scale — moderat verdichtet für mehr Übersicht pro Screen */
+  /* Typo-Skala. Die großen Stufen sitzen enger als früher: eine fette
+     geometrische Grotesk verträgt engeren Satz als eine zarte Serif, und ohne
+     das Nachziehen fielen die Überschriften auseinander. */
   --text-caption: 0.8125rem;
   --text-caption--line-height: 1.45;
   --text-body: 0.9375rem;
@@ -20,19 +22,17 @@
   --text-body-lg: 1.0625rem;
   --text-body-lg--line-height: 1.3;
   --text-subheading: 1.1875rem;
-  --text-subheading--line-height: 1.35;
+  --text-subheading--line-height: 1.3;
+  --text-subheading--letter-spacing: -0.011em;
   --text-heading-sm: 1.375rem;
-  --text-heading-sm--line-height: 1.16;
-  --text-heading-sm--letter-spacing: -0.009em;
+  --text-heading-sm--line-height: 1.14;
+  --text-heading-sm--letter-spacing: -0.018em;
   --text-heading: 2.25rem;
-  --text-heading--line-height: 1.13;
-  --text-heading--letter-spacing: -0.015em;
+  --text-heading--line-height: 1.08;
+  --text-heading--letter-spacing: -0.03em;
   --text-heading-lg: 3.25rem;
-  --text-heading-lg--line-height: 1.08;
-  --text-heading-lg--letter-spacing: -0.015em;
-  --text-display: 4.5rem;
-  --text-display--line-height: 1.03;
-  --text-display--letter-spacing: -0.025em;
+  --text-heading-lg--line-height: 1.04;
+  --text-heading-lg--letter-spacing: -0.034em;
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -64,19 +64,41 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
 
-  /* steep surfaces */
-  --color-canvas: var(--canvas);
-  --color-fog: var(--fog);
+  /* Flächen */
+  --color-nav: var(--nav);
+  --color-nav-foreground: var(--nav-foreground);
   --color-elevated: var(--elevated);
-  --color-blush: var(--blush);
-  --color-blush-foreground: var(--blush-foreground);
   --color-success: var(--success);
 
-  /* steep radii */
-  --radius-card: 24px;
-  --radius-panel: 20px;
-  --radius-field: 16px;
-  --radius-tile: 12px;
+  /* Die fünf Farbflächen. Jede hat ihr Ink-Gegenstück, und das ist in beiden
+     Modi dunkel — auf einer Tönung steht nie weiße Schrift. Genau das hält die
+     Palette leicht statt laut; mit weißem Text auf Pastell wäre sie beides
+     nicht mehr, weder lesbar noch ruhig. */
+  --color-tint-violet: var(--tint-violet);
+  --color-tint-violet-ink: var(--tint-violet-ink);
+  --color-tint-blue: var(--tint-blue);
+  --color-tint-blue-ink: var(--tint-blue-ink);
+  --color-tint-orange: var(--tint-orange);
+  --color-tint-orange-ink: var(--tint-orange-ink);
+  --color-tint-pink: var(--tint-pink);
+  --color-tint-pink-ink: var(--tint-pink-ink);
+  --color-tint-mint: var(--tint-mint);
+  --color-tint-mint-ink: var(--tint-mint-ink);
+
+  /* Dieselben Familien als Strich statt als Fläche. Eine Kurve ist zwei Pixel
+     breit — als Pastell auf Weiß wäre sie nicht da. Gleicher Farbton,
+     gesättigt, damit Legende und Familienpunkt dieselbe Sprache sprechen. */
+  --color-tint-violet-line: var(--tint-violet-line);
+  --color-tint-blue-line: var(--tint-blue-line);
+  --color-tint-orange-line: var(--tint-orange-line);
+  --color-tint-pink-line: var(--tint-pink-line);
+  --color-tint-mint-line: var(--tint-mint-line);
+
+  /* Radien — runder als zuvor, das ist die halbe Formsprache. */
+  --radius-card: 28px;
+  --radius-panel: 24px;
+  --radius-field: 18px;
+  --radius-tile: 14px;
   --radius-pill: 9999px;
 
   --radius-sm: calc(var(--radius) * 0.6);
@@ -87,110 +109,172 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* steep elevation — only floating artifacts earn a shadow */
+  /* Erhöhung — weiterhin nur für Dinge, die wirklich schweben: die
+     Navigationspille, der Startknopf, der Pausen-Timer. Der Schatten fällt
+     jetzt in der Tinte der Schrift statt in neutralem Schwarz, sonst legt sich
+     ein grauer Schleier unter die farbigen Flächen. */
   --shadow-float:
-    0 0 0 1px rgb(4 23 43 / 0.05), 0 20px 25px -5px rgb(0 0 0 / 0.1),
-    0 8px 10px -6px rgb(0 0 0 / 0.1);
-  --shadow-overlay: 0 0 0 1px rgb(0 0 0 / 0.05), 0 8px 40px 0 rgb(0 0 0 / 0.1);
-  --shadow-popover: 0 0 0 1px rgb(0 0 0 / 0.05), 0 4px 24px 0 rgb(0 0 0 / 0.08);
+    0 0 0 1px rgb(13 16 27 / 0.04), 0 18px 40px -12px rgb(13 16 27 / 0.22),
+    0 6px 14px -8px rgb(13 16 27 / 0.14);
+  --shadow-overlay: 0 0 0 1px rgb(13 16 27 / 0.05), 0 8px 40px 0 rgb(13 16 27 / 0.14);
+  --shadow-popover: 0 0 0 1px rgb(13 16 27 / 0.05), 0 4px 24px 0 rgb(13 16 27 / 0.1);
 }
 
 :root {
-  /* Canvas = paper white, cards = mist. Colour is rationed: peach is the
-     only chromatic surface, sienna the only ink that sits on it. */
-  --canvas: #ffffff;
-  --fog: #fafafb;
+  /* Farbe ist hier kein Schmuck, sondern Ordnung: die Tönung sagt, welche
+     Muskelfamilie gemeint ist, bevor man ein Wort gelesen hat. Welche Tönung
+     wofür steht, entscheidet lib/tints.ts an einer Stelle — sonst wird aus dem
+     Ordnungsmittel schnell wieder Dekoration. */
   --elevated: #ffffff;
-  --blush: #fbe1d1;
-  --blush-foreground: #5d2a1a;
-  --success: #3f6b4d;
+
+  /* Wieviel Platz die schwebende Leiste unten wegnimmt: ihre Höhe plus der
+     Abstand, mit dem sie über der Kante schwebt. An einer Stelle, weil sich
+     drei darauf verlassen — der Seiteninhalt, die Fußzeile im Training und die
+     im Planeditor. Vorher stand in zweien davon `68px` als feste Zahl, die
+     Höhe der alten randbündigen Leiste; beim Umbau blieben beide stehen und
+     die neue Leiste legte sich über „Training beenden". */
+  --bottom-nav-space: calc(4rem + 0.75rem + env(safe-area-inset-bottom));
+
+  /* Die schwebende Navigationspille ist in der Vorlage immer dunkel. Im
+     Dunkeln kann sie das nicht bleiben — eine dunkle Pille auf dunklem Grund
+     schwebt nicht, sie verschwindet. Dort übernimmt die Erhöhungsfläche. */
+  --nav: #0d101b;
+  --nav-foreground: #f1f1f4;
+
+  --tint-violet: #b3a0ff;
+  --tint-violet-ink: #0d101b;
+  --tint-blue: #a0c6ff;
+  --tint-blue-ink: #0d101b;
+  --tint-orange: #f8b45f;
+  --tint-orange-ink: #0d101b;
+  --tint-pink: #f3a5de;
+  --tint-pink-ink: #0d101b;
+  --tint-mint: #a8e3bb;
+  --tint-mint-ink: #0d101b;
+
+  --tint-violet-line: #7c5cf0;
+  --tint-blue-line: #3b7fe0;
+  --tint-orange-line: #d98716;
+  --tint-pink-line: #cc47a8;
+  --tint-mint-line: #1f8f57;
+
+  /* Kein Pastell: --success ist eine Schriftfarbe (text-success in der
+     Progression), keine Fläche. Sie muss auf Weiß tragen. */
+  --success: #2e7d52;
 
   --background: #ffffff;
-  --foreground: #17191c;
-  --card: #f2f2f3;
-  --card-foreground: #17191c;
+  --foreground: #0d101b;
+  /* Nicht das #f8f8f8 der Vorlage: das ist dort der Seitengrund, nicht die
+     Karte. Als Karte gäbe es nur drei Prozent Abstand zum weißen --elevated,
+     und alles, was sich auf einer Karte abheben soll — die Tagespillen der
+     Woche, die Ruhetage im Kalender samt Legendenkästchen — wäre unsichtbar.
+     Dasselbe Problem, das im Dunkeln schon einmal gelöst werden musste. */
+  --card: #f0f0f2;
+  --card-foreground: #0d101b;
   --popover: #ffffff;
-  --popover-foreground: #17191c;
-  --primary: #17191c;
+  --popover-foreground: #0d101b;
+  --primary: #0d101b;
   --primary-foreground: #ffffff;
   --secondary: #ffffff;
-  --secondary-foreground: #17191c;
-  --muted: #f2f2f3;
-  --muted-foreground: #777b86;
-  --accent: #fbe1d1;
-  --accent-foreground: #5d2a1a;
-  --destructive: #a33327;
-  --border: #ececec;
-  --input: #e4e4e6;
-  --ring: #a3a6af;
+  --secondary-foreground: #0d101b;
+  --muted: #f0f0f2;
+  --muted-foreground: #6f7280;
+  --accent: #b3a0ff;
+  --accent-foreground: #0d101b;
+  --destructive: #c0392b;
+  --border: #e5e5ea;
+  --input: #e2e2e6;
+  --ring: #b3a0ff;
 
-  --chart-1: #5d2a1a;
-  --chart-2: #17191c;
-  --chart-3: #777b86;
-  --chart-4: #c98f6d;
-  --chart-5: #a3a6af;
+  /* Diagrammfarben sind Striche, keine Flächen — als Pastell verschwänden sie
+     auf Weiß. Deshalb dieselben Farbtöne, aber gesättigt. */
+  --chart-1: #7c5cf0;
+  --chart-2: #0d101b;
+  --chart-3: #4a86e8;
+  --chart-4: #e8942a;
+  --chart-5: #8b8f9c;
 
-  --radius: 1rem;
+  --radius: 1.125rem;
 
-  --sidebar: #fafafb;
-  --sidebar-foreground: #17191c;
-  --sidebar-primary: #17191c;
+  --sidebar: #f6f6f8;
+  --sidebar-foreground: #0d101b;
+  --sidebar-primary: #0d101b;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f2f2f3;
-  --sidebar-accent-foreground: #17191c;
-  --sidebar-border: #ececec;
-  --sidebar-ring: #a3a6af;
+  --sidebar-accent: #f1f1f3;
+  --sidebar-accent-foreground: #0d101b;
+  --sidebar-border: #e5e5ea;
+  --sidebar-ring: #b3a0ff;
 }
 
 .dark {
-  /* Same restraint inverted: deep neutral ink, peach kept as the single
-     chromatic accent but dimmed so it reads as warm, not neon. */
-  --canvas: #101113;
-  --fog: #16171a;
+  --nav: #262b3b;
+  --nav-foreground: #f1f1f4;
   /* Eine Stufe über der Karte — und im Dunkeln muss diese Stufe größer sein
-     als im Hellen, sonst ist sie keine. Hier standen #1c1e21 auf Karten in
-     #1a1c1f: zwei Farbwerte Unterschied, also nichts. Alles, was sich auf einer
-     Karte abheben soll, verschwand darin — die leeren Segmente des
+     als im Hellen, sonst ist sie keine. Alles, was sich auf einer Karte
+     abheben soll, verschwindet sonst darin: die leeren Segmente des
      Wochenbalkens, die Ruhetage im Kalender samt ihrem Legendenkästchen, die
      Fläche hinter einem Übungsbild, das noch fehlt. */
-  --elevated: #26282c;
-  --blush: #4a3226;
-  --blush-foreground: #f4d3bd;
-  --success: #7fae90;
+  --elevated: #262b3b;
 
-  --background: #101113;
-  --foreground: #f1f1f2;
-  --card: #1a1c1f;
-  --card-foreground: #f1f1f2;
-  --popover: #1c1e21;
-  --popover-foreground: #f1f1f2;
-  --primary: #f1f1f2;
-  --primary-foreground: #17191c;
-  --secondary: #24262a;
-  --secondary-foreground: #f1f1f2;
-  --muted: #1a1c1f;
-  --muted-foreground: #9296a1;
-  --accent: #4a3226;
-  --accent-foreground: #f4d3bd;
-  --destructive: #d67b6d;
+  /* Die Tönungen werden im Dunkeln entsättigt, nicht abgedunkelt. Abgedunkelt
+     wäre der naheliegende Griff und der falsche: dann trägt das dunkle Ink
+     darauf nicht mehr, und die Signatur der ganzen App — dunkle Schrift auf
+     farbiger Fläche — wäre weg. So bleiben sie hell genug zum Beschriften und
+     verlieren nur das Leuchten, das auf schwarzem Grund grell wirkt. */
+  --tint-violet: #9d8ae0;
+  --tint-violet-ink: #0d101b;
+  --tint-blue: #8fb0e0;
+  --tint-blue-ink: #0d101b;
+  --tint-orange: #dc9f56;
+  --tint-orange-ink: #0d101b;
+  --tint-pink: #d894c4;
+  --tint-pink-ink: #0d101b;
+  --tint-mint: #93c8a6;
+  --tint-mint-ink: #0d101b;
+
+  /* Im Dunkeln dürfen die Striche wieder heller sein als die Flächen — hier
+     liegen sie auf Schwarz, nicht auf Pastell. */
+  --tint-violet-line: #b3a0ff;
+  --tint-blue-line: #8ab4f8;
+  --tint-orange-line: #f0a94e;
+  --tint-pink-line: #f09cd8;
+  --tint-mint-line: #7ed3a0;
+
+  --success: #7fc79a;
+
+  --background: #0d101b;
+  --foreground: #f1f1f4;
+  --card: #191d2a;
+  --card-foreground: #f1f1f4;
+  --popover: #1c2130;
+  --popover-foreground: #f1f1f4;
+  --primary: #f1f1f4;
+  --primary-foreground: #0d101b;
+  --secondary: #232838;
+  --secondary-foreground: #f1f1f4;
+  --muted: #191d2a;
+  --muted-foreground: #9296a5;
+  --accent: #9d8ae0;
+  --accent-foreground: #0d101b;
+  --destructive: #e08376;
   --border: rgb(255 255 255 / 0.09);
   --input: rgb(255 255 255 / 0.14);
-  --ring: #5c606b;
+  --ring: #9d8ae0;
 
-  --chart-1: #e8b894;
-  --chart-2: #f1f1f2;
-  --chart-3: #9296a1;
-  --chart-4: #b3805f;
-  --chart-5: #5c606b;
+  --chart-1: #b3a0ff;
+  --chart-2: #f1f1f4;
+  --chart-3: #a0c6ff;
+  --chart-4: #f8b45f;
+  --chart-5: #7c808c;
 
-  --sidebar: #16171a;
-  --sidebar-foreground: #f1f1f2;
-  --sidebar-primary: #f1f1f2;
-  --sidebar-primary-foreground: #17191c;
-  --sidebar-accent: #24262a;
-  --sidebar-accent-foreground: #f1f1f2;
+  --sidebar: #141722;
+  --sidebar-foreground: #f1f1f4;
+  --sidebar-primary: #f1f1f4;
+  --sidebar-primary-foreground: #0d101b;
+  --sidebar-accent: #232838;
+  --sidebar-accent-foreground: #f1f1f4;
   --sidebar-border: rgb(255 255 255 / 0.09);
-  --sidebar-ring: #5c606b;
+  --sidebar-ring: #9d8ae0;
 }
 
 @layer base {
@@ -205,9 +289,11 @@
     @apply font-sans;
     -webkit-tap-highlight-color: transparent;
   }
-  /* The serif whispers — weight stays at 400 at every size. */
+  /* Überschriften tragen Gewicht. Hier stand 400, solange die Anzeigeschrift
+     eine zarte Serif war — die Regel überlebt einen Schriftwechsel nicht: mit
+     ihr bliebe jede Überschrift dünn, egal was geladen ist. */
   .font-display {
-    font-weight: 400;
+    font-weight: 700;
   }
 }
 
@@ -227,6 +313,21 @@
     padding-left: max(var(--edge, 1rem), env(safe-area-inset-left));
     padding-right: max(var(--edge, 1rem), env(safe-area-inset-right));
   }
+}
+
+/* Auf einer Tönung gibt es kein Grau.
+   --muted-foreground ist für Weiß und für dunkles Blau ausgesucht; auf einer
+   Pastellfläche fällt es auf gut drei zu eins und wird zu Rauschen statt zu
+   Nebenschrift. Innerhalb einer getönten Karte ist die gedämpfte Schrift
+   deshalb dieselbe Tinte wie der Rest, nur durchscheinend — currentColor löst
+   dabei auf die geerbte Farbe auf, also auf das Ink der Karte.
+
+   Als Variable statt als Klassenüberschreibung, damit alles mitkommt, was
+   davon abgeleitet ist, und nicht nur text-muted-foreground. Ungelayert wie
+   die Regeln darunter, damit sie Tailwinds Utilities schlägt. */
+[data-variant="tint"] {
+  --muted-foreground: color-mix(in oklch, currentColor 72%, transparent);
+  --border: color-mix(in oklch, currentColor 18%, transparent);
 }
 
 /* Seitwärts scrollende Reihen (Muskel- und Gerätefilter, die Tab-Leiste, der

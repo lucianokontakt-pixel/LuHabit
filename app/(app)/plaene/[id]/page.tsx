@@ -190,15 +190,10 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
       )}
 
       {/* Speichern bleibt in Reichweite, auch bei langen Plänen. */}
-      <div
-        className="fixed inset-x-0 bottom-[var(--bottom-nav-offset)] z-30 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-xl sm:bottom-0 sm:px-6"
-        style={
-          {
-            // Auf Mobile sitzt die Tab-Leiste unten — die Speicherleiste legt sich darüber.
-            "--bottom-nav-offset": "calc(68px + env(safe-area-inset-bottom))",
-          } as React.CSSProperties
-        }
-      >
+      {/* Auf dem Handy schwebt die Navigationsleiste unten — die Speicherleiste
+          setzt sich darüber. Wieviel Platz die braucht, steht in
+          --bottom-nav-space, damit sie nicht wieder auseinanderlaufen. */}
+      <div className="fixed inset-x-0 bottom-[var(--bottom-nav-space)] z-30 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-xl sm:bottom-0 sm:px-6">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             {dirty ? "Ungespeicherte Änderungen" : "Alles gespeichert"}

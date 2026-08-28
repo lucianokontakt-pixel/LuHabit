@@ -29,6 +29,7 @@ import {
   type WorkoutPlan,
 } from "@/lib/training";
 import { cn } from "@/lib/utils";
+import { MUSCLE_TINT, TINT_FILL } from "@/lib/tints";
 
 const EQUIPMENT_KEYS = EQUIPMENT;
 
@@ -294,7 +295,13 @@ export default function ExercisesPage() {
           {grouped.map((group) => (
             <Card key={group.key} className="gap-2">
               <div className="flex items-baseline justify-between px-(--card-spacing)">
-                <h2 className="text-subheading font-display">{group.label}</h2>
+                {/* Der Punkt trägt die Familienfarbe — dieselbe, die im
+                    Kalender und auf den Kacheln steht. Hier lernt man sie
+                    nebenbei, weil der Name direkt danebensteht. */}
+                <span className="flex items-baseline gap-2">
+                  <span className={cn("size-2 shrink-0 translate-y-[-1px] rounded-full", TINT_FILL[MUSCLE_TINT[group.key]])} />
+                  <h2 className="text-subheading font-display">{group.label}</h2>
+                </span>
                 <span className="text-xs text-muted-foreground">
                   {group.items.length} · Standardsprung {defaultIncrement(group.key)} kg
                 </span>

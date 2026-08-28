@@ -27,17 +27,14 @@ import {
 } from "@/lib/muscle-stats";
 import { formatCompact, formatNumber, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { MUSCLE_TINT, TINT_FILL, TINT_LINE, type Tint } from "@/lib/tints";
 
-const LINE_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
-
-/** Höchstens so viele Kurven gleichzeitig — sonst wiederholen sich die Farben. */
-const MAX_SELECTED = LINE_COLORS.length;
+/**
+ * Höchstens so viele Kurven gleichzeitig — mehr wird zum Knäuel. Die Zahl hing
+ * früher an der Länge der Farbliste; seit die Farbe aus der Familie kommt und
+ * nicht mehr aus der Reihenfolge, ist sie eine Entscheidung über Lesbarkeit.
+ */
+const MAX_SELECTED = 5;
 
 const STATUS_LABELS: Record<MuscleStatus, string> = {
   none: "kein Reiz",
@@ -56,7 +53,7 @@ function basisLabel(entry: MuscleProgress): string {
  * eingetragen ist — eine leere Fläche sagt weniger als eine Linie, die flach
  * auf null liegt.
  */
-function Sparkline({ weeks }: { weeks: MuscleProgress["weeks"] }) {
+function Sparkline({ weeks, tint }: { weeks: MuscleProgress["weeks"]; tint: Tint }) {
   const max = Math.max(WEEKLY_SETS_MAX + 4, ...weeks.map((w) => w.sets));
 
   return (
@@ -76,7 +73,7 @@ function Sparkline({ weeks }: { weeks: MuscleProgress["weeks"] }) {
           <Line
             type="monotone"
             dataKey="sets"
-            stroke="var(--chart-1)"
+            stroke={TINT_LINE[tint]}
             strokeWidth={1.75}
             dot={false}
             isAnimationActive={false}
@@ -97,14 +94,47 @@ export function MuscleGrid({ progress }: { progress: MuscleProgress[] }) {
       .map((p) => p.muscle)
   );
 
+  /**
+   * Rücken und Bizeps sind dieselbe Familie und damit dieselbe Farbe — als
+   * zwei blaue Kurven wären sie nicht auseinanderzuhalten. Das zweite
+   * Geschwister bekommt deshalb einen abgesetzten Ton derselben Familie:
+   * verwandt genug, dass die Zugehörigkeit sichtbar bleibt, verschieden genug,
+   * dass man sie trennt. Der Sprung ist bewusst klein — bei knapp der Hälfte
+   * kippte das Blau ins Schwarze und war keine Familie mehr, sondern eine
+   * sechste Farbe.
+   *
+   * Gemischt wird zur Schriftfarbe, nicht zum Hintergrund. Zum Hintergrund
+   * hieße im Hellen „blasser" und im Dunkeln „dunkler" — beides genau die
+   * Richtung, in der ein zwei Pixel breiter Strich verschwindet. So wird er im
+   * Hellen tiefer und im Dunkeln heller, also in beiden Fällen deutlicher.
+   *
+   * Über die Farbe statt über gestrichelte Linien, weil die Legende nur das
+   * Kästchen zeigt: zwei gleiche blaue Kästchen mit verschiedenen Namen wären
+   * genau die Verwechslung, die vermieden werden soll.
+   */
+  const farbeJeMuskel = useMemo(() => {
+    const gezaehlt = new Map<Tint, number>();
+    const map: Record<string, string> = {};
+    for (const muscle of selected) {
+      const tint = MUSCLE_TINT[muscle as keyof typeof MUSCLE_TINT];
+      const n = gezaehlt.get(tint) ?? 0;
+      gezaehlt.set(tint, n + 1);
+      map[muscle] =
+        n === 0
+          ? TINT_LINE[tint]
+          : `color-mix(in oklch, ${TINT_LINE[tint]} ${100 - n * 28}%, var(--foreground))`;
+    }
+    return map;
+  }, [selected]);
+
   const chartConfig = useMemo(() => {
     const config: ChartConfig = {};
-    selected.forEach((muscle, i) => {
+    selected.forEach((muscle) => {
       const entry = progress.find((p) => p.muscle === muscle);
-      config[muscle] = { label: entry?.label ?? muscle, color: LINE_COLORS[i % LINE_COLORS.length] };
+      config[muscle] = { label: entry?.label ?? muscle, color: farbeJeMuskel[muscle] };
     });
     return config;
-  }, [selected, progress]);
+  }, [selected, progress, farbeJeMuskel]);
 
   const chartData = useMemo(() => {
     const weeks = progress[0]?.weeks ?? [];
@@ -211,7 +241,14 @@ export function MuscleGrid({ progress }: { progress: MuscleProgress[] }) {
         {progress.map((entry) => (
           <Card key={entry.muscle} size="sm" className="gap-2">
             <div className="px-(--card-spacing)">
-              <p className="truncate text-xs text-muted-foreground">{entry.label}</p>
+              {/* Der Familienpunkt wie in der Übungsliste und im Kalender.
+                  Nicht die ganze Kachel getönt: zehn Farbflächen nebeneinander
+                  wären ein Farbkasten, kein Ordnungsmittel — und die Zahl in
+                  der Mitte ist hier die Aussage, nicht die Fläche. */}
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className={cn("size-2 shrink-0 rounded-full", TINT_FILL[MUSCLE_TINT[entry.muscle]])} />
+                <span className="truncate">{entry.label}</span>
+              </p>
               <p className="nums mt-1 text-heading-sm leading-none">
                 {formatNumber(entry.averageSets)}
                 <span className="ml-1 text-xs font-normal text-muted-foreground">Sätze</span>
@@ -219,11 +256,9 @@ export function MuscleGrid({ progress }: { progress: MuscleProgress[] }) {
               <p className="mt-0.5 text-[11px] text-muted-foreground">{basisLabel(entry)}</p>
             </div>
 
-            <Sparkline weeks={entry.weeks} />
+            <Sparkline weeks={entry.weeks} tint={MUSCLE_TINT[entry.muscle]} />
 
             <div className="flex flex-col gap-1 px-(--card-spacing)">
-              {/* Kein Peach hier: die eine Farbfläche der Seite gehört nicht
-                  zehn Kacheln gleichzeitig. */}
               <span
                 className={cn(
                   "w-fit rounded-pill bg-elevated px-2 py-0.5 text-[10px]",

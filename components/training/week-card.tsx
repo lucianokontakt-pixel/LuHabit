@@ -6,7 +6,10 @@ import { Flame } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { trainingWeekSummary } from "@/lib/training-weeks";
-import { muscleProgress } from "@/lib/muscle-stats";
+import { muscleProgress, weekStartISO } from "@/lib/muscle-stats";
+import { addDaysISO, todayISO } from "@/lib/datum";
+import { weekdayShort } from "@/lib/format";
+import { MUSCLE_TINT, TINT_FILL, tintForMuscles } from "@/lib/tints";
 import type { Exercise, WorkoutSession } from "@/lib/training";
 import { StatValue } from "@/components/stat-value";
 import { formatCompact, formatNumber, formatSigned } from "@/lib/format";
@@ -55,6 +58,31 @@ export function WeekCard({
     );
   }, [sessions, exerciseById]);
 
+  /**
+   * Die sieben Tage der laufenden Woche, Montag zuerst. Die Tönung eines Tages
+   * kommt aus den Muskeln, die an ihm trainiert wurden — dieselbe Zuordnung
+   * wie überall sonst, damit ein grüner Punkt hier dasselbe heißt wie eine
+   * grüne Kachel auf der Startseite.
+   */
+  const woche = useMemo(() => {
+    const heute = todayISO();
+    const montag = weekStartISO(heute);
+    return Array.from({ length: 7 }, (_, i) => {
+      const iso = addDaysISO(montag, i);
+      const desTages = sessions.filter((s) => s.date === iso);
+      const muskeln = desTages
+        .flatMap((s) => s.sets.map((set) => exerciseById[set.exerciseId]?.muscle))
+        .filter((m): m is NonNullable<typeof m> => Boolean(m) && Boolean(MUSCLE_TINT[m!]));
+      return {
+        iso,
+        kurz: weekdayShort(iso),
+        nummer: Number(iso.slice(8, 10)),
+        heute: iso === heute,
+        tint: desTages.length > 0 ? tintForMuscles(muskeln) : null,
+      };
+    });
+  }, [sessions, exerciseById]);
+
   const chartData = summary.weeks.map((w) => ({
     label: w.label,
     volume: Math.round(w.volume),
@@ -94,19 +122,38 @@ export function WeekCard({
         )}
       </div>
 
-      {weeklyTarget !== null && (
-        <div className="flex gap-1.5 px-(--card-spacing)">
-          {Array.from({ length: weeklyTarget }, (_, i) => (
+      {/* Die Woche als sieben Tage statt als Balken. Hier stand ein
+          Segmentbalken „so viele von so vielen" — genau das, was zwei Zeilen
+          weiter oben schon als „1 / 4" dasteht. Die Tage sagen dasselbe und
+          zusätzlich, welche es waren; der Punkt trägt die Tönung der
+          trainierten Muskelgruppe. */}
+      <div className="flex gap-1.5 px-(--card-spacing)">
+        {woche.map((tag) => (
+          <div
+            key={tag.iso}
+            className={cn(
+              "flex flex-1 flex-col items-center gap-1 rounded-panel py-2 transition-colors",
+              tag.heute ? "bg-primary text-primary-foreground" : "bg-elevated"
+            )}
+          >
             <span
-              key={i}
               className={cn(
-                "h-1.5 flex-1 rounded-pill transition-colors",
-                i < summary.thisWeekCount ? "bg-chart-1" : "bg-elevated"
+                "text-[10px] leading-none",
+                tag.heute ? "opacity-70" : "text-muted-foreground"
+              )}
+            >
+              {tag.kurz}
+            </span>
+            <span className="nums text-sm leading-none font-semibold">{tag.nummer}</span>
+            <span
+              className={cn(
+                "size-1.5 rounded-full",
+                tag.tint ? TINT_FILL[tag.tint] : "bg-transparent"
               )}
             />
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
 
       <div className="grid grid-cols-3 gap-3 px-(--card-spacing)">
         <StatValue label="Sätze" value={String(summary.setsThisWeek)} size="sm" />

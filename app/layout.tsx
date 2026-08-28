@@ -1,24 +1,27 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Source_Serif_4, Geist_Mono } from "next/font/google";
+import { Inter, Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SyncRunner } from "@/components/sync-runner";
 import { ServiceWorkerRegistration } from "@/components/service-worker";
 import { Toaster } from "@/components/ui/sonner";
 
-// Sohne stand-in — the half-step weights in the design map onto Inter's
-// variable axis, so the finer 430/450/480 hierarchy survives.
+// Die Fließtextschrift. Sie trägt alles außer den Überschriften — vor allem
+// die Satztabellen im Training, in denen Zahlen dicht nebeneinander stehen und
+// eine geometrische Grotesk merklich schlechter liest.
 const sans = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
 });
 
-// Signifier stand-in. Stays at weight 400 at every size, per the design system.
-const display = Source_Serif_4({
+// Die Anzeigeschrift: geometrische Grotesk, fett gesetzt. Sie trägt
+// Überschriften und große Kennzahlen — nicht den Fließtext. Die Vorlage nutzt
+// durchgehend eine Schrift, kommt dabei aber mit sehr wenig Text aus; hier
+// stehen Satztabellen, Gewichte und Zahlenkolonnen, in denen Inter deutlich
+// besser liest. Deshalb zwei Schriften statt einer.
+const display = Outfit({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["400"],
-  style: ["normal", "italic"],
 });
 
 const mono = Geist_Mono({
@@ -39,7 +42,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#101113" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d101b" },
   ],
   // Ohne das bleibt die Safe-Area der PWA leer (env(safe-area-inset-*) liefert
   // dann überall 0px) — die App füllt den Bildschirm nicht bis zum Rand, und

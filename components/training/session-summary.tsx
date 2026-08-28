@@ -7,6 +7,7 @@ import { MUSCLE_LABELS, type Muscle } from "@/lib/training";
 import { RECORD_LABELS, type SessionSummary as Summary } from "@/lib/session-stats";
 import { formatCompact, formatDateLong, formatNumber, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { MUSCLE_TINT, TINT_FILL, tintForMuscles } from "@/lib/tints";
 
 function minutes(seconds: number | null): string {
   if (seconds === null) return "—";
@@ -18,8 +19,11 @@ function minutes(seconds: number | null): string {
  * Belohnung und später im Verlauf als Nachschlagewerk — deshalb ein Bauteil
  * statt zweier, die auseinanderlaufen.
  *
- * `hero` färbt die Kopfzeile in Peach. Das ist die eine Farbfläche der Seite
- * und gehört dem Moment direkt nach dem letzten Satz, nicht dem Archiv.
+ * `hero` unterscheidet die beiden Auftritte, und die Tönung sagt, welcher es
+ * ist: direkt nach dem letzten Satz Mint — die Farbe des Erledigten, wie die
+ * abgehakten Sätze eine Bildschirmhöhe weiter oben. Im Archiv dagegen die
+ * Tönung der Muskelfamilie, dieselbe, die die Kachel auf der Startseite trug,
+ * über die man hergekommen ist. Die Farbe trägt einen also durch.
  */
 export function SessionSummary({
   summary,
@@ -37,18 +41,27 @@ export function SessionSummary({
     .map(([key, sets]) => ({ key: key as Muscle, sets }))
     .sort((a, b) => b.sets - a.sets);
   const maxMuscleSets = Math.max(...muscleRows.map((r) => r.sets), 1);
+  /* Jeder Muskel so oft, wie er Sätze hatte: gefragt ist, woran die Einheit
+     überwiegend gearbeitet hat, nicht welche Muskeln überhaupt vorkamen. */
+  const tint = hero
+    ? "mint"
+    : tintForMuscles(muscleRows.flatMap((r) => Array<Muscle>(r.sets).fill(r.key)));
 
   return (
     <div className="flex flex-col gap-4">
-      <Card variant={hero ? "blush" : "default"} className="gap-4">
+      <Card variant="tint" tint={tint} className="gap-4">
         <div className="px-(--card-spacing)">
-          <p className={cn("text-sm", hero ? "opacity-75" : "text-muted-foreground")}>
-            {session.dayName} · {formatDateLong(session.date)}
+          {/* Wenn die Überschrift schon der Tagesname ist (im Archiv), steht
+              hier nur das Datum. Sonst stünde „Upper" zweimal untereinander. */}
+          <p className="text-sm opacity-75">
+            {headline === session.dayName
+              ? formatDateLong(session.date)
+              : `${session.dayName} · ${formatDateLong(session.date)}`}
           </p>
           <p className="font-display text-4xl leading-none tracking-tight sm:text-heading">
             {headline ?? "Geschafft!"}
           </p>
-          <p className={cn("mt-2 text-sm", hero ? "opacity-75" : "text-muted-foreground")}>
+          <p className="mt-2 text-sm opacity-75">
             {summary.sets} {summary.sets === 1 ? "Satz" : "Sätze"} ·{" "}
             {formatNumber(summary.reps)} Wiederholungen ·{" "}
             {formatNumber(Math.round(summary.volume))} kg bewegt
@@ -155,9 +168,13 @@ export function SessionSummary({
                 <span className="w-24 shrink-0 truncate text-sm text-muted-foreground">
                   {MUSCLE_LABELS[row.key]}
                 </span>
+                {/* Jeder Balken in der Farbe seiner Familie statt fünfmal
+                    dasselbe Violett. Die Zeile sagt ohnehin, welcher Muskel
+                    gemeint ist — die Farbe macht daraus ein Bild, in dem man
+                    eine Schieflage sieht, ohne die Namen zu lesen. */}
                 <div className="h-2 flex-1 overflow-hidden rounded-pill bg-elevated">
                   <div
-                    className="h-full rounded-pill bg-chart-1"
+                    className={cn("h-full rounded-pill", TINT_FILL[MUSCLE_TINT[row.key]])}
                     style={{ width: `${(row.sets / maxMuscleSets) * 100}%` }}
                   />
                 </div>

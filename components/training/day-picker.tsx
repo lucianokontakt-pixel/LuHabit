@@ -103,7 +103,7 @@ export function DayPicker({
                     {/* „Läuft" schlägt „Vorschlag": welcher Tag angefangen ist,
                         wiegt schwerer als welcher an der Reihe wäre. */}
                     {day.id === runningId ? (
-                      <span className="flex shrink-0 items-center gap-1.5 rounded-pill bg-blush px-2 py-0.5 text-[11px] font-normal text-blush-foreground">
+                      <span className="flex shrink-0 items-center gap-1.5 rounded-pill bg-tint-orange px-2 py-0.5 text-[11px] font-normal text-tint-orange-ink">
                         <span className="size-1.5 animate-pulse rounded-full bg-current" />
                         Läuft
                       </span>

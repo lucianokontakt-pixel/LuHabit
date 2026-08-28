@@ -87,7 +87,7 @@ export function TrendChart({
             <stop offset="100%" stopColor="var(--color-value)" stopOpacity={0} />
           </linearGradient>
         </defs>
-        {/* steep: hauchdünne gestrichelte Gridlines, keine Achsenrahmen. */}
+        {/* Hauchdünne gestrichelte Gridlines, keine Achsenrahmen. */}
         <CartesianGrid
           vertical={false}
           strokeDasharray="2 4"

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Play, CalendarDays, Dumbbell, Shuffle, Timer } from "lucide-react";
+import { Play, CalendarDays, Shuffle, Timer } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { WeekCard } from "@/components/training/week-card";
@@ -20,6 +20,7 @@ import {
 } from "@/lib/training";
 import { formatDateLong, formatNumber } from "@/lib/format";
 import { todayISO } from "@/lib/datum";
+import { TINT_SURFACE, tintForMuscles } from "@/lib/tints";
 import { cn } from "@/lib/utils";
 
 export default function TrainingOverviewPage() {
@@ -84,9 +85,15 @@ export default function TrainingOverviewPage() {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Eine Zeile, die sagt, welcher Tag heute ist — mehr nicht. Kein
+          zweiter Seitenkopf: der stand hier früher in 36px und stritt mit der
+          Überschrift der Karte darunter um denselben Blick (siehe unten).
+          Als Bildunterschrift tut dieselbe Information niemandem weh. */}
+      <p className="text-sm text-muted-foreground">Heute, {formatDateLong(todayISO())}</p>
+
       {/* Kein eigener Seitenkopf mehr. Er trug „Was heute dran ist / Training"
-          in 36px Serif — und 130 Pixel darunter sagte die Karte „Als Nächstes
-          dran" in derselben Schrift, derselben Größe. Zwei Serif-Zeilen gleicher
+          in 36px Anzeigeschrift — und 130 Pixel darunter sagte die Karte „Als
+          Nächstes dran" in derselben Schrift, derselben Größe. Zwei Zeilen gleicher
           Größe übereinander stritten um denselben Blick, und der Satz stand
           zweimal da. Die Karte ist auf dieser Seite die Überschrift; welcher
           Bereich das ist, sagt die Leiste unten. */}
@@ -108,7 +115,7 @@ export default function TrainingOverviewPage() {
         // Läuft schon etwas, hat das Vorrang: dann ist die Begrüßung vorbei.
         <WelcomeCard plan={activePlan} day={nextDay} />
       ) : karte ? (
-        <Card variant="blush" className="gap-5">
+        <Card variant="tint" tint="violet" className="gap-5">
           <div className="flex flex-col gap-1 px-(--card-spacing)">
             <p className="flex items-center gap-1.5 text-sm opacity-75">
               {/* Der Punkt pulsiert, weil „läuft" ein Zustand ist und kein
@@ -207,49 +214,65 @@ export default function TrainingOverviewPage() {
             </p>
           </Card>
         ) : (
-          <div className="flex flex-col gap-2">
+          // Kacheln statt Zeilen: zwei Spalten, jede in der Tönung ihrer
+          // Hauptmuskelgruppe. Die Farbe sagt beim Überfliegen, was für eine
+          // Einheit das war, bevor man den Namen gelesen hat — als Zeilenliste
+          // waren sechs Einheiten sechsmal dasselbe Grau.
+          <div className="grid grid-cols-2 gap-3">
             {sessions.slice(0, 6).map((session) => {
-              const muscles = new Set(
-                session.sets
-                  .map((s) => exerciseById[s.exerciseId]?.muscle)
-                  .filter((m): m is NonNullable<typeof m> => Boolean(m))
-              );
+              // Für die Tönung zählt jeder Satz, nicht jede Muskelgruppe:
+              // gefragt ist, woran die Einheit überwiegend gearbeitet hat.
+              // Über die entdoppelte Liste gezählt stünden zwei Sätze Bizeps
+              // gleichauf mit zwölf Sätzen Brust.
+              const satzMuskeln = session.sets
+                .map((s) => exerciseById[s.exerciseId]?.muscle)
+                .filter((m): m is NonNullable<typeof m> => Boolean(m));
+              const muscles = [...new Set(satzMuskeln)];
+              const tint = tintForMuscles(satzMuskeln);
+              // Auf halber Breite passen zwei Namen. Der Rest wird gezählt,
+              // nicht abgeschnitten — „Schu…" ist keine Information.
+              const chip =
+                muscles.length === 0
+                  ? "Einheit"
+                  : muscles.slice(0, 2).map((m) => MUSCLE_LABELS[m]).join(", ") +
+                    (muscles.length > 2 ? ` +${muscles.length - 2}` : "");
               return (
-                <Card key={session.id} size="sm" className="gap-0">
-                  <Link
-                    href={`/einheit/${session.id}`}
-                    className="flex items-center gap-3 px-(--card-spacing)"
-                  >
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-tile bg-elevated">
-                      <Dumbbell className="size-4" />
+                <Link
+                  key={session.id}
+                  href={`/einheit/${session.id}`}
+                  className={cn(
+                    "flex min-w-0 flex-col gap-2 rounded-card p-4 transition-transform active:scale-[0.98]",
+                    TINT_SURFACE[tint]
+                  )}
+                >
+                  <span className="w-fit max-w-full rounded-pill bg-current/10 px-2 py-0.5 text-[11px] font-medium">
+                    {chip}
+                  </span>
+
+                  <p className="font-display truncate text-xl leading-tight">
+                    {session.dayName}
+                  </p>
+
+                  <div className="mt-auto flex flex-col gap-0.5 text-xs opacity-75">
+                    <span className="truncate">{formatDateLong(session.date)}</span>
+                    <span className="nums">
+                      {formatNumber(Math.round(volumeOf(session)))} kg
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{session.dayName}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {formatDateLong(session.date)} ·{" "}
-                        {[...muscles].map((m) => MUSCLE_LABELS[m]).join(", ") || "—"}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="nums text-sm">
-                        {formatNumber(Math.round(volumeOf(session)))} kg
-                      </p>
-                      <p className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
-                        {session.durationSeconds ? (
-                          <>
-                            <Timer className="size-3" />
-                            {Math.round(session.durationSeconds / 60)} min
-                          </>
-                        ) : (
-                          <>
-                            <CalendarDays className="size-3" />
-                            {session.sets.length} Sätze
-                          </>
-                        )}
-                      </p>
-                    </div>
-                  </Link>
-                </Card>
+                    <span className="flex items-center gap-1">
+                      {session.durationSeconds ? (
+                        <>
+                          <Timer className="size-3 shrink-0" />
+                          {Math.round(session.durationSeconds / 60)} min
+                        </>
+                      ) : (
+                        <>
+                          <CalendarDays className="size-3 shrink-0" />
+                          {session.sets.length} Sätze
+                        </>
+                      )}
+                    </span>
+                  </div>
+                </Link>
               );
             })}
           </div>

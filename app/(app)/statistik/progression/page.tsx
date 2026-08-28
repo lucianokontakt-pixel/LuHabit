@@ -15,6 +15,7 @@ import { summarizeProgress, type ProgressSummary } from "@/lib/progression";
 import { MUSCLES, workingSets, type Exercise, type Muscle } from "@/lib/training";
 import { formatNumber, formatSigned, formatDateLong } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { MUSCLE_TINT, TINT_FILL } from "@/lib/tints";
 
 const WINDOWS = [
   { weeks: 4, label: "4 Wochen" },
@@ -84,7 +85,7 @@ function ProgressRow({
                 und genau das unterscheidet die Übung von ihren Geschwistern. */}
             <span className="line-clamp-2 text-sm font-medium">{summary.exercise.name}</span>
             {summary.stagnating && (
-              <span className="shrink-0 rounded-pill bg-blush px-2 py-0.5 text-[10px] font-medium text-blush-foreground">
+              <span className="shrink-0 rounded-pill bg-tint-orange px-2 py-0.5 text-[10px] font-medium text-tint-orange-ink">
                 stagniert
               </span>
             )}
@@ -207,7 +208,7 @@ export default function ProgressionPage() {
       ) : (
         <>
           {stagnatingCount > 0 && (
-            <Card variant="blush" className="gap-0">
+            <Card variant="tint" tint="orange" className="gap-0">
               <p className="px-(--card-spacing) text-sm">
                 {stagnatingCount === 1
                   ? "Eine Übung steht seit mindestens 3 Einheiten still."
@@ -280,7 +281,10 @@ export default function ProgressionPage() {
               {grouped.map((group) => (
                 <Card key={group.key} className="gap-1">
                   <div className="flex items-baseline justify-between px-(--card-spacing)">
-                    <h2 className="text-subheading font-display">{group.label}</h2>
+                    <span className="flex items-baseline gap-2">
+                      <span className={cn("size-2 shrink-0 translate-y-[-1px] rounded-full", TINT_FILL[MUSCLE_TINT[group.key]])} />
+                      <h2 className="text-subheading font-display">{group.label}</h2>
+                    </span>
                     <span className="hidden shrink-0 gap-4 text-[11px] text-muted-foreground sm:flex">
                       {WINDOWS.map((w) => (
                         <span key={w.weeks} className="w-20 text-right">

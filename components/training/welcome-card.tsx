@@ -17,7 +17,7 @@ import type { PlanDay, WorkoutPlan } from "@/lib/training";
  * Sie ersetzt die normale Karte, statt über ihr zu stehen: zwei Karten mit
  * demselben Startknopf direkt untereinander wären eine Dopplung, und der
  * Bildschirm hat nur einen Blickfang zu vergeben — deshalb auch hier das
- * einzige Peach der Seite.
+ * eine Farbfläche der Seite.
  *
  * Bewusst ohne die Übungs-Pillen der normalen Karte: mit dem Erklärtext und dem
  * zweiten Knopf füllte die Karte sonst ein ganzes Handy-Display, und die
@@ -36,7 +36,7 @@ export function WelcomeCard({ plan, day }: { plan: WorkoutPlan; day: PlanDay }) 
   ].filter(Boolean);
 
   return (
-    <Card variant="blush" className="gap-5">
+    <Card variant="tint" tint="violet" className="gap-5">
       <div className="flex flex-col gap-1 px-(--card-spacing)">
         <p className="text-sm opacity-75">Willkommen</p>
         <p className="font-display text-4xl leading-none tracking-tight sm:text-heading">

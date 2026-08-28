@@ -9,9 +9,10 @@ import { cn } from "@/lib/utils";
 import type { WorkoutSession } from "@/lib/training";
 
 /**
- * Achromatisch statt in Peach: der Kalender darunter trägt schon die eine
- * Farbfläche der Seite, und zwei warme Raster nebeneinander konkurrieren
- * miteinander, statt sich zu ergänzen.
+ * Ohne Farbe, anders als der Kalender darunter: der zeigt mit seinen
+ * Tönungen, *was* trainiert wurde, dieses Raster nur, *wieviel*. Zwei Raster
+ * mit derselben Farbsprache übereinander läsen sich als dieselbe Aussage —
+ * so teilen sie sich die Arbeit.
  */
 const LEVEL_CLASSES = [
   "bg-elevated",

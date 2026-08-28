@@ -45,8 +45,10 @@ export function RestTimer({
   const done = remaining <= 0;
   const percent = total > 0 ? Math.max(0, Math.min(100, (remaining / total) * 100)) : 0;
 
+  // Orange, nicht die Leitfarbe: der Timer sagt „jetzt", nicht „hier entlang".
+  // Dieselbe Tönung trägt drüben im Tageswähler die laufende Einheit.
   return (
-    <div className="overflow-hidden rounded-card bg-blush text-blush-foreground shadow-float">
+    <div className="overflow-hidden rounded-card bg-tint-orange text-tint-orange-ink shadow-float">
       <div className="flex items-center gap-3 px-4 py-3">
         <div className="min-w-0 flex-1">
           <p className="text-xs opacity-75">{done ? "Pause vorbei" : "Pause"}</p>
@@ -62,7 +64,7 @@ export function RestTimer({
             onClick={() => onExtend(-30)}
             disabled={done}
             aria-label="Pause um 30 Sekunden verkürzen"
-            className="text-blush-foreground hover:bg-current/10"
+            className="text-tint-orange-ink hover:bg-current/10"
           >
             <Minus />
           </Button>
@@ -72,7 +74,7 @@ export function RestTimer({
             size="icon-sm"
             onClick={() => onExtend(30)}
             aria-label="Pause um 30 Sekunden verlängern"
-            className="text-blush-foreground hover:bg-current/10"
+            className="text-tint-orange-ink hover:bg-current/10"
           >
             <Plus />
           </Button>
@@ -82,7 +84,7 @@ export function RestTimer({
           variant="ghost"
           size="sm"
           onClick={onDismiss}
-          className="shrink-0 text-blush-foreground hover:bg-current/10"
+          className="shrink-0 text-tint-orange-ink hover:bg-current/10"
         >
           <SkipForward />
           {done ? "Weiter" : "Überspringen"}

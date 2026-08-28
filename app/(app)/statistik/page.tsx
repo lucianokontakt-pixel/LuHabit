@@ -275,7 +275,7 @@ export default function TrainingStatsPage() {
 
           <TrainingHeatmap sessions={sessions} />
 
-          <TrainingCalendar sessions={sessions} months={3} />
+          <TrainingCalendar sessions={sessions} exerciseById={exerciseById} months={3} />
 
           <section className="flex flex-col gap-3">
             <h2 className="text-sm font-medium text-muted-foreground">

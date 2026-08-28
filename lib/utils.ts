@@ -2,7 +2,7 @@ import { clsx, type ClassValue } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 
 /**
- * Die Schriftgrößen aus dem steep-Typo-System (globals.css). tailwind-merge
+ * Die Schriftgrößen aus dem eigenen Typo-System (globals.css). tailwind-merge
  * kennt nur die eingebauten Größen und stuft `text-body` sonst als Textfarbe
  * ein — dadurch wirft es ein vorher gesetztes `text-primary-foreground` raus
  * und man bekommt schwarze Schrift auf schwarzem Grund.

@@ -61,8 +61,13 @@ export default function StatistikKoerperPage() {
 
       <SectionTabs tabs={STATISTIK_TABS} />
 
+      {/* Die eine farbige Kennzahlenreihe der App — dieselbe Stelle, an der sie
+          auch in der Vorlage steht. Vier Messgrößen, vier Tönungen: hier meint
+          Farbe ausnahmsweise nicht die Muskelfamilie, sondern welcher Wert das
+          ist. Das beißt sich nicht, weil auf dieser Seite keine einzige
+          Muskelkachel steht. */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Card size="sm" className="gap-0">
+        <Card size="sm" variant="tint" tint="mint" className="gap-0">
           <div className="px-(--card-spacing)">
             <StatValue
               label="Gewicht"
@@ -71,7 +76,7 @@ export default function StatistikKoerperPage() {
             />
           </div>
         </Card>
-        <Card size="sm" className="gap-0">
+        <Card size="sm" variant="tint" tint="orange" className="gap-0">
           <div className="px-(--card-spacing)">
             <StatValue
               label="Körperfett"
@@ -80,7 +85,7 @@ export default function StatistikKoerperPage() {
             />
           </div>
         </Card>
-        <Card size="sm" className="gap-0">
+        <Card size="sm" variant="tint" tint="blue" className="gap-0">
           <div className="px-(--card-spacing)">
             <StatValue
               label="Fettfreie Masse"
@@ -89,7 +94,7 @@ export default function StatistikKoerperPage() {
             />
           </div>
         </Card>
-        <Card size="sm" className="gap-0">
+        <Card size="sm" variant="tint" tint="pink" className="gap-0">
           <div className="px-(--card-spacing)">
             <StatValue
               label="BMI"
