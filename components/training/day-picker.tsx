@@ -41,6 +41,7 @@ export function DayPicker({
   sessions,
   exerciseById,
   suggestedId,
+  runningId = null,
   open,
   onOpenChange,
 }: {
@@ -49,20 +50,28 @@ export function DayPicker({
   sessions: WorkoutSession[];
   exerciseById: Record<string, Exercise>;
   suggestedId: string | null;
+  /** Der Tag der angefangenen Einheit, falls gerade eine läuft. */
+  runningId?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const today = todayISO();
   const days = [...plan.days].sort((a, b) => a.position - b.position);
+  const laufenderTag = days.find((d) => d.id === runningId) ?? null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Welcher Tag?</DialogTitle>
+          {/* Läuft schon etwas, ist das Wählen kein harmloser Wechsel mehr: es
+              gibt nur einen Entwurf, ein anderer Tag überschreibt ihn. Das
+              gehört hierhin, wo entschieden wird — ein Dialog davor wäre eine
+              Rückfrage auf eine Rückfrage. */}
           <DialogDescription>
-            Der Vorschlag folgt der Reihenfolge im Plan. Du kannst jeden Tag
-            nehmen — der übersprungene kommt in der nächsten Runde wieder.
+            {laufenderTag
+              ? `${laufenderTag.name} ist angefangen. Ein anderer Tag beginnt neu — die angefangene Einheit wird dabei verworfen.`
+              : "Der Vorschlag folgt der Reihenfolge im Plan. Du kannst jeden Tag nehmen — der übersprungene kommt in der nächsten Runde wieder."}
           </DialogDescription>
         </DialogHeader>
 
@@ -91,10 +100,19 @@ export function DayPicker({
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 text-sm font-medium">
                     <span className="truncate">{day.name}</span>
-                    {day.id === suggestedId && (
-                      <span className="shrink-0 rounded-pill bg-foreground/8 px-2 py-0.5 text-[11px] font-normal text-muted-foreground">
-                        Vorschlag
+                    {/* „Läuft" schlägt „Vorschlag": welcher Tag angefangen ist,
+                        wiegt schwerer als welcher an der Reihe wäre. */}
+                    {day.id === runningId ? (
+                      <span className="flex shrink-0 items-center gap-1.5 rounded-pill bg-blush px-2 py-0.5 text-[11px] font-normal text-blush-foreground">
+                        <span className="size-1.5 animate-pulse rounded-full bg-current" />
+                        Läuft
                       </span>
+                    ) : (
+                      day.id === suggestedId && (
+                        <span className="shrink-0 rounded-pill bg-foreground/8 px-2 py-0.5 text-[11px] font-normal text-muted-foreground">
+                          Vorschlag
+                        </span>
+                      )
                     )}
                   </p>
                   {/* Die Muskeln stehen vor der Übungszahl: wer wegen einer

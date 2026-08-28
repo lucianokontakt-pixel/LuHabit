@@ -20,12 +20,63 @@ export const DRAFT_KEY = "luhabit-active-session";
  * heißt „nichts offen"; das ist der harmlose Ausgang.
  */
 export function offenerEntwurfTag(): string | null {
+  return entwurfStand(entwurfRoh())?.dayId ?? null;
+}
+
+/**
+ * Der rohe Text aus dem Speicher.
+ *
+ * Für useSyncExternalStore muss der Schnappschuss zwischen zwei Renderdurchläufen
+ * derselbe Wert sein, solange sich nichts geändert hat. Ein frisch geparstes
+ * Objekt wäre jedes Mal ein neues und triebe React in eine Endlosschleife — eine
+ * Zeichenkette wird dagegen dem Wert nach verglichen. Das Auswerten passiert
+ * deshalb erst danach, in entwurfStand.
+ */
+export function entwurfRoh(): string | null {
   if (typeof localStorage === "undefined") return null;
   try {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    if (!raw) return null;
-    const dayId = (JSON.parse(raw) as { dayId?: unknown }).dayId;
-    return typeof dayId === "string" && dayId ? dayId : null;
+    return localStorage.getItem(DRAFT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Auf dem Server gibt es keinen Speicher — siehe keinEntwurf. */
+export function keinEntwurfRoh(): null {
+  return null;
+}
+
+export type EntwurfStand = {
+  dayId: string;
+  /** Abgehakte Arbeitssätze. */
+  erledigt: number;
+  /** Arbeitssätze insgesamt — Aufwärmsätze zählen wie in der Einheit nicht mit. */
+  gesamt: number;
+};
+
+/**
+ * Was im Entwurf steht, so weit es außerhalb der Einheit jemanden angeht:
+ * welcher Tag, und wie weit er ist.
+ */
+export function entwurfStand(raw: string | null): EntwurfStand | null {
+  if (!raw) return null;
+  try {
+    const draft = JSON.parse(raw) as {
+      dayId?: unknown;
+      sets?: Record<string, { done?: unknown; warmup?: unknown }[]>;
+    };
+    if (typeof draft.dayId !== "string" || !draft.dayId) return null;
+
+    let erledigt = 0;
+    let gesamt = 0;
+    for (const liste of Object.values(draft.sets ?? {})) {
+      for (const satz of liste ?? []) {
+        if (satz?.warmup) continue;
+        gesamt += 1;
+        if (satz?.done) erledigt += 1;
+      }
+    }
+    return { dayId: draft.dayId, erledigt, gesamt };
   } catch {
     return null;
   }

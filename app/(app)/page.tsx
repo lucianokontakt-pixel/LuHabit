@@ -10,13 +10,14 @@ import { WelcomeCard } from "@/components/training/welcome-card";
 import { DayPicker } from "@/components/training/day-picker";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
+import { useEntwurf } from "@/lib/use-start-ziel";
 import { measuredOn, nextDayFor, sessionVolume, MUSCLE_LABELS } from "@/lib/training";
 import { formatDateLong, formatNumber } from "@/lib/format";
 import { todayISO } from "@/lib/datum";
 import { cn } from "@/lib/utils";
 
 export default function TrainingOverviewPage() {
-  const { activePlan, sessions, exerciseById, loading, error } = useTraining();
+  const { activePlan, plans, sessions, exerciseById, loading, error } = useTraining();
   // Eigengewichtsübungen zählen mit dem Körpergewicht vom Tag der Einheit.
   const { entries: weights } = useMetricData("weight");
   const volumeOf = (s: (typeof sessions)[number]) =>
@@ -31,6 +32,49 @@ export default function TrainingOverviewPage() {
   const weeklyTarget = activePlan?.weeklyTarget ?? null;
   const trainedToday = sessions.some((s) => s.date === todayISO());
   const [picking, setPicking] = useState(false);
+
+  /**
+   * Die angefangene Einheit. Sie steht über dem Rotationsvorschlag: bis hierher
+   * zeigte die Karte „Als Nächstes dran" mit einem anderen Tag, während unten
+   * der Knopf „Weiter" sagte — und wer den großen schwarzen Knopf drückte,
+   * verwarf damit die laufende Einheit, ohne dass irgendwo stand, dass es eine
+   * gab. Der Entwurf kann aus jedem Plan stammen, nicht nur aus dem aktiven.
+   */
+  const entwurf = useEntwurf();
+  // Ohne useMemo: der React Compiler übernimmt das hier von selbst, und eine
+  // Schleife mit vorzeitigem return kann er dabei nicht erhalten.
+  const laufend =
+    (entwurf
+      ? plans
+          .flatMap((plan) => plan.days.map((day) => ({ plan, day })))
+          .find(({ day }) => day.id === entwurf.dayId)
+      : null) ?? null;
+
+  /**
+   * Was die eine Karte oben zeigt: die laufende Einheit, sonst der Vorschlag.
+   * Beide tragen dieselbe Form — deshalb eine Karte mit wechselndem Inhalt
+   * statt zweier fast gleicher Blöcke.
+   */
+  const karte =
+    laufend && entwurf
+      ? {
+          plan: laufend.plan,
+          day: laufend.day,
+          kicker: "Läuft gerade",
+          meta: `${laufend.plan.name} · ${entwurf.erledigt} von ${entwurf.gesamt} Sätzen`,
+          cta: "Weiter",
+        }
+      : nextDay && activePlan
+        ? {
+            plan: activePlan,
+            day: nextDay,
+            kicker: trainedToday ? "Heute schon trainiert — als Nächstes" : "Als Nächstes dran",
+            meta: `${activePlan.name} · ${nextDay.exercises.length} ${
+              nextDay.exercises.length === 1 ? "Übung" : "Übungen"
+            }`,
+            cta: "Starten",
+          }
+        : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -53,28 +97,32 @@ export default function TrainingOverviewPage() {
 
       {loading ? (
         <div className="h-44 animate-pulse rounded-card bg-card" />
-      ) : nextDay && activePlan && sessions.length === 0 ? (
+      ) : !laufend && nextDay && activePlan && sessions.length === 0 ? (
         // Noch nie trainiert: der Plan kommt aus dem Startpaket, nicht aus
         // eigener Wahl — das sagt die Willkommenskarte und bietet den Wechsel
         // gleich an. Nach der ersten Einheit übernimmt die normale Karte.
+        // Läuft schon etwas, hat das Vorrang: dann ist die Begrüßung vorbei.
         <WelcomeCard plan={activePlan} day={nextDay} />
-      ) : nextDay && activePlan ? (
+      ) : karte ? (
         <Card variant="blush" className="gap-5">
           <div className="flex flex-col gap-1 px-(--card-spacing)">
-            <p className="text-sm opacity-75">
-              {trainedToday ? "Heute schon trainiert — als Nächstes" : "Als Nächstes dran"}
+            <p className="flex items-center gap-1.5 text-sm opacity-75">
+              {/* Der Punkt pulsiert, weil „läuft" ein Zustand ist und kein
+                  Ereignis — er ist der einzige Unterschied, den man aus zwei
+                  Metern Entfernung noch sieht. */}
+              {laufend && (
+                <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-current" />
+              )}
+              {karte.kicker}
             </p>
             <p className="font-display text-4xl leading-none tracking-tight sm:text-heading">
-              {nextDay.name}
+              {karte.day.name}
             </p>
-            <p className="mt-1 text-sm opacity-75">
-              {activePlan.name} · {nextDay.exercises.length}{" "}
-              {nextDay.exercises.length === 1 ? "Übung" : "Übungen"}
-            </p>
+            <p className="mt-1 text-sm opacity-75">{karte.meta}</p>
           </div>
 
           <div className="flex flex-wrap gap-1.5 px-(--card-spacing)">
-            {nextDay.exercises.slice(0, 6).map((pe) => (
+            {karte.day.exercises.slice(0, 6).map((pe) => (
               <span
                 key={pe.id}
                 className="rounded-pill bg-current/10 px-2.5 py-1 text-xs"
@@ -92,13 +140,13 @@ export default function TrainingOverviewPage() {
               tailwind-merge das bg-primary weg, sonst stünden beide Klassen da. */}
           <div className="flex gap-2 px-(--card-spacing)">
             <Link
-              href={`/session?day=${encodeURIComponent(nextDay.id)}`}
+              href={`/session?day=${encodeURIComponent(karte.day.id)}`}
               className={cn(buttonVariants({ size: "lg" }), "min-w-0 flex-1")}
             >
               <Play className="size-4" />
-              Starten
+              {karte.cta}
             </Link>
-            {activePlan.days.length > 1 && (
+            {karte.plan.days.length > 1 && (
               <Button
                 size="lg"
                 onClick={() => setPicking(true)}
@@ -204,12 +252,16 @@ export default function TrainingOverviewPage() {
         )}
       </section>
 
-      {activePlan && (
+      {/* Der Plan der Karte, nicht stur der aktive: läuft eine Einheit aus
+          einem anderen Plan, sollen dessen Tage zur Wahl stehen — sonst fehlte
+          dem Wähler ausgerechnet der Tag, der gerade offen ist. */}
+      {karte && (
         <DayPicker
-          plan={activePlan}
+          plan={karte.plan}
           sessions={sessions}
           exerciseById={exerciseById}
           suggestedId={nextDay?.id ?? null}
+          runningId={laufend?.day.id ?? null}
           open={picking}
           onOpenChange={setPicking}
         />

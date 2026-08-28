@@ -1,9 +1,27 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useTraining } from "@/lib/training-store";
 import { nextDayFor } from "@/lib/training";
-import { abonniereEntwurf, keinEntwurf, offenerEntwurfTag } from "@/lib/session-draft";
+import {
+  abonniereEntwurf,
+  entwurfRoh,
+  entwurfStand,
+  keinEntwurfRoh,
+  type EntwurfStand,
+} from "@/lib/session-draft";
+
+/**
+ * Die angefangene Einheit — oder null.
+ *
+ * Der Schnappschuss ist der rohe Text aus dem Speicher; das Auswerten steht im
+ * useMemo dahinter. Andersherum bekäme useSyncExternalStore bei jedem Render ein
+ * neues Objekt und React drehte sich im Kreis.
+ */
+export function useEntwurf(): EntwurfStand | null {
+  const raw = useSyncExternalStore(abonniereEntwurf, entwurfRoh, keinEntwurfRoh);
+  return useMemo(() => entwurfStand(raw), [raw]);
+}
 
 /**
  * Wohin der Start-Knopf führt und wie er heißt.
@@ -15,23 +33,17 @@ import { abonniereEntwurf, keinEntwurf, offenerEntwurfTag } from "@/lib/session-
  */
 export function useStartZiel(): { ziel: string; laeuft: boolean } {
   const { activePlan, sessions } = useTraining();
-
-  /**
-   * Läuft schon eine Einheit? Der Entwurf liegt in localStorage — ein externer
-   * Speicher, für den es useSyncExternalStore gibt. Auf dem Server kommt null
-   * heraus, im Browser der echte Stand; damit weicht die Hydration nicht ab.
-   */
-  const offenerTag = useSyncExternalStore(abonniereEntwurf, offenerEntwurfTag, keinEntwurf);
+  const entwurf = useEntwurf();
 
   const naechster = activePlan ? nextDayFor(activePlan, sessions[0]) : null;
   // Ein offener Entwurf schlägt den Vorschlag: wer mitten in einer Einheit
   // steht, will dorthin zurück und keine neue anfangen.
-  const zielTag = offenerTag ?? naechster?.id ?? null;
+  const zielTag = entwurf?.dayId ?? naechster?.id ?? null;
 
   return {
     // Ohne Plan gibt es nichts zu starten — dann führt der Knopf dorthin, wo man
     // einen anlegt, statt in eine Seite, die "Tag nicht gefunden" sagt.
     ziel: zielTag ? `/session?day=${encodeURIComponent(zielTag)}` : "/plaene",
-    laeuft: offenerTag !== null,
+    laeuft: entwurf !== null,
   };
 }
