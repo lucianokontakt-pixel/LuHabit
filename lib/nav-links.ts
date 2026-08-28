@@ -31,9 +31,13 @@ export const NAV_LINKS: NavLink[] = [
  * und Körperfett sind Verläufe wie die anderen auch.
  */
 export const STATISTIK_TABS: readonly SubTab[] = [
+  // „Körper" steht vorn, weil dort der Wert eingetragen wird — das ist die
+  // Handlung im Bereich, der Rest ist Nachschlagen. Die Reihenfolge in dieser
+  // Liste bestimmt nur die Leiste, nicht die Startseite des Bereichs: die
+  // untere Navigation zeigt weiter auf /statistik.
+  { href: "/statistik/koerper", label: "Körper" },
   { href: "/statistik", label: "Verlauf" },
   { href: "/statistik/progression", label: "Je Übung" },
-  { href: "/statistik/koerper", label: "Körper" },
 ];
 
 /** Seiten ohne eigenen Platz in der Leiste, die trotzdem irgendwo leuchten sollen. */
