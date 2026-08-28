@@ -144,9 +144,19 @@ export function ExerciseDetail({
                 sich das Grid festhalten könnte, und lief dann über die Zahlen.
                 Eine Flex-Spalte mit shrink-0 an der Box hält alles gestapelt.
 
-                Feste Höhe statt aspect-square: ein quadratisches Bild über die
-                volle Breite füllte auf dem Handy fast den ganzen Dialog — für
-                ein Popup, das man kurz aufruft und wieder schließt, zu viel. */}
+                Quadratisch, weil die Quelldateien es sind (180×180): so füllt
+                das Bild die Dialogbreite genau aus, ohne weiße Bänder oben und
+                unten. Hier standen vorher 144 Pixel fester Höhe — das Bild ist
+                aber der Grund, warum man den Dialog überhaupt öffnet.
+
+                Größer geht nicht ohne Zuschnitt, und Zuschnitt verbietet sich:
+                die Illustrationen bringen ihren weißen Rand selbst mit, aber
+                unterschiedlich viel. Bei liegenden Übungen wäre reichlich Platz,
+                bei Klimmzügen reichen Stange und Füße fast an die Kante — ein
+                fester Zoom würde sie abschneiden.
+
+                Die Deckelung greift im Querformat, wo 70dvh Dialoghöhe weniger
+                sind als die Breite. */}
             <div className="flex min-w-0 flex-col gap-3">
               {/* bg-white statt bg-muted: die Illustrationen sind selbst
                   weiß hinterlegt, nicht transparent — auf grauem Grund stand
@@ -154,7 +164,7 @@ export function ExerciseDetail({
                   einer eigenen Box. Bewusst fest statt themefähig, aus
                   demselben Grund wie im dunklen Modus des Bilds selbst. */}
               {gif && (
-                <div className="relative h-36 w-full shrink-0 overflow-hidden rounded-card bg-white">
+                <div className="relative aspect-square max-h-[45dvh] w-full shrink-0 overflow-hidden rounded-card bg-white">
                   <Image
                     src={gif}
                     alt={`Bewegungsablauf: ${exercise.name}`}
