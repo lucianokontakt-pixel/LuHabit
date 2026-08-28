@@ -6,18 +6,30 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowLeft,
+  ArrowLeftRight,
   Check,
   ChevronLeft,
   ChevronRight,
+  Ellipsis,
   Flame,
+  Info,
   Lightbulb,
+  Minus,
   TrendingUp,
   TrendingDown,
   Plus,
+  SkipForward,
+  Trash2,
   X,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -33,16 +45,12 @@ import {
 import { RestTimer } from "@/components/training/rest-timer";
 import { SetRow, type SessionSet } from "@/components/training/set-row";
 import { SessionSummary } from "@/components/training/session-summary";
-import {
-  ExerciseDetail,
-  ExerciseMedia,
-  ExerciseThumb,
-} from "@/components/training/exercise-media";
+import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
 import { ExercisePicker } from "@/components/training/exercise-picker";
 import { summarizeSession } from "@/lib/session-stats";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
-import { saveSession } from "@/lib/api-training";
+import { saveSession, updatePlan, dayToInput } from "@/lib/api-training";
 import { addDaysISO, isoDateDaysAgo, todayISO } from "@/lib/datum";
 import { newId } from "@/lib/ids";
 import { formatClock, formatDayLabel, formatNumber } from "@/lib/format";
@@ -220,6 +228,7 @@ export function SessionClient() {
 
   const {
     plans,
+    setPlans,
     exerciseById,
     sessions,
     pendingIds,
@@ -656,6 +665,38 @@ export function SessionClient() {
       scrollTargetRef.current = planExercise.id;
     },
     [day, historyFor, bodyweight]
+  );
+
+  /**
+   * Denselben Tausch auch im Plan festschreiben — für alle künftigen
+   * Einheiten, nicht nur für heute. Kommt aus der Nachfrage nach dem Tausch,
+   * nie automatisch: wer nur heute kein Gerät frei hatte, soll den Plan nicht
+   * ungefragt umgeräumt bekommen.
+   */
+  const persistSwapToPlan = useCallback(
+    async (slotId: string, exercise: Exercise) => {
+      if (!located) return;
+      const { plan, day: planDay } = located;
+      const days = [...plan.days]
+        .sort((a, b) => a.position - b.position)
+        .map((d) =>
+          dayToInput(
+            d.id === planDay.id
+              ? {
+                  ...d,
+                  exercises: d.exercises.map((pe) =>
+                    pe.id === slotId
+                      ? { ...pe, exerciseId: exercise.id, increment: null, startWeight: null }
+                      : pe
+                  ),
+                }
+              : d
+          )
+        );
+      const { plans: next } = await updatePlan({ id: plan.id, days });
+      setPlans(next);
+    },
+    [located, setPlans]
   );
 
   const dismissSuggestion = useCallback(
@@ -1098,31 +1139,37 @@ export function SessionClient() {
 
               {isActive && (
                 <>
-                  {/* Die Animation läuft, solange die Übung offen ist — beim
-                      Nachmachen will man sie sehen, nicht erst aufrufen. Tippen
-                      hält sie an, der Knopf schrumpft sie dauerhaft. */}
+                  {/* Wie in der Bibliothek: ein Standbild, kein Video, das
+                      neben den Sätzen mitläuft. Ein Tipp öffnet dieselbe
+                      Anleitung mit Bewegungsablauf, Bestwert und Schritten —
+                      wer nachschauen will, tut das einmal, nicht die ganze
+                      Zeit nebenbei. */}
                   {exercise && (
-                    <ExerciseMedia
-                      exercise={exercise}
-                      onOpenDetail={() => setDetail(exercise)}
+                    <button
+                      type="button"
+                      onClick={() => setDetail(exercise)}
+                      aria-label={`${exercise.name} — Ausführung und Infos`}
+                      className="mx-(--card-spacing) flex items-center gap-3 rounded-panel bg-card p-2 text-left transition-colors active:bg-foreground/5"
                     >
-                      {/* Was war, und was das Beste war. In der kompakten
-                          Ansicht füllt das den Platz neben der Bewegung, der
-                          sonst leer bliebe. */}
-                      {best && (
-                        <p>
-                          Bestwert <span className="nums text-foreground">{best}</span>
-                        </p>
-                      )}
-                      {lastLogged && (
-                        <p>
-                          Letztes Mal ({formatDayLabel(lastLogged.date, today)}):{" "}
-                          <span className="nums text-foreground">
-                            {formatLoggedSets(lastLogged.sets)}
+                      <ExerciseThumb exercise={exercise} />
+                      <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs text-muted-foreground">
+                        {best && (
+                          <span>
+                            Bestwert <span className="nums text-foreground">{best}</span>
                           </span>
-                        </p>
-                      )}
-                    </ExerciseMedia>
+                        )}
+                        {lastLogged && (
+                          <span>
+                            Letztes Mal ({formatDayLabel(lastLogged.date, today)}):{" "}
+                            <span className="nums text-foreground">
+                              {formatLoggedSets(lastLogged.sets)}
+                            </span>
+                          </span>
+                        )}
+                        {!best && !lastLogged && <span>Ausführung &amp; Infos ansehen</span>}
+                      </span>
+                      <Info className="size-4 shrink-0 text-muted-foreground" />
+                    </button>
                   )}
 
                   {suggestionOpen && (
@@ -1223,82 +1270,99 @@ export function SessionClient() {
                     ))}
                   </div>
 
-                  <div className="flex gap-2 px-(--card-spacing)">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setSetsByExercise((prev) => {
-                          const list = prev[pe.id] ?? [];
-                          // Ein zusätzlicher Satz erbt den vorherigen — das
-                          // trifft es näher als das Ziel des ersten Satzes.
-                          const previous = list[list.length - 1];
-                          return {
-                            ...prev,
-                            [pe.id]: [
-                              ...list,
-                              {
-                                weight: previous?.weight ?? target?.weight ?? 0,
-                                reps: previous?.reps ?? target?.reps ?? pe.repMin,
-                                done: false,
-                                warmup: false,
-                              },
-                            ],
-                          };
-                        })
-                      }
-                    >
-                      Satz hinzufügen
-                    </Button>
-                    {sets.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                  {/* Satz hinzufügen/entfernen bleibt in der Zeile, weil es
+                      am häufigsten gebraucht wird — als Icon-Paar statt als
+                      zwei Wortpillen, die zusammen breiter waren als beide
+                      Sätze auf dem Handy nebeneinander Platz hatten. Die
+                      selteneren Wege (tauschen, auslassen, entfernen) sitzen
+                      hinter einem Punktmenü, statt als eigene Pillen die
+                      Zeile zu füllen. */}
+                  <div className="flex items-center gap-2 px-(--card-spacing)">
+                    <div className="flex items-center overflow-hidden rounded-pill bg-elevated ring-1 ring-foreground/8">
+                      <button
+                        type="button"
                         onClick={() =>
                           setSetsByExercise((prev) => ({
                             ...prev,
                             [pe.id]: (prev[pe.id] ?? []).slice(0, -1),
                           }))
                         }
+                        disabled={sets.length <= 1}
+                        aria-label="Letzten Satz entfernen"
+                        className="flex h-8 w-9 items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:opacity-25"
                       >
-                        Letzten entfernen
-                      </Button>
-                    )}
-                    {isExtra && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="ml-auto text-muted-foreground"
-                        onClick={() => removeExercise(pe.id)}
+                        <Minus className="size-3.5" />
+                      </button>
+                      <span className="px-1 text-[0.8rem] text-muted-foreground">Satz</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSetsByExercise((prev) => {
+                            const list = prev[pe.id] ?? [];
+                            // Ein zusätzlicher Satz erbt den vorherigen — das
+                            // trifft es näher als das Ziel des ersten Satzes.
+                            const previous = list[list.length - 1];
+                            return {
+                              ...prev,
+                              [pe.id]: [
+                                ...list,
+                                {
+                                  weight: previous?.weight ?? target?.weight ?? 0,
+                                  reps: previous?.reps ?? target?.reps ?? pe.repMin,
+                                  done: false,
+                                  warmup: false,
+                                },
+                              ],
+                            };
+                          })
+                        }
+                        aria-label="Satz hinzufügen"
+                        className="flex h-8 w-9 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
                       >
-                        Übung entfernen
-                      </Button>
-                    )}
-                    {/* Nur solange nichts abgehakt ist: sonst nähme ein Tipp
-                        Protokolliertes mit. Wer doch wechseln will, hakt erst
-                        wieder ab. */}
-                    {slotId && doneCount === 0 && (
-                      <div className="ml-auto flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-muted-foreground"
-                          onClick={() => {
-                            setTauschFuer(slotId);
-                            setPicking(true);
-                          }}
+                        <Plus className="size-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Auslassen/Tauschen nur solange nichts abgehakt ist:
+                        sonst nähme ein Tipp Protokolliertes mit. Wer doch
+                        wechseln will, hakt erst wieder ab. */}
+                    {((slotId && doneCount === 0) || isExtra) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          aria-label="Weitere Aktionen für diese Übung"
+                          className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
                         >
-                          Tauschen
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-muted-foreground"
-                          onClick={() => skipExercise(slotId)}
-                        >
-                          Auslassen
-                        </Button>
-                      </div>
+                          <Ellipsis className="size-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {slotId && doneCount === 0 && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setTauschFuer(slotId);
+                                  setPicking(true);
+                                }}
+                              >
+                                <ArrowLeftRight />
+                                Tauschen
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => skipExercise(slotId)}>
+                                <SkipForward />
+                                Auslassen
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {isExtra && (
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => removeExercise(pe.id)}
+                            >
+                              <Trash2 />
+                              Übung entfernen
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </div>
                 </>
@@ -1408,8 +1472,26 @@ export function SessionClient() {
           if (!open) setTauschFuer(null);
         }}
         onPick={(exercise) => {
-          if (tauschFuer) swapExercise(tauschFuer, exercise);
-          else addExercise(exercise);
+          if (tauschFuer) {
+            const slotId = tauschFuer;
+            swapExercise(slotId, exercise);
+            // Der Tausch gilt erstmal nur für heute (siehe Beschreibung oben) —
+            // wer ihn dauerhaft will, muss das extra sagen. Sonst würde ein
+            // Ausweichtausch, weil ein Gerät gerade belegt war, ungefragt den
+            // Plan umräumen.
+            toast(`„${exercise.name}“ eingetauscht — nur für heute`, {
+              action: {
+                label: "Auch im Plan",
+                onClick: () => {
+                  persistSwapToPlan(slotId, exercise)
+                    .then(() => toast.success("Im Plan übernommen"))
+                    .catch(() => toast.error("Konnte den Plan nicht aktualisieren"));
+                },
+              },
+            });
+          } else {
+            addExercise(exercise);
+          }
           setTauschFuer(null);
         }}
         excludeIds={exercises.map((pe) => pe.exerciseId)}
