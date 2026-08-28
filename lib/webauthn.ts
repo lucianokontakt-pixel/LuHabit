@@ -9,7 +9,7 @@ import { signValue, verifyValue } from "@/lib/auth";
  * auf dem Handy registrierter Passkey zur Live-Adresse, und ein lokal
  * registrierter zu localhost, ohne dass beides sich in die Quere kommt.
  */
-export const RP_NAME = "LuHabit";
+export const RP_NAME = "Steps";
 
 export function rpID(req: NextRequest): string {
   return new URL(appOrigin(req)).hostname;

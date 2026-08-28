@@ -1,4 +1,4 @@
-# LuHabit
+# Steps
 
 Trainings-App: Pläne, Progression und Verlauf, dazu Gewicht, Körperfett und eine
 Körperkarte. 1295 Übungen mit Bewegungs-GIF, offline nutzbar.
@@ -41,7 +41,7 @@ Die App spricht D1 über Cloudflares HTTP-Query-API an (`lib/d1.ts`), nicht übe
 
 ## 2. Anmeldung
 
-LuHabit ist mehrbenutzerfähig: jedes Konto sieht nur seine eigenen Pläne,
+Steps ist mehrbenutzerfähig: jedes Konto sieht nur seine eigenen Pläne,
 Übungen, Einheiten und Körperwerte. Ohne gesetzte `GOOGLE_CLIENT_ID` bleibt die App
 offen und alle Zugriffe laufen auf das Owner-Konto — praktisch lokal, in
 Produktion muss sie gesetzt sein.
@@ -104,13 +104,13 @@ node scripts/audit-sql.mjs
 
 Browser können weder Bluetooth zur Waage noch Health-Daten direkt lesen (vor allem in iOS Safari
 nicht). Lösung: die Renpho-App synct Gewicht (und Körperfett) automatisch nach Apple Health, ein
-iOS-Shortcut liest den Wert aus Health und schickt ihn an LuHabit.
+iOS-Shortcut liest den Wert aus Health und schickt ihn an Steps.
 
 Der Webhook gilt **pro Nutzer**: jedes Konto hat sein eigenes Secret, das
 gleichzeitig festlegt, auf welches Konto der Wert geschrieben wird.
 
 1. In der Renpho-App: Health-Sync für Gewicht (und optional Körperfett) aktivieren.
-2. In LuHabit einloggen, über das Konto-Menü **„Einstellungen“** öffnen (`/einstellungen`),
+2. In Steps einloggen, über das Konto-Menü **„Einstellungen“** öffnen (`/einstellungen`),
    unter „Automatischer Sync“ ein Secret generieren und die Webhook-URLs kopieren.
 3. Shortcuts-App → neuer Shortcut:
    - Aktion **„Gesundheitsprobe abrufen“** → Gewicht, neuester Wert
@@ -169,7 +169,7 @@ müssen also nicht bei jedem Deploy neu gesetzt werden.
 
 ## 5. Als App installieren
 
-LuHabit hat ein Web-App-Manifest (`app/manifest.ts`) und ist damit installierbar:
+Steps hat ein Web-App-Manifest (`app/manifest.ts`) und ist damit installierbar:
 
 - **iOS Safari:** Teilen-Icon → „Zum Home-Bildschirm“
 - **Android Chrome:** Menü → „App installieren“ (oder ein automatischer Install-Banner)

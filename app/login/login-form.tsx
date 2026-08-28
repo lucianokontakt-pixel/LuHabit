@@ -19,7 +19,7 @@ const ERRORS: Record<string, string> = {
   kein_id_token: "Google hat keine Identität mitgeschickt.",
   token_ungueltig: "Die Antwort von Google war ungültig.",
   keine_mail: "Für dieses Google-Konto ist keine bestätigte Mailadresse hinterlegt.",
-  nicht_freigegeben: "Diese Mailadresse ist für LuHabit nicht freigegeben.",
+  nicht_freigegeben: "Diese Mailadresse ist für Steps nicht freigegeben.",
 };
 
 /** Googles eigene Fehlercodes in Klartext — spart beim Einrichten viel Raten. */
@@ -131,7 +131,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   return (
     <Card className="w-full max-w-sm gap-6">
       <div className="px-(--card-spacing)">
-        <h1 className="font-display text-4xl leading-tight tracking-tight">LuHabit</h1>
+        <h1 className="font-display text-4xl leading-tight tracking-tight">Steps</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Melde dich an, um dein Training zu sehen.
         </p>

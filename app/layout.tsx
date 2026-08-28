@@ -30,12 +30,12 @@ const mono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LuHabit",
+  title: "Steps",
   description: "Dein Training und deine Werte — an einem Ort.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "LuHabit",
+    title: "Steps",
   },
 };
 

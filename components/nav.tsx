@@ -27,7 +27,7 @@ export function Nav() {
     >
       <div className="px-edge mx-auto flex h-16 max-w-4xl items-center justify-between gap-4 sm:[--edge:1.5rem]">
         <Link href="/" className="font-display text-xl tracking-tight">
-          LuHabit
+          Steps
         </Link>
 
         <nav className="hidden items-center gap-1 sm:flex">

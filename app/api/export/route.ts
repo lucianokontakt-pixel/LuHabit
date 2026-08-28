@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
           e.habit === "bodyfat" ? "%" : "kg",
         ])
       ),
-      `luhabit-koerper-${stamp}.csv`,
+      `steps-koerper-${stamp}.csv`,
       "text/csv"
     );
   }
@@ -160,14 +160,14 @@ export async function GET(req: NextRequest) {
           ];
         })
       ),
-      `luhabit-training-${stamp}.csv`,
+      `steps-training-${stamp}.csv`,
       "text/csv"
     );
   }
 
   return download(
     JSON.stringify({ exportedAt: new Date().toISOString(), schema: 1, ...data }, null, 2),
-    `luhabit-export-${stamp}.json`,
+    `steps-export-${stamp}.json`,
     "application/json"
   );
 }

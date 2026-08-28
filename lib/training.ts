@@ -258,7 +258,7 @@ export const MAX_BODYWEIGHT_SETS = 6;
  * Untergrenze erreicht hat. Weniger Sätze als geplant zählt als verfehlt —
  * eine Einheit, die auseinandergefallen ist, darf die Last nie steigern.
  *
- * Gemessen wird gegen den *heutigen* Plan: LuHabit speichert die Vorgabe einer
+ * Gemessen wird gegen den *heutigen* Plan: Steps speichert die Vorgabe einer
  * Einheit nicht mit. Wer den Plan ändert, ändert damit rückwirkend die
  * Lesart der Historie — das ist der Preis dafür, dass nichts zurückgeschrieben
  * wird, und immer noch besser, als alte Einheiten gegen nichts zu messen.

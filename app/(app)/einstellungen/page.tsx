@@ -466,7 +466,7 @@ export default function EinstellungenPage() {
       </Section>
 
       <p className="px-1 text-xs text-muted-foreground">
-        LuHabit · Übungsdaten und Körperkarte stammen aus fremden Quellen, siehe NOTICE.md
+        Steps · Übungsdaten und Körperkarte stammen aus fremden Quellen, siehe NOTICE.md
       </p>
 
       <AlertDialog
