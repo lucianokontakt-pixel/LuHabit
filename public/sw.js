@@ -1,5 +1,5 @@
 /**
- * Damit LuHabit im Gym auch ohne Empfang aufgeht.
+ * Damit Steps im Gym auch ohne Empfang aufgeht.
  *
  * Ohne Service Worker holt Safari bei jedem Start das HTML aus dem Netz — im
  * Keller ohne Balken kommt dann die Fehlerseite statt der laufenden Einheit.
@@ -10,7 +10,7 @@
  * fliegen alle Caches mit anderem Namen raus.
  */
 
-const VERSION = "v9";
+const VERSION = "v10";
 const STATIC_CACHE = `luhabit-static-${VERSION}`;
 const PAGE_CACHE = `luhabit-pages-${VERSION}`;
 const KEEP = [STATIC_CACHE, PAGE_CACHE];
@@ -180,8 +180,11 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   // Der Anmeldefluss lebt von echten Weiterleitungen und Cookies — der darf
-  // nie aus dem Cache kommen.
-  if (url.pathname.startsWith("/api/auth/")) return;
+  // nie aus dem Cache kommen. Die Login-Seite gehört dazu: sie entscheidet
+  // beim Laden, ob sie den Passkey von sich aus anbietet, und aus dem Cache
+  // wäre das die Entscheidung von vorletzter Woche. In WARMUP stand das schon
+  // als Absicht, im Abfangen fehlte es.
+  if (url.pathname.startsWith("/api/auth/") || url.pathname === "/login") return;
 
   // Der Abgleich erst recht nicht. Eine Antwort aus dem Cache brächte einen
   // alten Cursor und einen alten Bestand — das Gerät würde einen längst

@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyRegistrationResponse, type RegistrationResponseJSON } from "@simplewebauthn/server";
 import { d1Query } from "@/lib/d1";
 import { createPasskeyUser } from "@/lib/server-user";
-import { AUTH_COOKIE, createSessionCookie, sessionCookieOptions } from "@/lib/auth";
+import { AUTH_COOKIE, createSessionCookie, sessionCookieOptions,
+  PASSKEY_HINT_COOKIE,
+  passkeyHintCookieOptions,
+} from "@/lib/auth";
 import {
   PASSKEY_COOKIE,
   bytesToBase64,
@@ -87,6 +90,11 @@ export async function POST(req: NextRequest) {
     }),
     sessionCookieOptions
   );
+  // Ab jetzt weiß dieses Gerät, dass es hier einen Passkey gibt — auch wenn
+  // iOS das Ablagefach der installierten App später leerräumt. Der Merker
+  // überlebt das als Cookie und lässt die Login-Seite den Passkey von sich aus
+  // anbieten, statt erst einen Knopfdruck abzuwarten.
+  res.cookies.set(PASSKEY_HINT_COOKIE, "1", passkeyHintCookieOptions);
   res.cookies.delete(PASSKEY_COOKIE);
   return res;
 }

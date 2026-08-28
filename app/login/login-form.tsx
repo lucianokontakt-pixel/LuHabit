@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { KeyRound, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
-import { loginWithPasskey, signupWithPasskey } from "@/lib/passkey-client";
+import {
+  hasRegisteredPasskeyHere,
+  loginWithPasskey,
+  signupWithPasskey,
+} from "@/lib/passkey-client";
 import { Input } from "@/components/ui/input";
 
 const ERRORS: Record<string, string> = {
@@ -78,6 +82,9 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   // serverseitig immer gleiches Ergebnis (etwa "true") gäbe es hier nicht,
   // ohne bei jedem alten Browser einen toten Knopf zu zeigen.
   const [passkeySupported, setPasskeySupported] = useState(false);
+  /** Kennt dieses Gerät hier schon einen Passkey? Entscheidet über den Selbststart. */
+  const [passkeyBekannt, setPasskeyBekannt] = useState(false);
+  const selbststartGelaufen = useRef(false);
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
   /** Offen heißt: das Namensfeld fürs neue Profil steht statt der Knöpfe da. */
@@ -87,6 +94,8 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Browser-Fähigkeit lässt sich erst nach dem Mount sicher abfragen
     setPasskeySupported(browserSupportsWebAuthn());
+    // localStorage und document.cookie gibt es ebenfalls erst im Browser.
+    setPasskeyBekannt(hasRegisteredPasskeyHere());
   }, []);
 
   function enter() {
@@ -94,16 +103,18 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
     router.refresh();
   }
 
-  async function handlePasskeyLogin() {
+  const handlePasskeyLogin = useCallback(async () => {
     setPasskeyBusy(true);
     setPasskeyError(null);
     const result = await loginWithPasskey();
-    if (result.ok) enter();
-    else {
+    if (result.ok) {
+      router.push(from);
+      router.refresh();
+    } else {
       setPasskeyError(result.error);
       setPasskeyBusy(false);
     }
-  }
+  }, [router, from]);
 
   async function handlePasskeySignup() {
     if (!newName.trim()) {
@@ -119,6 +130,27 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
       setPasskeyBusy(false);
     }
   }
+
+  /**
+   * Wer hier schon einmal mit Passkey drin war, soll nicht erst einen Knopf
+   * suchen müssen. Das ist die Nachholung, die es für Google längst gibt
+   * (siehe autoRetrying) und für den Passkey bisher nicht — dabei trifft der
+   * Verlust genau ihn: iOS räumt das Ablagefach der installierten App nach
+   * rund einer Woche ohne Nutzung leer, das Sitzungscookie geht mit, und man
+   * steht wieder hier. Ein Face-ID-Blick statt einer Anmeldeseite.
+   *
+   * Nur wenn dieses Gerät den Passkey kennt: sonst landete jeder Erstbesucher
+   * ungefragt in Safaris „Du hast keinen Passkey für diese Website"-Fenster.
+   * Und nicht, während der stille Google-Versuch läuft — der navigiert weg.
+   */
+  useEffect(() => {
+    if (autoRetrying || !passkeySupported || !passkeyBekannt || oauthError) return;
+    // Genau einmal: schlägt es fehl, bleibt der Knopf für einen zweiten
+    // Versuch stehen, statt in einer Schleife nach Face ID zu fragen.
+    if (selbststartGelaufen.current) return;
+    selbststartGelaufen.current = true;
+    void handlePasskeyLogin();
+  }, [autoRetrying, passkeySupported, passkeyBekannt, oauthError, handlePasskeyLogin]);
 
   useEffect(() => {
     if (!autoRetrying) return;

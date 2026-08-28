@@ -10,6 +10,8 @@ async function readError(res: Response, fallback: string): Promise<string> {
 }
 
 const REGISTERED_KEY = "luhabit-passkey-registered";
+/** Denselben Merker setzt der Server als Cookie, siehe PASSKEY_HINT_COOKIE. */
+const REGISTERED_COOKIE = "steps_passkey";
 
 /**
  * Ob dieser Browser hier schon einmal einen Passkey angelegt hat. WebAuthn
@@ -23,13 +25,20 @@ const REGISTERED_KEY = "luhabit-passkey-registered";
  * kann auf einem zweiten Gerät längst da sein, auch wenn dieser Browser hier
  * noch nichts davon weiß — dann bleibt der Passkey-Knopf dort kleiner, statt
  * zu behaupten, es gäbe nichts.
+ *
+ * Zwei Ablagen, weil die eine nicht hält: localStorage ist auf iOS das Erste,
+ * was bei einer installierten Web-App nach rund einer Woche ohne Nutzung
+ * verschwindet — zusammen mit dem Sitzungscookie. Genau dann steht man wieder
+ * auf der Login-Seite, und genau dann muss dieser Merker noch da sein. Das
+ * Cookie kommt vom Server und hält ein Jahr.
  */
 export function hasRegisteredPasskeyHere(): boolean {
   try {
-    return localStorage.getItem(REGISTERED_KEY) === "1";
+    if (localStorage.getItem(REGISTERED_KEY) === "1") return true;
   } catch {
-    return false;
+    // Kein Speicher — dann entscheidet allein das Cookie.
   }
+  return document.cookie.split("; ").includes(`${REGISTERED_COOKIE}=1`);
 }
 
 function rememberPasskeyRegistered() {

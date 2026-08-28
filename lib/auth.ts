@@ -15,6 +15,22 @@ export const AUTH_COOKIE = "luhabit_session";
 export const OAUTH_COOKIE = "luhabit_oauth";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 90; // 90 Tage
 
+/**
+ * Merker: „auf diesem Gerät gibt es einen Passkey."
+ *
+ * Steht zusätzlich zum localStorage-Eintrag, weil genau der auf iOS als Erstes
+ * verschwindet — eine installierte Web-App verliert ihr Ablagefach nach rund
+ * einer Woche ohne Nutzung. Ohne den Merker weiß die Login-Seite nicht, ob sie
+ * den Passkey von sich aus anbieten darf, und schickt jeden Erstbesucher sonst
+ * in Safaris „Du hast keinen Passkey"-Fenster.
+ *
+ * Bewusst nicht httpOnly: die Login-Seite muss ihn im Browser lesen können. Er
+ * trägt keine Kennung, nur die Eins — daraus lässt sich nichts über das Konto
+ * ableiten.
+ */
+export const PASSKEY_HINT_COOKIE = "steps_passkey";
+export const PASSKEY_HINT_MAX_AGE = 60 * 60 * 24 * 365; // ein Jahr
+
 /** Feste Kennung des Kontos, dem der Datenbestand vor dem Mehrbenutzer-Umbau gehört. */
 export const OWNER_USER_ID = "usr_owner";
 
@@ -156,6 +172,14 @@ export const sessionCookieOptions = {
   sameSite: "lax" as const,
   path: "/",
   maxAge: SESSION_MAX_AGE,
+};
+
+export const passkeyHintCookieOptions = {
+  httpOnly: false,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+  maxAge: PASSKEY_HINT_MAX_AGE,
 };
 
 /** Zufälliger URL-sicherer Wert für state und PKCE-Verifier. */
