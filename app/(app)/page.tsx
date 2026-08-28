@@ -129,7 +129,7 @@ export default function TrainingOverviewPage() {
             {karte.day.exercises.slice(0, 6).map((pe) => (
               <span
                 key={pe.id}
-                className="rounded-pill bg-current/10 px-2.5 py-1 text-xs"
+                className="rounded-pill bg-current/10 px-2 py-0.5 text-[11px]"
               >
                 {kurzerName(exerciseById[pe.exerciseId]?.name ?? pe.exerciseId)}
               </span>
