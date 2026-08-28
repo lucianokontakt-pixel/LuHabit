@@ -116,6 +116,7 @@ export default function StatistikKoerperPage() {
         icon={Weight}
         step={0.1}
         direction="down-good"
+        fallback={75}
       />
       <MetricSection
         metric="bodyfat"
@@ -124,6 +125,8 @@ export default function StatistikKoerperPage() {
         icon={Percent}
         step={0.1}
         direction="down-good"
+        span={10}
+        fallback={20}
       />
 
       {/* Wo die Sätze hingingen — welche Gruppe bekommt Arbeit, nicht wie viel

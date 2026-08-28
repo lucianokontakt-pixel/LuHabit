@@ -259,6 +259,17 @@
   }
 }
 
+/* Beim Lineal ist die Leiste kein Hinweis, sondern ein zweiter Strich unter
+   den Strichen — dass es seitlich weitergeht, sagt die Skala selbst. Deshalb
+   verschwindet sie dort auch mit Maus. Ungelayert wie die Regeln darüber. */
+[data-slot="ruler"] {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+[data-slot="ruler"]::-webkit-scrollbar {
+  display: none;
+}
+
 /* Das Wischen in einer solchen Reihe soll dort enden. Ohne das reicht iOS die
    Bewegung am Ende der Reihe an die Seite weiter und löst die Zurück-Geste
    aus — man scrollt durch die Muskelgruppen und landet auf der vorigen Seite. */

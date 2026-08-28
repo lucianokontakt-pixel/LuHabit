@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { StatValue, type DeltaDirection } from "@/components/stat-value";
+import { RulerPicker } from "@/components/ruler-picker";
 import { TrendChart } from "@/components/trend-chart";
 import { useMetricData } from "@/lib/use-metric-data";
 import { formatNumber } from "@/lib/format";
@@ -30,6 +31,8 @@ export function MetricSection({
   step = 0.1,
   direction = "neutral",
   days = 30,
+  span = 15,
+  fallback,
 }: {
   metric: Metric;
   label: string;
@@ -38,6 +41,10 @@ export function MetricSection({
   step?: number;
   direction?: DeltaDirection;
   days?: number;
+  /** Wie weit die Skala nach oben und unten reicht, gemessen am letzten Wert. */
+  span?: number;
+  /** Mitte der Skala, solange noch nichts gemessen wurde. */
+  fallback: number;
 }) {
   const { entries, loading, addValue } = useMetricData(metric);
   const [input, setInput] = useState("");
@@ -47,6 +54,19 @@ export function MetricSection({
   const latest = entries[entries.length - 1];
   const reference = valueDaysAgo(entries, days);
   const delta = latest && reference !== null ? latest.value - reference : null;
+
+  // Die Skala hängt am zuletzt gemessenen Wert, nicht am Getippten: sonst
+  // wandert sie schon unter dem Finger weg, während eine Zahl entsteht ("6"
+  // auf dem Weg zu "68"). Der Anker rastet in Fünferschritten, damit sich der
+  // Ausschnitt nach einer neuen Messung nicht bei jedem Zehntel verschiebt.
+  const anchor = Math.round((latest?.value ?? fallback) / 5) * 5;
+  const rulerMin = Math.max(0, anchor - span);
+  const rulerMax = anchor + span;
+  const typed = Number(input.replace(",", "."));
+  const rulerValue = Math.min(
+    rulerMax,
+    Math.max(rulerMin, Number.isFinite(typed) && typed > 0 ? typed : anchor)
+  );
 
   // Der zuletzt gemessene Wert steht schon im Feld: eine neue Messung weicht
   // meist nur in der letzten Stelle ab, das spart Tipparbeit am Handy.
@@ -120,6 +140,25 @@ export function MetricSection({
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-1.5 px-(--card-spacing)">
+        {/* Wischen statt tippen: der neue Wert liegt fast immer dicht am
+            letzten, und am Handy trifft der Daumen das Zehntel hier leichter
+            als die Tastatur. Feld und Tasten bleiben daneben bestehen. */}
+        <RulerPicker
+          value={rulerValue}
+          onChange={(next) => {
+            setEdited(true);
+            setInput(String(next));
+            setError(null);
+          }}
+          min={rulerMin}
+          max={rulerMax}
+          step={step}
+          majorEvery={Math.max(1, Math.round(1 / step))}
+          pitch={8}
+          unit={unit}
+          ariaLabel={`${label} am Lineal einstellen`}
+        />
+
         <div className="flex items-center gap-2">
           {/* Minus und Plus rahmen das Feld ein, damit ein Wert ohne Tastatur
               nachjustiert werden kann — die native Spinner-Pfeile entfallen. */}

@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Check, Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/format";
+import { WeightSheet } from "@/components/training/weight-sheet";
 
 export type SessionSet = {
   weight: number;
@@ -16,6 +18,9 @@ export type SessionSet = {
  * Plus/Minus um eine Zahl. Liegt hier, weil die Satzzeile der Hauptnutzer ist —
  * geteilt mit dem Rechner im Übungsblatt, damit ein Schrittfeld überall gleich
  * aussieht und sich gleich anfühlt.
+ *
+ * Mit `onPress` wird die Zahl selbst antippbar — dahinter liegt dann das
+ * Lineal für größere Sprünge. Ohne die Prop bleibt sie reine Anzeige.
  */
 export function Stepper({
   label,
@@ -24,6 +29,8 @@ export function Stepper({
   step,
   min = 0,
   onChange,
+  onPress,
+  pressLabel,
   disabled,
 }: {
   label: string;
@@ -32,6 +39,8 @@ export function Stepper({
   step: number;
   min?: number;
   onChange: (value: number) => void;
+  onPress?: () => void;
+  pressLabel?: string;
   disabled?: boolean;
 }) {
   return (
@@ -45,10 +54,23 @@ export function Stepper({
       >
         <Minus className="size-3.5" />
       </button>
-      <span className="nums min-w-0 flex-1 text-center text-sm">
-        {formatNumber(value)}
-        <span className="ml-0.5 text-[11px] text-muted-foreground">{suffix}</span>
-      </span>
+      {onPress ? (
+        <button
+          type="button"
+          onClick={onPress}
+          disabled={disabled}
+          aria-label={pressLabel ?? `${label} einstellen`}
+          className="nums min-w-0 flex-1 self-stretch text-center text-sm transition-colors active:bg-foreground/5"
+        >
+          {formatNumber(value)}
+          <span className="ml-0.5 text-[11px] text-muted-foreground">{suffix}</span>
+        </button>
+      ) : (
+        <span className="nums min-w-0 flex-1 text-center text-sm">
+          {formatNumber(value)}
+          <span className="ml-0.5 text-[11px] text-muted-foreground">{suffix}</span>
+        </span>
+      )}
       <button
         type="button"
         onClick={() => onChange(Number((value + step).toFixed(2)))}
@@ -78,6 +100,9 @@ export function SetRow({
   onChange: (patch: Partial<SessionSet>) => void;
   onToggleDone: () => void;
 }) {
+  const [weightSheet, setWeightSheet] = useState(false);
+  const satzName = set.warmup ? "Aufwärmsatz" : `Satz ${index + 1}`;
+
   return (
     <div
       className={cn(
@@ -112,6 +137,8 @@ export function SetRow({
         suffix="kg"
         step={weightStep}
         onChange={(weight) => onChange({ weight })}
+        onPress={() => setWeightSheet(true)}
+        pressLabel={`Gewicht für ${satzName} am Lineal einstellen`}
       />
       <Stepper
         label="Wiederholungen"
@@ -136,6 +163,17 @@ export function SetRow({
       >
         <Check className="size-4" />
       </button>
+
+      {weightSheet && (
+        <WeightSheet
+          open
+          onOpenChange={setWeightSheet}
+          title={`${satzName} · Gewicht`}
+          value={set.weight}
+          step={weightStep}
+          onChange={(weight) => onChange({ weight })}
+        />
+      )}
     </div>
   );
 }
