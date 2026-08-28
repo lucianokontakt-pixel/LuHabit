@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { KeyRound } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
-import { loginWithPasskey } from "@/lib/passkey-client";
+import { hasRegisteredPasskeyHere, loginWithPasskey } from "@/lib/passkey-client";
 
 const ERRORS: Record<string, string> = {
   nicht_konfiguriert: "Google-Login ist auf dem Server noch nicht eingerichtet.",
@@ -77,12 +77,17 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   // serverseitig immer gleiches Ergebnis (etwa "true") gäbe es hier nicht,
   // ohne bei jedem alten Browser einen toten Knopf zu zeigen.
   const [passkeySupported, setPasskeySupported] = useState(false);
+  // Ob HIER schon einmal einer angelegt wurde: ohne das lief ein Antippen
+  // beim allerersten Besuch geradewegs in Safaris eigenes "Du hast keinen
+  // Passkey für diese Website"-Fenster — der Knopf bleibt bis dahin klein.
+  const [passkeyKnown, setPasskeyKnown] = useState(false);
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Browser-Fähigkeit lässt sich erst nach dem Mount sicher abfragen
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Browser-Fähigkeit und lokaler Merker lassen sich erst nach dem Mount sicher abfragen
     setPasskeySupported(browserSupportsWebAuthn());
+    setPasskeyKnown(hasRegisteredPasskeyHere());
   }, []);
 
   async function handlePasskeyLogin() {
@@ -134,33 +139,54 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
           <div className="px-(--card-spacing) text-sm text-muted-foreground">Meldet an …</div>
         ) : (
           <div className="flex flex-col gap-3 px-(--card-spacing)">
-            {/* Zuerst der Passkey, wenn das Gerät kann, und als Hauptknopf:
-                ein Fingerabdruck oder Face ID ist weniger Weg als der Umweg
-                über Google, das verdient den Vortritt auch optisch. Der
-                Knopf verschwindet auf Geräten ohne Unterstützung ganz, statt
-                dort tot dazustehen. */}
-            {passkeySupported && (
-              <Button
-                type="button"
-                className="h-12 w-full rounded-pill text-sm font-medium"
-                onClick={handlePasskeyLogin}
-                disabled={passkeyBusy}
-              >
-                <KeyRound className="size-4" />
-                {passkeyBusy ? "Meldet an …" : "Mit Passkey anmelden"}
-              </Button>
-            )}
-            {passkeyError && <p className="text-xs text-destructive">{passkeyError}</p>}
+            {/* Ein Passkey lässt sich hier nicht anlegen — das Anlegen hängt
+                an einer schon bestehenden Google-Sitzung (Einstellungen), sonst
+                könnte sich jede beliebige Person selbst einen Zugang schaffen,
+                ganz ohne die freigegebene Mailadresse. Ob DIESES Gerät schon
+                einen kennt, entscheidet, welcher Knopf hier der Hauptweg ist:
+                ein unbekanntes Gerät würde mit einem Login-Versuch nur in
+                Safaris "Du hast keinen Passkey für diese Website"-Fenster
+                laufen, bevor überhaupt einer existiert. */}
+            {passkeySupported && passkeyKnown ? (
+              <>
+                <Button
+                  type="button"
+                  className="h-12 w-full rounded-pill text-sm font-medium"
+                  onClick={handlePasskeyLogin}
+                  disabled={passkeyBusy}
+                >
+                  <KeyRound className="size-4" />
+                  {passkeyBusy ? "Meldet an …" : "Mit Passkey anmelden"}
+                </Button>
+                {passkeyError && <p className="text-xs text-destructive">{passkeyError}</p>}
 
-            {/* Bewusst ein Link, kein fetch: der OAuth-Start ist eine echte
-                Navigation zu Google und darf nicht im Hintergrund passieren. */}
-            <a
-              href={`/api/auth/google/start?from=${encodeURIComponent(from)}`}
-              className="flex h-12 w-full items-center justify-center gap-3 rounded-pill bg-elevated text-sm font-medium ring-1 ring-foreground/12 transition-colors hover:ring-foreground/30"
-            >
-              <GoogleMark />
-              Mit Google anmelden
-            </a>
+                <a
+                  href={`/api/auth/google/start?from=${encodeURIComponent(from)}`}
+                  className="flex h-12 w-full items-center justify-center gap-3 rounded-pill bg-elevated text-sm font-medium ring-1 ring-foreground/12 transition-colors hover:ring-foreground/30"
+                >
+                  <GoogleMark />
+                  Mit Google anmelden
+                </a>
+              </>
+            ) : (
+              <>
+                {/* Bewusst ein Link, kein fetch: der OAuth-Start ist eine echte
+                    Navigation zu Google und darf nicht im Hintergrund passieren. */}
+                <a
+                  href={`/api/auth/google/start?from=${encodeURIComponent(from)}`}
+                  className={buttonVariants({ className: "h-12 w-full rounded-pill text-sm font-medium" })}
+                >
+                  <GoogleMark />
+                  Mit Google anmelden
+                </a>
+                {passkeySupported && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Noch keinen Passkey auf diesem Gerät — nach der Anmeldung unter
+                    Einstellungen einrichten.
+                  </p>
+                )}
+              </>
+            )}
           </div>
         )
       ) : (
