@@ -66,7 +66,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="de"
       suppressHydrationWarning
-      className={`${sans.variable} ${display.variable} ${mono.variable} h-full antialiased`}
+      className={`${sans.variable} ${display.variable} ${mono.variable} h-dvh antialiased`}
     >
       <head>
         {/* Cloudflare-Worker-Build bundelt den Server-Code mit esbuilds
@@ -82,7 +82,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-background">
+      {/* min-h-full statt min-h-dvh reichte nicht: "100%" hängt an der
+          Layout-Viewport-Höhe, die iOS Safari auf einer kurzen Seite (nichts
+          zu scrollen) instabil hält, während sich Adressleiste und
+          Wisch-Zone ein- und ausblenden. Die untere Navigation ist fest am
+          Bildschirmrand verankert (siehe components/bottom-nav.tsx) und
+          wanderte dabei sichtbar nach oben, mit einer Lücke darunter. dvh
+          verfolgt die tatsächlich sichtbare Höhe, nicht die maximal mögliche. */}
+      <body className="min-h-dvh flex flex-col bg-background">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           {/* Navigation und Inhaltsrahmen sitzen in app/(app)/layout.tsx, nicht
               hier: der Start-Knopf in der unteren Leiste muss den aktiven Plan
