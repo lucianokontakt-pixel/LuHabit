@@ -234,7 +234,10 @@ export default function ExercisesPage() {
                     >
                       <ExerciseThumb exercise={exercise} />
                       <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm">{exercise.name}</p>
+                      {/* Umbrechen statt abschneiden: das Gerät steht am Ende
+                          des Namens und ist genau das, was die sechs
+                          Bankdrück-Varianten voneinander unterscheidet. */}
+                      <p className="line-clamp-2 text-sm">{exercise.name}</p>
                       <p className="truncate text-xs text-muted-foreground">
                         {EQUIPMENT_LABELS[exercise.equipment]}
                         {exercise.increment !== null && ` · ${exercise.increment} kg Sprung`}

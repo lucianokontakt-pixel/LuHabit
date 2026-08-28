@@ -206,18 +206,26 @@ export default function TrainingStatsPage() {
             </Card>
             <Card size="sm" className="gap-0">
               <div className="px-(--card-spacing)">
+                {/* Die Unterzeile erklärt bei jeder Kachel den Wert darüber
+                    ("abgehakt", "im Gym", "insgesamt"). Hier stand stattdessen
+                    die Wochenquote — eine ganz andere Zahl, die nur so aussah,
+                    als gehöre sie zu den Rekorden. Sie steht jetzt als Satz
+                    unter dem Raster. */}
                 <StatValue label="Bestleistungen" value={String(recordCount)} />
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  {consistency
-                    ? `${consistency.hit}/${consistency.weeks} Wochen im Ziel`
-                    : "neue Rekorde"}
-                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">neue Rekorde</p>
               </div>
             </Card>
           </div>
 
           {/* Ohne diesen Satz wirkt der Sprung im Volumen wie ein Fehler. */}
           <p className="-mt-3 text-xs text-muted-foreground">
+            {consistency && (
+              <>
+                In {consistency.hit} von {consistency.weeks}{" "}
+                {consistency.weeks === 1 ? "Woche" : "Wochen"} hast du dein Wochenziel
+                erreicht.{" "}
+              </>
+            )}
             Gezählt werden Arbeitssätze — Aufwärmsätze bleiben außen vor. Übungen mit dem eigenen
             Körper (Klimmzüge, Dips, Liegestütze) gehen mit dem Anteil deines Körpergewichts ins
             Volumen ein, den sie tatsächlich bewegen.
