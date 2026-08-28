@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import { Play, CalendarDays, Dumbbell, Timer } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Play, CalendarDays, Dumbbell, Shuffle, Timer } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { WeekCard } from "@/components/training/week-card";
 import { WelcomeCard } from "@/components/training/welcome-card";
+import { DayPicker } from "@/components/training/day-picker";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
 import { measuredOn, nextDayFor, sessionVolume, MUSCLE_LABELS } from "@/lib/training";
 import { formatDateLong, formatNumber } from "@/lib/format";
 import { todayISO } from "@/lib/datum";
+import { cn } from "@/lib/utils";
 
 export default function TrainingOverviewPage() {
   const { activePlan, sessions, exerciseById, loading, error } = useTraining();
@@ -28,6 +30,7 @@ export default function TrainingOverviewPage() {
 
   const weeklyTarget = activePlan?.weeklyTarget ?? null;
   const trainedToday = sessions.some((s) => s.date === todayISO());
+  const [picking, setPicking] = useState(false);
 
   return (
     <div className="flex flex-col gap-5">
@@ -81,14 +84,32 @@ export default function TrainingOverviewPage() {
             ))}
           </div>
 
-          <div className="px-(--card-spacing)">
+          {/* Der Wechsel steht neben dem Start, nicht darunter: eine zweite
+              Reihe hätte die Karte um eine Knopfhöhe wachsen lassen und die
+              Wochenübersicht unter den Rand geschoben. „Anderer Tag" bleibt
+              deshalb schmal — den Platz braucht der Startknopf.
+              Über cn statt direkt über buttonVariants: nur so räumt
+              tailwind-merge das bg-primary weg, sonst stünden beide Klassen da. */}
+          <div className="flex gap-2 px-(--card-spacing)">
             <Link
               href={`/session?day=${encodeURIComponent(nextDay.id)}`}
-              className={buttonVariants({ size: "lg", className: "w-full" })}
+              className={cn(buttonVariants({ size: "lg" }), "min-w-0 flex-1")}
             >
               <Play className="size-4" />
-              Training starten
+              Starten
             </Link>
+            {activePlan.days.length > 1 && (
+              <Button
+                size="lg"
+                onClick={() => setPicking(true)}
+                className={cn(
+                  "shrink-0 bg-current/10 text-current hover:bg-current/20"
+                )}
+              >
+                <Shuffle className="size-4" />
+                Anderer Tag
+              </Button>
+            )}
           </div>
         </Card>
       ) : (
@@ -182,6 +203,17 @@ export default function TrainingOverviewPage() {
           </div>
         )}
       </section>
+
+      {activePlan && (
+        <DayPicker
+          plan={activePlan}
+          sessions={sessions}
+          exerciseById={exerciseById}
+          suggestedId={nextDay?.id ?? null}
+          open={picking}
+          onOpenChange={setPicking}
+        />
+      )}
     </div>
   );
 }
