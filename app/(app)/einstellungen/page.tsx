@@ -7,9 +7,11 @@ import {
   Copy,
   Download,
   ImageDown,
+  KeyRound,
   Laptop,
   LogOut,
   Moon,
+  Plus,
   RefreshCw,
   RotateCcw,
   Smartphone,
@@ -37,9 +39,13 @@ import {
 import { useTraining } from "@/lib/training-store";
 import { useSignalSound } from "@/lib/use-signal-sound";
 import { raeumeAbmeldungAuf } from "@/lib/abmelden";
+import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
+import { registerPasskey } from "@/lib/passkey-client";
+import { formatDateLong } from "@/lib/format";
 import { ladeMedienVor, type VorladeFortschritt } from "@/lib/medien-vorladen";
 
 type Me = { email: string; name: string | null; picture: string | null };
+type Passkey = { id: string; name: string; created_at: string; last_used_at: string | null };
 
 function webhookUrl(metric: string, secret: string): string {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -101,6 +107,9 @@ type ResetScope = (typeof RESETS)[number]["scope"];
 
 export default function EinstellungenPage() {
   const [me, setMe] = useState<Me | null>(null);
+  const [passkeys, setPasskeys] = useState<Passkey[] | null>(null);
+  const [passkeySupported, setPasskeySupported] = useState(false);
+  const [addingPasskey, setAddingPasskey] = useState(false);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [secret, setSecret] = useState<string | null>(null);
@@ -137,7 +146,40 @@ export default function EinstellungenPage() {
       .then((data: { secret: string | null } | null) => setSecret(data?.secret ?? null))
       .catch(() => {})
       .finally(() => setSecretLoading(false));
+    setPasskeySupported(browserSupportsWebAuthn());
+    loadPasskeys();
   }, []);
+
+  function loadPasskeys() {
+    fetch("/api/passkeys")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { passkeys: Passkey[] } | null) => setPasskeys(data?.passkeys ?? []))
+      .catch(() => setPasskeys([]));
+  }
+
+  async function addPasskey() {
+    setAddingPasskey(true);
+    const result = await registerPasskey();
+    setAddingPasskey(false);
+    if (result.ok) {
+      toast.success(`„${result.name}“ hinzugefügt`);
+      loadPasskeys();
+    } else {
+      toast.error(result.error);
+    }
+  }
+
+  async function removePasskey(passkey: Passkey) {
+    setPasskeys((prev) => (prev ? prev.filter((p) => p.id !== passkey.id) : prev));
+    try {
+      const res = await fetch(`/api/passkeys/${passkey.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      toast.success(`„${passkey.name}“ entfernt`);
+    } catch {
+      toast.error("Konnte den Passkey nicht entfernen");
+      loadPasskeys();
+    }
+  }
 
   async function generateSecret() {
     setGenerating(true);
@@ -224,6 +266,50 @@ export default function EinstellungenPage() {
           </>
         )}
       </Section>
+
+      {/* Ohne Sitzung gibt es kein Konto, an das sich ein Passkey hängen
+          ließe — und ohne WebAuthn-Unterstützung liefe der Knopf ins Leere. */}
+      {me && passkeySupported && (
+        <Section
+          title="Passkeys"
+          footer="Face ID oder Touch ID statt Google — schneller, und du bleibst angemeldet, auch wenn iOS die Google-Sitzung mal vergisst."
+        >
+          {passkeys === null ? (
+            <Row icon={KeyRound} title="Lädt …" />
+          ) : passkeys.length === 0 ? (
+            <Row icon={KeyRound} title="Noch kein Passkey eingerichtet" />
+          ) : (
+            passkeys.map((passkey) => (
+              <Row
+                key={passkey.id}
+                icon={KeyRound}
+                iconTint="var(--chart-4)"
+                title={passkey.name}
+                subtitle={
+                  passkey.last_used_at
+                    ? `Zuletzt genutzt am ${formatDateLong(passkey.last_used_at.slice(0, 10))}`
+                    : `Eingerichtet am ${formatDateLong(passkey.created_at.slice(0, 10))}`
+                }
+              >
+                <button
+                  type="button"
+                  onClick={() => removePasskey(passkey)}
+                  aria-label={`„${passkey.name}“ entfernen`}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </Row>
+            ))
+          )}
+          <Row
+            icon={Plus}
+            title={addingPasskey ? "Wird eingerichtet …" : "Passkey hinzufügen"}
+            onClick={addPasskey}
+            disabled={addingPasskey}
+          />
+        </Section>
+      )}
 
       {/* Drei Wahlmöglichkeiten mit Icon passen auf 375 px nicht neben eine
           Beschriftung — also über die ganze Breite statt in eine Zeile. */}

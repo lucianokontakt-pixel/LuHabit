@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { KeyRound } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
+import { loginWithPasskey } from "@/lib/passkey-client";
 
 const ERRORS: Record<string, string> = {
   nicht_konfiguriert: "Google-Login ist auf dem Server noch nicht eingerichtet.",
@@ -51,6 +55,7 @@ function GoogleMark() {
 }
 
 export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "/";
   const oauthError = searchParams.get("error");
@@ -67,6 +72,31 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   // normale Knopf. Ein ausdrückliches Abmelden markiert silentDone selbst,
   // damit es hier nicht sofort wieder rückgängig gemacht wird.
   const autoRetrying = googleEnabled && !oauthError && !silentDone;
+
+  // Ob dieses Gerät Passkeys überhaupt kann, weiß erst der Browser — ein
+  // serverseitig immer gleiches Ergebnis (etwa "true") gäbe es hier nicht,
+  // ohne bei jedem alten Browser einen toten Knopf zu zeigen.
+  const [passkeySupported, setPasskeySupported] = useState(false);
+  const [passkeyBusy, setPasskeyBusy] = useState(false);
+  const [passkeyError, setPasskeyError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Browser-Fähigkeit lässt sich erst nach dem Mount sicher abfragen
+    setPasskeySupported(browserSupportsWebAuthn());
+  }, []);
+
+  async function handlePasskeyLogin() {
+    setPasskeyBusy(true);
+    setPasskeyError(null);
+    const result = await loginWithPasskey();
+    if (result.ok) {
+      router.push(from);
+      router.refresh();
+    } else {
+      setPasskeyError(result.error);
+      setPasskeyBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!autoRetrying) return;
@@ -103,7 +133,25 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
         autoRetrying ? (
           <div className="px-(--card-spacing) text-sm text-muted-foreground">Meldet an …</div>
         ) : (
-          <div className="px-(--card-spacing)">
+          <div className="flex flex-col gap-3 px-(--card-spacing)">
+            {/* Zuerst der Passkey, wenn das Gerät kann: ein Fingerabdruck
+                oder Face ID ist weniger Weg als der Umweg über Google. Der
+                Knopf verschwindet auf Geräten ohne Unterstützung ganz, statt
+                dort tot dazustehen. */}
+            {passkeySupported && (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 w-full rounded-pill text-sm font-medium"
+                onClick={handlePasskeyLogin}
+                disabled={passkeyBusy}
+              >
+                <KeyRound className="size-4" />
+                {passkeyBusy ? "Meldet an …" : "Mit Passkey anmelden"}
+              </Button>
+            )}
+            {passkeyError && <p className="text-xs text-destructive">{passkeyError}</p>}
+
             {/* Bewusst ein Link, kein fetch: der OAuth-Start ist eine echte
                 Navigation zu Google und darf nicht im Hintergrund passieren. */}
             <a
