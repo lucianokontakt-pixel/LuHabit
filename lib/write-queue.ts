@@ -103,6 +103,12 @@ async function send(op: WriteOp): Promise<Response> {
       );
     case "plan.delete":
       return remove(`/api/training/plans?id=${encodeURIComponent(op.id)}`);
+    case "planExercise.swap":
+      return post(
+        "/api/training/plans",
+        { dayId: op.dayId, planExerciseId: op.planExerciseId, exerciseId: op.exerciseId },
+        "PATCH"
+      );
     case "session.save":
       return post("/api/training/sessions", sessionBody(op.session), op.isNew ? "POST" : "PUT");
     case "session.delete":

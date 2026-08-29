@@ -305,6 +305,56 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json({ plan: plans.find((p) => p.id === body.id), plans });
 }
 
+/**
+ * Nur die Bewegung an einem einzelnen Platz austauschen — ohne den Tag oder
+ * seine Geschwister-Übungen anzufassen.
+ *
+ * PUT (und damit writeDays) ersetzt bei jedem Aufruf ALLE Tage und Übungen
+ * des Plans durch frische Zeilen mit neuen IDs (siehe writeDays oben). Für
+ * einen Tausch aus einer laufenden Einheit heraus ist das der Fehler, der
+ * sie zum Absturz bringt: die Einheit merkt sich ihren Tag über dessen ID,
+ * und die wäre danach eine andere — "Trainingstag nicht gefunden" mitten im
+ * Training. Dieser Weg ändert deshalb ausschließlich exercise_id (und setzt
+ * increment/start_weight zurück, dieselbe Regel wie beim Tausch selbst),
+ * ohne dass sich irgendeine ID im Plan verschiebt.
+ */
+export async function PATCH(req: NextRequest) {
+  const userId = await currentUserId(req);
+  if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
+
+  const body = (await req.json()) as {
+    dayId?: string;
+    planExerciseId?: string;
+    exerciseId?: string;
+  };
+
+  if (!body.dayId || !body.planExerciseId || !body.exerciseId) {
+    return NextResponse.json(
+      { error: "dayId, planExerciseId und exerciseId sind erforderlich" },
+      { status: 400 }
+    );
+  }
+
+  const current = await d1Query<{ id: string }>(
+    `SELECT pe.id FROM plan_exercises pe
+       JOIN plan_days pd ON pd.id = pe.day_id AND pd.user_id = pe.user_id
+       JOIN workout_plans wp ON wp.id = pd.plan_id AND wp.user_id = pd.user_id
+      WHERE pe.user_id = ? AND pe.id = ? AND pe.day_id = ? AND wp.deleted_at IS NULL`,
+    [userId, body.planExerciseId, body.dayId]
+  );
+  if (current.length === 0) {
+    return NextResponse.json({ error: "Übung im Plan nicht gefunden" }, { status: 404 });
+  }
+
+  await d1Query(
+    `UPDATE plan_exercises SET exercise_id = ?, increment = NULL, start_weight = NULL
+       WHERE user_id = ? AND id = ? AND day_id = ?`,
+    [body.exerciseId, userId, body.planExerciseId, body.dayId]
+  );
+
+  return NextResponse.json({ plans: await loadPlans(userId) });
+}
+
 export async function DELETE(req: NextRequest) {
   const userId = await currentUserId(req);
   if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });

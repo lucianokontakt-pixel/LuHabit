@@ -40,6 +40,19 @@ export type WriteOp =
   // Leere laufen lassen, weil die alte dayId dann zu keinem Tag mehr passt.
   | { kind: "plan.save"; plan: WorkoutPlan; isNew: boolean; daysChanged: boolean }
   | { kind: "plan.delete"; id: string }
+  // Eigener Fall statt plan.save mit daysChanged:true — der schriebe beim
+  // Senden ALLE Tage und Übungen neu (siehe writeDays in
+  // app/api/training/plans/route.ts) und vergäbe dabei frische IDs. Eine
+  // laufende Einheit hält ihren Tag über dessen ID fest; verschöbe die sich,
+  // fände sie ihn nicht mehr wieder. Dieser Fall ändert serverseitig nur die
+  // eine Zeile (siehe PATCH dort).
+  | {
+      kind: "planExercise.swap";
+      plan: WorkoutPlan;
+      dayId: string;
+      planExerciseId: string;
+      exerciseId: string;
+    }
   | { kind: "session.save"; session: WorkoutSession; isNew: boolean }
   | { kind: "session.delete"; id: string };
 
@@ -122,6 +135,16 @@ export function localEffect(op: WriteOp): LocalEffect[] {
       ];
     case "plan.delete":
       return [{ collection: "plans", key: op.id, action: "delete" }];
+    case "planExercise.swap":
+      return [
+        {
+          collection: "plans",
+          key: op.plan.id,
+          action: "put",
+          data: op.plan,
+          sort: `${pad(op.plan.position)}|${nowStamp()}`,
+        },
+      ];
     case "session.save":
       return [
         {

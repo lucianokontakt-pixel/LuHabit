@@ -324,6 +324,53 @@ export async function updatePlan(params: {
 }
 
 /**
+ * Die Bewegung an einem einzelnen Platz im Plan austauschen — ohne dass sich
+ * die ID des Tages oder einer anderen Übung verschiebt.
+ *
+ * updatePlan mit days wäre hier der falsche Weg: es schreibt beim Senden
+ * IMMER alle Tage und Übungen des Plans neu (siehe writeDays in
+ * app/api/training/plans/route.ts) und vergibt dabei frische IDs. Ruft eine
+ * laufende Einheit das auf, verliert sie ihren eigenen Tag — der ist über
+ * dessen ID gemerkt, und die wäre danach eine andere.
+ */
+export async function swapPlanExercise(params: {
+  dayId: string;
+  planExerciseId: string;
+  exerciseId: string;
+}): Promise<WorkoutPlan[]> {
+  const plans = await readAll<WorkoutPlan>("plans");
+  const plan = plans.find((p) => p.days.some((d) => d.id === params.dayId));
+  if (!plan) throw new Error("Plan nicht gefunden");
+
+  const nextPlan: WorkoutPlan = {
+    ...plan,
+    days: plan.days.map((d) =>
+      d.id !== params.dayId
+        ? d
+        : {
+            ...d,
+            exercises: d.exercises.map((pe) =>
+              pe.id === params.planExerciseId
+                ? { ...pe, exerciseId: params.exerciseId, increment: null, startWeight: null }
+                : pe
+            ),
+          }
+    ),
+  };
+
+  await enqueue({
+    kind: "planExercise.swap",
+    plan: nextPlan,
+    dayId: params.dayId,
+    planExerciseId: params.planExerciseId,
+    exerciseId: params.exerciseId,
+  });
+  void flushQueue();
+
+  return readAll<WorkoutPlan>("plans");
+}
+
+/**
  * Absolvierte Einheiten bleiben erhalten — sie sind der Verlauf, nicht der
  * Plan. Bleibt nach dem Löschen kein aktiver Plan übrig, wird ein anderer
  * befördert, damit "Training starten" weiter etwas vorschlägt — dieselbe

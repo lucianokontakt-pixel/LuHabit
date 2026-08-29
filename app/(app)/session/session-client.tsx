@@ -49,7 +49,7 @@ import { ExercisePicker } from "@/components/training/exercise-picker";
 import { summarizeSession } from "@/lib/session-stats";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
-import { saveSession, updatePlan, dayToInput } from "@/lib/api-training";
+import { saveSession, swapPlanExercise } from "@/lib/api-training";
 import { addDaysISO, isoDateDaysAgo, todayISO } from "@/lib/datum";
 import { newId } from "@/lib/ids";
 import { formatClock, formatDayLabel, formatNumber } from "@/lib/format";
@@ -681,25 +681,13 @@ export function SessionClient() {
   const persistSwapToPlan = useCallback(
     async (slotId: string, exercise: Exercise) => {
       if (!located) return;
-      const { plan, day: planDay } = located;
-      const days = [...plan.days]
-        .sort((a, b) => a.position - b.position)
-        .map((d) =>
-          dayToInput(
-            d.id === planDay.id
-              ? {
-                  ...d,
-                  exercises: d.exercises.map((pe) =>
-                    pe.id === slotId
-                      ? { ...pe, exerciseId: exercise.id, increment: null, startWeight: null }
-                      : pe
-                  ),
-                }
-              : d
-          )
-        );
-      const { plans: next } = await updatePlan({ id: plan.id, days });
-      setPlans(next);
+      const { day: planDay } = located;
+      const plans = await swapPlanExercise({
+        dayId: planDay.id,
+        planExerciseId: slotId,
+        exerciseId: exercise.id,
+      });
+      setPlans(plans);
     },
     [located, setPlans]
   );
