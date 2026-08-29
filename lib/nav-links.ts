@@ -54,6 +54,31 @@ export const STATISTIK_TABS: readonly SubTab[] = [
 /** Seiten ohne eigenen Platz in der Leiste, die trotzdem irgendwo leuchten sollen. */
 const HOME_PREFIXES = ["/session", "/einheit"];
 
+/**
+ * Welcher Unterreiter leuchtet. Es gewinnt der längste Treffer.
+ *
+ * Vorher galt der *erste* Reiter als Wurzel des Bereichs und war als einziger
+ * von der Präfix-Prüfung ausgenommen. Das stimmte nur, solange die Wurzel auch
+ * vorn stand — als „Körper" nach vorn rückte, galt die Ausnahme dem falschen
+ * Eintrag, und „/statistik" passte per Präfix auf jede Unterseite. Auf
+ * /statistik/koerper waren dann zwei Reiter gleichzeitig aktiv.
+ *
+ * Der längste Treffer braucht keine Annahme über die Reihenfolge: „/statistik"
+ * und „/statistik/koerper" passen beide auf /statistik/koerper, aber der
+ * längere ist der gemeinte. Genau ein Reiter kann so aktiv sein.
+ */
+export function activeSubTab(
+  tabs: readonly SubTab[],
+  pathname: string
+): string | null {
+  let treffer: string | null = null;
+  for (const tab of tabs) {
+    if (pathname !== tab.href && !pathname.startsWith(`${tab.href}/`)) continue;
+    if (treffer === null || tab.href.length > treffer.length) treffer = tab.href;
+  }
+  return treffer;
+}
+
 export function isActiveLink(href: string, pathname: string): boolean {
   if (href === "/") {
     return pathname === "/" || HOME_PREFIXES.some((p) => pathname.startsWith(p));
