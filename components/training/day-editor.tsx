@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, GripVertical, Plus, Trash2 } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, GripVertical, Plus, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,8 @@ export function DayEditor({
 }) {
   const { exerciseById } = useTraining();
   const [picking, setPicking] = useState(false);
+  /** Der Platz (key), der gerade getauscht wird — null heißt: es wird dazugenommen. */
+  const [tauschFuer, setTauschFuer] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   // Beim Zusammenstellen eines Plans steht man oft vor einem Namen, den man aus
   // der Bibliothek übernommen, aber nie ausgeführt hat. Das Vorschaubild zeigt,
@@ -86,6 +88,16 @@ export function DayEditor({
     };
     onChange({ ...day, exercises: [...day.exercises, entry] });
     setExpanded(entry.key);
+  }
+
+  /**
+   * Die Bewegung an einem Platz austauschen — Sätze, Wiederholungen und Pause
+   * bleiben, wie sie programmiert waren. Sprung und Startgewicht nicht: die
+   * waren auf die alte Übung eingestellt (dieselbe Regel wie beim Tausch im
+   * laufenden Training, siehe session-client.tsx).
+   */
+  function swapExercise(key: string, exercise: Exercise) {
+    patchExercise(key, { exerciseId: exercise.id, increment: null, startWeight: null });
   }
 
   return (
@@ -230,6 +242,19 @@ export function DayEditor({
                 <Button
                   variant="ghost"
                   size="icon-sm"
+                  onClick={() => {
+                    setTauschFuer(key);
+                    setPicking(true);
+                  }}
+                  aria-label={`${exercise?.name ?? "Übung"} tauschen`}
+                  className="shrink-0"
+                >
+                  <ArrowLeftRight />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() =>
                     onChange({
                       ...day,
@@ -329,9 +354,27 @@ export function DayEditor({
 
       <ExercisePicker
         open={picking}
-        onOpenChange={setPicking}
-        onPick={addExercise}
-        excludeIds={day.exercises.map((e) => e.exerciseId)}
+        onOpenChange={(open) => {
+          setPicking(open);
+          if (!open) setTauschFuer(null);
+        }}
+        onPick={(exercise) => {
+          if (tauschFuer) {
+            swapExercise(tauschFuer, exercise);
+          } else {
+            addExercise(exercise);
+          }
+          setTauschFuer(null);
+        }}
+        excludeIds={day.exercises
+          .filter((e) => e.key !== tauschFuer)
+          .map((e) => e.exerciseId)}
+        title={tauschFuer ? "Übung tauschen" : "Übung hinzufügen"}
+        description={
+          tauschFuer
+            ? "Der Ersatz behält Sätze, Wiederholungen und Pause dieses Platzes."
+            : "Aus der Bibliothek wählen oder eine eigene Übung anlegen."
+        }
       />
 
       <ExerciseDetail exercise={detail} onOpenChange={(open) => !open && setDetail(null)} />

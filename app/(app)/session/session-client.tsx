@@ -258,6 +258,11 @@ export function SessionClient() {
   const [activeExercise, setActiveExercise] = useState<string | null>(null);
   const [detail, setDetail] = useState<Exercise | null>(null);
   const [confirmAbort, setConfirmAbort] = useState(false);
+  /** Nach einem Tausch: welche Übung wen ersetzt hat — offen, bis explizit
+   *  entschieden ist, ob das auch im Plan gilt. */
+  const [swapConfirm, setSwapConfirm] = useState<{ slotId: string; exercise: Exercise } | null>(
+    null
+  );
   const [saving, setSaving] = useState(false);
   /** Gesetzt, sobald gespeichert wurde — dann zeigt die Seite den Abschluss. */
   const [finishedId, setFinishedId] = useState<string | null>(null);
@@ -1470,20 +1475,10 @@ export function SessionClient() {
           if (tauschFuer) {
             const slotId = tauschFuer;
             swapExercise(slotId, exercise);
-            // Der Tausch gilt erstmal nur für heute (siehe Beschreibung oben) —
-            // wer ihn dauerhaft will, muss das extra sagen. Sonst würde ein
-            // Ausweichtausch, weil ein Gerät gerade belegt war, ungefragt den
-            // Plan umräumen.
-            toast(`„${exercise.name}“ eingetauscht — nur für heute`, {
-              action: {
-                label: "Auch im Plan",
-                onClick: () => {
-                  persistSwapToPlan(slotId, exercise)
-                    .then(() => toast.success("Im Plan übernommen"))
-                    .catch(() => toast.error("Konnte den Plan nicht aktualisieren"));
-                },
-              },
-            });
+            // Der Tausch gilt sofort für heute. Ob er auch den Plan ändert,
+            // ist eine eigene Entscheidung — die muss explizit fallen, nicht
+            // per Toast, den man auch einfach wegwischen kann.
+            setSwapConfirm({ slotId, exercise });
           } else {
             addExercise(exercise);
           }
@@ -1509,6 +1504,37 @@ export function SessionClient() {
           <AlertDialogFooter>
             <AlertDialogCancel>Weitertrainieren</AlertDialogCancel>
             <AlertDialogAction onClick={handleAbort}>Abbrechen</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Erzwingt die Entscheidung, statt sie über einen wegwischbaren Toast
+          anzubieten: der Tausch gilt schon für heute, offen ist nur noch, ob
+          er auch für künftige Einheiten in diesem Plan gelten soll. */}
+      <AlertDialog open={swapConfirm !== null} onOpenChange={() => {}}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Auch im Plan übernehmen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              „{swapConfirm?.exercise.name}“ gilt für heute. Soll der Tausch auch für künftige
+              Einheiten in diesem Plan gelten?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSwapConfirm(null)}>
+              Nein, nur heute
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!swapConfirm) return;
+                persistSwapToPlan(swapConfirm.slotId, swapConfirm.exercise)
+                  .then(() => toast.success("Im Plan übernommen"))
+                  .catch(() => toast.error("Konnte den Plan nicht aktualisieren"));
+                setSwapConfirm(null);
+              }}
+            >
+              Ja, im Plan übernehmen
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
