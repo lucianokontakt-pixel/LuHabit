@@ -98,6 +98,7 @@ export async function createExercise(params: {
   increment?: number | null;
   bodyweightFactor?: number | null;
   warmup?: "always" | "never" | null;
+  favorite?: boolean;
 }): Promise<Exercise> {
   const name = params.name.trim();
   const existing = await readAll<Exercise>("exercises");
@@ -113,6 +114,7 @@ export async function createExercise(params: {
     equipment: params.equipment,
     isCustom: true,
     hidden: false,
+    favorite: params.favorite ?? false,
     increment: params.increment ?? null,
     bodyweightFactor: params.bodyweightFactor ?? null,
     loadFactor,
@@ -136,6 +138,7 @@ export async function updateExercise(params: {
   loadFactor?: number | null;
   warmup?: "always" | "never" | null;
   hidden?: boolean;
+  favorite?: boolean;
 }): Promise<Exercise> {
   // Eine Katalogübung, die noch nie angefasst wurde, hat keine Zeile — ihre
   // Ausgangswerte kommen dann aus dem Katalog.
@@ -150,6 +153,7 @@ export async function updateExercise(params: {
     equipment: params.equipment ?? before?.equipment ?? "barbell",
     isCustom: before?.isCustom ?? true,
     hidden: params.hidden === undefined ? before?.hidden ?? false : params.hidden,
+    favorite: params.favorite === undefined ? before?.favorite ?? false : params.favorite,
     increment: params.increment === undefined ? before?.increment ?? null : params.increment,
     bodyweightFactor:
       params.bodyweightFactor === undefined ? before?.bodyweightFactor ?? null : params.bodyweightFactor,

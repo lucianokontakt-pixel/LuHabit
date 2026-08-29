@@ -17,6 +17,7 @@ function exercise(id: string, muscle: Exercise["muscle"]): Exercise {
     equipment: "barbell",
     isCustom: false,
     hidden: false,
+    favorite: false,
     increment: null,
     bodyweightFactor: null,
     loadFactor: null,

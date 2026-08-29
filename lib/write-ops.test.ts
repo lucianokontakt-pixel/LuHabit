@@ -54,7 +54,7 @@ describe("localEffect", () => {
       isNew: true,
       exercise: {
         id: "ab-wheel", name: "Ab Wheel", muscle: "core", equipment: "bodyweight",
-        isCustom: true, hidden: false, increment: null, bodyweightFactor: null,
+        isCustom: true, hidden: false, favorite: false, increment: null, bodyweightFactor: null,
         loadFactor: null, warmup: null,
       },
     });

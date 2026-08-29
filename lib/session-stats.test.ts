@@ -9,6 +9,7 @@ const bench: Exercise = {
   equipment: "barbell",
   isCustom: false,
   hidden: false,
+  favorite: false,
   increment: null,
   bodyweightFactor: null,
   loadFactor: null,

@@ -13,6 +13,7 @@ type ExerciseRow = {
   equipment: string;
   is_custom: number;
   hidden: number;
+  favorite: number;
   increment: number | null;
   bodyweight_factor: number | null;
   load_factor: number | null;
@@ -32,6 +33,7 @@ function toRecord(row: ExerciseRow): ExerciseRecord {
     equipment: row.equipment as Equipment,
     isCustom: row.is_custom === 1,
     hidden: row.hidden === 1,
+    favorite: row.favorite === 1,
     increment: row.increment,
     bodyweightFactor: row.bodyweight_factor,
     loadFactor: row.load_factor,
@@ -52,7 +54,7 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
 
   const rows = await d1Query<ExerciseRow>(
-    `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor, load_factor, warmup
+    `SELECT id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup
        FROM exercises WHERE user_id = ? AND deleted_at IS NULL ORDER BY name COLLATE NOCASE ASC`,
     [userId]
   );
@@ -72,6 +74,7 @@ export async function POST(req: NextRequest) {
     bodyweightFactor?: number | null;
     loadFactor?: number | null;
     warmup?: string | null;
+    favorite?: boolean;
   };
 
   const name = body.name?.trim();
@@ -109,12 +112,12 @@ export async function POST(req: NextRequest) {
     body.loadFactor ?? (body.equipment === "bodyweight" ? DEFAULT_BODYWEIGHT_LOAD : null);
 
   await d1Query(
-    `INSERT INTO exercises (user_id, id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor, load_factor, warmup, updated_at)
-     VALUES (?, ?, ?, ?, ?, 1, 0, ?, ?, ?, ?, datetime('now'))
+    `INSERT INTO exercises (user_id, id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup, updated_at)
+     VALUES (?, ?, ?, ?, ?, 1, 0, ?, ?, ?, ?, ?, datetime('now'))
      ON CONFLICT(user_id, id) DO UPDATE
        SET name = excluded.name, muscle = excluded.muscle, equipment = excluded.equipment,
            increment = excluded.increment, bodyweight_factor = excluded.bodyweight_factor,
-           load_factor = excluded.load_factor, warmup = excluded.warmup,
+           load_factor = excluded.load_factor, warmup = excluded.warmup, favorite = excluded.favorite,
            hidden = 0, deleted_at = NULL, updated_at = datetime('now')`,
     [
       userId,
@@ -122,6 +125,7 @@ export async function POST(req: NextRequest) {
       name,
       body.muscle,
       body.equipment,
+      body.favorite ? 1 : 0,
       body.increment ?? null,
       body.bodyweightFactor ?? null,
       loadFactor,
@@ -130,7 +134,7 @@ export async function POST(req: NextRequest) {
   );
 
   const rows = await d1Query<ExerciseRow>(
-    `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor, load_factor, warmup
+    `SELECT id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup
        FROM exercises WHERE user_id = ? AND deleted_at IS NULL AND id = ?`,
     [userId, id]
   );
@@ -151,6 +155,7 @@ export async function PUT(req: NextRequest) {
     loadFactor?: number | null;
     warmup?: string | null;
     hidden?: boolean;
+    favorite?: boolean;
   };
 
   if (!body.id) {
@@ -158,7 +163,7 @@ export async function PUT(req: NextRequest) {
   }
 
   const current = await d1Query<ExerciseRow>(
-    `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor, load_factor, warmup
+    `SELECT id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup
        FROM exercises WHERE user_id = ? AND deleted_at IS NULL AND id = ?`,
     [userId, body.id]
   );
@@ -179,6 +184,7 @@ export async function PUT(req: NextRequest) {
             equipment: base.equipment,
             is_custom: 0,
             hidden: 0,
+            favorite: 0,
             increment: base.increment,
             bodyweight_factor: base.bodyweightFactor,
             load_factor: base.loadFactor,
@@ -192,11 +198,11 @@ export async function PUT(req: NextRequest) {
   }
 
   await d1Query(
-    `INSERT INTO exercises (user_id, id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor, load_factor, warmup, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `INSERT INTO exercises (user_id, id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
      ON CONFLICT(user_id, id) DO UPDATE
        SET name = excluded.name, muscle = excluded.muscle, equipment = excluded.equipment,
-           hidden = excluded.hidden, increment = excluded.increment,
+           hidden = excluded.hidden, favorite = excluded.favorite, increment = excluded.increment,
            bodyweight_factor = excluded.bodyweight_factor, load_factor = excluded.load_factor,
            warmup = excluded.warmup, deleted_at = NULL, updated_at = datetime('now')`,
     [
@@ -207,6 +213,7 @@ export async function PUT(req: NextRequest) {
       body.equipment ?? before.equipment,
       before.is_custom,
       body.hidden === undefined ? before.hidden : body.hidden ? 1 : 0,
+      body.favorite === undefined ? before.favorite : body.favorite ? 1 : 0,
       body.increment === undefined ? before.increment : body.increment,
       body.bodyweightFactor === undefined ? before.bodyweight_factor : body.bodyweightFactor,
       body.loadFactor === undefined ? before.load_factor : body.loadFactor,
@@ -215,7 +222,7 @@ export async function PUT(req: NextRequest) {
   );
 
   const rows = await d1Query<ExerciseRow>(
-    `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor, load_factor, warmup
+    `SELECT id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup
        FROM exercises WHERE user_id = ? AND deleted_at IS NULL AND id = ?`,
     [userId, body.id]
   );
@@ -236,8 +243,8 @@ export async function DELETE(req: NextRequest) {
   if (entry) {
     const base = fromCatalog(entry);
     await d1Query(
-      `INSERT INTO exercises (user_id, id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor, load_factor, warmup, updated_at)
-       VALUES (?, ?, ?, ?, ?, 0, 1, ?, ?, ?, ?, datetime('now'))
+      `INSERT INTO exercises (user_id, id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup, updated_at)
+       VALUES (?, ?, ?, ?, ?, 0, 1, 0, ?, ?, ?, ?, datetime('now'))
        ON CONFLICT(user_id, id) DO UPDATE
          SET hidden = 1, deleted_at = NULL, updated_at = datetime('now')`,
       [

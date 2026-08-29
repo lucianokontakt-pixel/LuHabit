@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Eye, EyeOff, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Pencil, Plus, Search, Star, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +76,7 @@ export default function ExercisesPage() {
   const [muscle, setMuscle] = useState<Muscle | "all">("all");
   const [equipment, setEquipment] = useState<Equipment | "all">("all");
   const [showHidden, setShowHidden] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Exercise | null>(null);
   const [detail, setDetail] = useState<Exercise | null>(null);
@@ -131,6 +132,7 @@ export default function ExercisesPage() {
     const q = query.trim().toLowerCase();
     return exercises
       .filter((e) => (showHidden ? true : !e.hidden))
+      .filter((e) => (favoritesOnly ? e.favorite : true))
       .filter((e) => (muscle === "all" ? true : e.muscle === muscle))
       .filter((e) => (equipment === "all" ? true : e.equipment === equipment))
       // Auch der englische Originalname zählt — wer "bench press" tippt, soll
@@ -140,7 +142,7 @@ export default function ExercisesPage() {
           ? e.name.toLowerCase().includes(q) || (e.en?.toLowerCase().includes(q) ?? false)
           : true
       );
-  }, [exercises, query, muscle, equipment, showHidden]);
+  }, [exercises, query, muscle, equipment, showHidden, favoritesOnly]);
 
   const grouped = useMemo(() => {
     const map = new Map<Muscle, typeof filtered>();
@@ -148,6 +150,10 @@ export default function ExercisesPage() {
       const list = map.get(e.muscle) ?? [];
       list.push(e);
       map.set(e.muscle, list);
+    }
+    // Favoriten zuerst, sonst bleibt die alphabetische Reihenfolge erhalten.
+    for (const list of map.values()) {
+      list.sort((a, b) => Number(b.favorite) - Number(a.favorite));
     }
     return MUSCLES.map((m) => ({ key: m.key, label: m.label, items: map.get(m.key) ?? [] })).filter(
       (g) => g.items.length > 0
@@ -158,6 +164,17 @@ export default function ExercisesPage() {
     setBusy(id);
     try {
       upsertExercise(await updateExercise({ id, hidden }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Konnte Übung nicht ändern");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function toggleFavorite(id: string, favorite: boolean) {
+    setBusy(id);
+    try {
+      upsertExercise(await updateExercise({ id, favorite }));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Konnte Übung nicht ändern");
     } finally {
@@ -269,17 +286,29 @@ export default function ExercisesPage() {
           ))}
         </div>
 
-        {hiddenCount > 0 && (
+        <div className="flex flex-wrap gap-2">
           <Button
-            variant="ghost"
+            variant={favoritesOnly ? "default" : "ghost"}
             size="sm"
             className="w-fit"
-            onClick={() => setShowHidden((v) => !v)}
+            onClick={() => setFavoritesOnly((v) => !v)}
           >
-            {showHidden ? <EyeOff /> : <Eye />}
-            {showHidden ? "Ausgeblendete verbergen" : `${hiddenCount} ausgeblendete anzeigen`}
+            <Star className={cn("size-4", favoritesOnly && "fill-current")} />
+            Favoriten
           </Button>
-        )}
+
+          {hiddenCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-fit"
+              onClick={() => setShowHidden((v) => !v)}
+            >
+              {showHidden ? <EyeOff /> : <Eye />}
+              {showHidden ? "Ausgeblendete verbergen" : `${hiddenCount} ausgeblendete anzeigen`}
+            </Button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -335,6 +364,20 @@ export default function ExercisesPage() {
                       )}
                       </div>
                     </button>
+
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={busy === exercise.id}
+                      onClick={() => toggleFavorite(exercise.id, !exercise.favorite)}
+                      aria-label={
+                        exercise.favorite
+                          ? `${exercise.name} aus Favoriten entfernen`
+                          : `${exercise.name} als Favorit markieren`
+                      }
+                    >
+                      <Star className={cn("size-4", exercise.favorite && "fill-current text-primary")} />
+                    </Button>
 
                     <Button
                       variant="ghost"

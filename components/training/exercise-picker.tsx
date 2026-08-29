@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, Check } from "lucide-react";
+import { Plus, Search, Check, Star } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useTraining } from "@/lib/training-store";
-import { createExercise } from "@/lib/api-training";
+import { createExercise, updateExercise } from "@/lib/api-training";
 import { ExerciseThumb } from "@/components/training/exercise-media";
 import {
   EQUIPMENT,
@@ -68,8 +68,18 @@ export function ExercisePicker({
   const [newWarmup, setNewWarmup] = useState<"always" | "never" | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [favoriteBusy, setFavoriteBusy] = useState<string | null>(null);
 
   const excluded = useMemo(() => new Set(excludeIds), [excludeIds]);
+
+  async function toggleFavorite(exercise: Exercise) {
+    setFavoriteBusy(exercise.id);
+    try {
+      upsertExercise(await updateExercise({ id: exercise.id, favorite: !exercise.favorite }));
+    } finally {
+      setFavoriteBusy(null);
+    }
+  }
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -93,6 +103,10 @@ export function ExercisePicker({
       const list = map.get(e.muscle) ?? [];
       list.push(e);
       map.set(e.muscle, list);
+    }
+    // Favoriten zuerst, sonst bleibt die alphabetische Reihenfolge von mergeExercises.
+    for (const list of map.values()) {
+      list.sort((a, b) => Number(b.favorite) - Number(a.favorite));
     }
     return MUSCLES.map((m) => ({ muscle: m.key, label: m.label, items: map.get(m.key) ?? [] })).filter(
       (g) => g.items.length > 0
@@ -297,27 +311,49 @@ export function ExercisePicker({
                       {group.items.map((exercise) => {
                         const already = excluded.has(exercise.id);
                         return (
-                          <button
+                          <div
                             key={exercise.id}
-                            type="button"
-                            onClick={() => {
-                              onPick(exercise);
-                              onOpenChange(false);
-                            }}
-                            className="flex items-center justify-between gap-3 rounded-field px-3 py-2 text-left transition-colors hover:bg-card"
+                            className="flex items-center gap-1 rounded-field transition-colors hover:bg-card"
                           >
-                            <ExerciseThumb exercise={exercise} className="size-9" />
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm">{exercise.name}</span>
-                              <span className="block text-xs text-muted-foreground">
-                                {EQUIPMENT_LABELS[exercise.equipment]}
-                                {exercise.isCustom ? " · eigene" : ""}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onPick(exercise);
+                                onOpenChange(false);
+                              }}
+                              className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left"
+                            >
+                              <ExerciseThumb exercise={exercise} className="size-9" />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm">{exercise.name}</span>
+                                <span className="block text-xs text-muted-foreground">
+                                  {EQUIPMENT_LABELS[exercise.equipment]}
+                                  {exercise.isCustom ? " · eigene" : ""}
+                                </span>
                               </span>
-                            </span>
-                            {already && (
-                              <Check className="size-4 shrink-0 text-muted-foreground" />
-                            )}
-                          </button>
+                              {already && (
+                                <Check className="size-4 shrink-0 text-muted-foreground" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={favoriteBusy === exercise.id}
+                              onClick={() => toggleFavorite(exercise)}
+                              aria-label={
+                                exercise.favorite
+                                  ? `${exercise.name} aus Favoriten entfernen`
+                                  : `${exercise.name} als Favorit markieren`
+                              }
+                              className="shrink-0 p-2 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+                            >
+                              <Star
+                                className={cn(
+                                  "size-4",
+                                  exercise.favorite && "fill-current text-primary"
+                                )}
+                              />
+                            </button>
+                          </div>
                         );
                       })}
                     </div>

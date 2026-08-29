@@ -85,6 +85,7 @@ describe("mergeExercises", () => {
     equipment: "barbell" as const,
     isCustom: false,
     hidden: true,
+    favorite: false,
     increment: 1.25,
     bodyweightFactor: null,
     loadFactor: null,

@@ -38,6 +38,7 @@ export type ExerciseRecord = {
   equipment: Equipment;
   isCustom: boolean;
   hidden: boolean;
+  favorite: boolean;
   increment: number | null;
   bodyweightFactor: number | null;
   loadFactor: number | null;
@@ -54,6 +55,7 @@ export function fromCatalog(entry: CatalogExercise): Exercise {
     equipment: entry.equipment,
     isCustom: false,
     hidden: false,
+    favorite: false,
     increment: null,
     bodyweightFactor: defaults?.factor ?? null,
     loadFactor:
@@ -94,6 +96,7 @@ export function mergeExercises(records: ExerciseRecord[]): Exercise[] {
       muscle: row.muscle,
       equipment: row.equipment,
       hidden: row.hidden,
+      favorite: row.favorite,
       increment: row.increment,
       bodyweightFactor: row.bodyweightFactor ?? base.bodyweightFactor,
       loadFactor: row.loadFactor ?? base.loadFactor,
@@ -119,6 +122,7 @@ export function mergeOne(record: ExerciseRecord): Exercise {
     muscle: record.muscle,
     equipment: record.equipment,
     hidden: record.hidden,
+    favorite: record.favorite,
     increment: record.increment,
     bodyweightFactor: record.bodyweightFactor ?? base.bodyweightFactor,
     loadFactor: record.loadFactor ?? base.loadFactor,

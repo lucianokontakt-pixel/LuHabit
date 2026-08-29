@@ -89,6 +89,8 @@ export type Exercise = {
   equipment: Equipment;
   isCustom: boolean;
   hidden: boolean;
+  /** Zum schnelleren Finden in Bibliothek und Übungswähler markiert. */
+  favorite: boolean;
   /** Überschreibt defaultIncrement, falls gesetzt. */
   increment: number | null;
   /** Startgewicht-Vorschlag = Körpergewicht × Faktor. */
