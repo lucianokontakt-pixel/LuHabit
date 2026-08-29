@@ -178,7 +178,11 @@
   --secondary: #ffffff;
   --secondary-foreground: #0d101b;
   --muted: #f0f0f2;
-  --muted-foreground: #6f7280;
+  /* War #6f7280 — auf --background gerade noch bei 4,5:1, auf --card (dasselbe
+     Grau wie unausgewählte Filter-Pillen) nur bei 4,1:1. Dort verschwamm die
+     Schrift auf den Pillen fast unleserlich mit dem Untergrund. Gleicher
+     Blauton, nur dunkler, jetzt auf beiden Flächen über 6:1. */
+  --muted-foreground: #51535d;
   --accent: #b3a0ff;
   --accent-foreground: #0d101b;
   --destructive: #c0392b;
