@@ -14,11 +14,23 @@ const MUSCLE_KEYS = new Set(MUSCLES.map((m) => m.key));
 const EQUIPMENT_KEYS = new Set(EQUIPMENT);
 
 describe("Katalog", () => {
-  it("vergibt jede ID und jeden Namen nur einmal", () => {
+  it("vergibt jede ID nur einmal", () => {
     const ids = CATALOG.map((e) => e.id);
-    const names = CATALOG.map((e) => e.name);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(new Set(names).size).toBe(names.length);
+  });
+
+  // Namen dürfen sich wiederholen: sie stehen 1:1 wie im openGym-Datensatz,
+  // und der enthält selbst ein halbes Dutzend echter Dubletten (z. B. zwei
+  // "Lever Chest Press" mit verschiedener ID). Eindeutig gemacht wurde hier
+  // bewusst nichts — das wäre keine Wiederherstellung des Originals mehr.
+  it("lässt IDs auch bei doppeltem Namen unterscheidbar", () => {
+    const byName = new Map<string, string[]>();
+    for (const e of CATALOG) {
+      byName.set(e.name, [...(byName.get(e.name) ?? []), e.id]);
+    }
+    for (const ids of byName.values()) {
+      expect(new Set(ids).size).toBe(ids.length);
+    }
   });
 
   it("kennt nur Muskelgruppen und Geräte, die die App anzeigen kann", () => {

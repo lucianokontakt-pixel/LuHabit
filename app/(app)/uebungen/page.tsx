@@ -43,12 +43,13 @@ const VORSCHAU = 24;
 /**
  * Die Zeile unter dem Übungsnamen — oder nichts.
  *
- * Das Gerät stand hier bis zuletzt immer, obwohl es bei fast jeder Übung schon
- * im Namen steht: „Bankdrücken (breit, Langhantel)" mit „Langhantel"
- * darunter. Damit war jede Zeile dreizeilig und sagte nichts, was zwei Zeilen
- * höher nicht schon stand — bei 1295 Übungen ist das der Unterschied zwischen
- * fünf und neun sichtbaren Treffern. Steht das Gerät ausnahmsweise nicht im
- * Namen, steht es weiterhin hier.
+ * Solange die Übung deutsch hieß, stand das Gerät fast immer schon im Namen
+ * selbst ("Bankdrücken (breit, Langhantel)"); die Zeile darunter blieb dann
+ * leer. Die Namen stehen inzwischen im englischen Original ("Barbell Bench
+ * Press"), das Gerät ("Langhantel") aber weiterhin deutsch — der Vergleich
+ * greift damit nicht mehr, und die Zeile erscheint praktisch immer. Das ist
+ * kein Fehler, nur keine Ersparnis mehr; den Vergleich lohnt es sich trotzdem
+ * zu behalten, falls Namen wieder einmal deutsch werden.
  *
  * Alles andere ist ohnehin eine Ausnahme und darf bleiben: ein abweichender
  * Sprung, der Lastanteil bei Eigengewicht, „eigene", „ausgeblendet".
