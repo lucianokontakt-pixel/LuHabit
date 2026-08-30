@@ -11,14 +11,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { OneRepMaxCalculator } from "@/components/training/one-rep-max";
 import { gifUrl, imageUrl, loadInstructions } from "@/lib/exercise-catalog";
 import { useTraining } from "@/lib/training-store";
 import {
   EQUIPMENT_LABELS,
   MUSCLE_LABELS,
   bestEffortLabel,
-  bestOneRepMax,
   formatLoggedSets,
   workingSets,
   type Exercise,
@@ -68,7 +66,9 @@ export function ExerciseThumb({
 
 /**
  * Die Übung in groß: die Animation zeigt die Bewegung, darunter stehen deine
- * Zahlen, der Maximum-Rechner und die Anleitung.
+ * Zahlen und die Anleitung — sonst nichts. Ein Maximum-Rechner stand hier
+ * einmal zusätzlich; als eigener Block mit Steppern wirkte er wie eine zweite
+ * Karte im selben Dialog und wurde deshalb wieder entfernt.
  *
  * Die Zahlen kommen vor die Anleitung: wie eine Übung geht, schlägt man einmal
  * nach — wo man bei ihr steht, immer wieder. Die Anleitung selbst liegt in
@@ -112,14 +112,9 @@ export function ExerciseDetail({
   const gif = exercise ? gifUrl(exercise) : null;
 
   const history = exercise ? loggedFor(exercise.id) : [];
-  const best = bestOneRepMax(history);
   const bestLabel = bestEffortLabel(history.map((h) => h.sets));
   const last = history[0];
   const lastSets = last ? workingSets(last.sets) : [];
-  // Der Rechner startet bei dem Satz, der die beste Schätzung hergibt; sonst
-  // beim letzten protokollierten, sonst bei etwas, das man drehen kann.
-  const startWeight = best?.weight ?? lastSets[0]?.weight ?? 20;
-  const startReps = best?.reps ?? lastSets[0]?.reps ?? 5;
 
   return (
     <Dialog open={exercise !== null} onOpenChange={onOpenChange}>
@@ -192,13 +187,6 @@ export function ExerciseDetail({
                 </div>
               )}
 
-              <OneRepMaxCalculator
-                key={exercise.id}
-                startWeight={startWeight}
-                startReps={startReps}
-                best={best}
-              />
-
               {steps.length > 0 && (
                 <section className="flex flex-col gap-3">
                   <h3 className="text-sm font-medium">So geht&apos;s</h3>
@@ -218,7 +206,11 @@ export function ExerciseDetail({
                 </section>
               )}
 
-              {exercise.en && exercise.en !== exercise.name && (
+              {/* Groß-/Kleinschreibung zählt hier nicht als Abweichung: der Name
+                  ist der Originaltext, nur je Wort großgeschrieben statt
+                  durchgehend klein. Diese Zeile ist für den Fall gedacht, dass
+                  jemand die Übung später über den Editor umbenennt. */}
+              {exercise.en && exercise.en.toLowerCase() !== exercise.name.toLowerCase() && (
                 <p className="text-xs text-muted-foreground">Original: {exercise.en}</p>
               )}
 

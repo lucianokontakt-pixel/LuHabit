@@ -666,25 +666,6 @@ export const ONE_RM_REP_CAP = 12;
  * Eine einzelne Wiederholung ist keine Schätzung, sondern die Messung, und
  * kommt unverändert zurück.
  */
-/**
- * Die beste Schätzung, die der Verlauf hergibt, samt dem Satz, aus dem sie
- * stammt. Sätze über der Wiederholungsgrenze zählen nicht mit — dort ist die
- * Formel Raterei, und ein Bestwert aus einem 20er-Satz wäre keiner.
- */
-export function bestOneRepMax(
-  history: { date: string; sets: WorkoutSet[] }[]
-): { est: number; weight: number; reps: number; date: string } | null {
-  let best: { est: number; weight: number; reps: number; date: string } | null = null;
-  for (const entry of history) {
-    for (const s of workingSets(entry.sets)) {
-      const est = displayOneRepMax(s.weight, s.reps);
-      if (est === null || (best !== null && est <= best.est)) continue;
-      best = { est, weight: s.weight, reps: s.reps, date: entry.date };
-    }
-  }
-  return best;
-}
-
 export function displayOneRepMax(weight: number, reps: number): number | null {
   if (!Number.isFinite(weight) || !Number.isFinite(reps)) return null;
   if (weight <= 0 || reps < 1 || reps > ONE_RM_REP_CAP) return null;
