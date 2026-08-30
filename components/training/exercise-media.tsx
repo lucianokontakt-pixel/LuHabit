@@ -1,28 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Dumbbell, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { gifUrl, imageUrl, loadInstructions } from "@/lib/exercise-catalog";
-import { useTraining } from "@/lib/training-store";
-import {
-  EQUIPMENT_LABELS,
-  MUSCLE_LABELS,
-  bestEffortLabel,
-  formatLoggedSets,
-  workingSets,
-  type Exercise,
-} from "@/lib/training";
-import { formatDayLabel } from "@/lib/format";
-import { todayISO } from "@/lib/datum";
+import { Dumbbell } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { gifUrl, imageUrl } from "@/lib/exercise-catalog";
+import { type Exercise } from "@/lib/training";
 import { cn } from "@/lib/utils";
 
 /**
@@ -65,169 +47,47 @@ export function ExerciseThumb({
 }
 
 /**
- * Die Übung in groß: die Animation zeigt die Bewegung, darunter stehen deine
- * Zahlen und die Anleitung — sonst nichts. Ein Maximum-Rechner stand hier
- * einmal zusätzlich; als eigener Block mit Steppern wirkte er wie eine zweite
- * Karte im selben Dialog und wurde deshalb wieder entfernt.
- *
- * Die Zahlen kommen vor die Anleitung: wie eine Übung geht, schlägt man einmal
- * nach — wo man bei ihr steht, immer wieder. Die Anleitung selbst liegt in
- * einer eigenen Datei und wird erst hier geladen, 600 KB Text gehören nicht in
- * jeden Seitenaufruf.
+ * Die Übung in groß — nur die Animation, sonst nichts. Zahlen, Anleitung, ein
+ * Maximum-Rechner standen hier alle einmal; jedes davon duplizierte, was
+ * anderswo in der App schon steht (Bestwert und letzter Satz zum Beispiel in
+ * der laufenden Einheit selbst, siehe session-client.tsx). Übrig blieb, wofür
+ * man diesen Dialog wirklich öffnet: sehen, wie die Bewegung aussieht.
  */
 export function ExerciseDetail({
   exercise,
   onOpenChange,
-  onAddToPlan,
 }: {
   exercise: Exercise | null;
   onOpenChange: (open: boolean) => void;
-  /**
-   * Optional: macht aus dem Nachschlagen ein Übernehmen. Nur die Bibliothek
-   * gibt das mit — in der laufenden Einheit oder im Plan-Editor steht man
-   * bereits dort, wo der Knopf hinführen würde.
-   */
-  onAddToPlan?: (exercise: Exercise) => void;
 }) {
-  // Die geladene Anleitung trägt ihre Übungs-ID mit sich. Sonst stünde beim
-  // Wechsel auf die nächste Übung kurz noch die Anleitung der vorigen da.
-  const [loaded, setLoaded] = useState<{ id: string; steps: string[] } | null>(null);
-
-  useEffect(() => {
-    if (!exercise) return;
-    let aktuell = true;
-    const id = exercise.id;
-    loadInstructions(id).then((steps) => {
-      if (aktuell) setLoaded({ id, steps });
-    });
-    return () => {
-      aktuell = false;
-    };
-  }, [exercise]);
-
-  const { loggedFor } = useTraining();
-  const today = todayISO();
-
-  const steps = exercise && loaded?.id === exercise.id ? loaded.steps : [];
   const gif = exercise ? gifUrl(exercise) : null;
-
-  const history = exercise ? loggedFor(exercise.id) : [];
-  const bestLabel = bestEffortLabel(history.map((h) => h.sets));
-  const last = history[0];
-  const lastSets = last ? workingSets(last.sets) : [];
 
   return (
     <Dialog open={exercise !== null} onOpenChange={onOpenChange}>
-      {/* 90dvh reichte bis an den Bildschirmrand — das sah nicht nach einem
-          Popup aus, das man kurz aufruft, sondern nach einer eigenen Seite.
-          70dvh lässt oben und unten sichtbar Luft, der Rest scrollt darin. */}
-      <DialogContent className="max-h-[70dvh] overflow-y-auto">
+      <DialogContent className="max-h-[90dvh] overflow-hidden p-0 sm:max-w-md">
         {exercise && (
           <>
-            <DialogHeader>
-              <DialogTitle>{exercise.name}</DialogTitle>
-              <DialogDescription>
-                {MUSCLE_LABELS[exercise.muscle]} · {EQUIPMENT_LABELS[exercise.equipment]}
-                {exercise.secondary.length > 0 &&
-                  ` · dazu ${exercise.secondary.map((m) => MUSCLE_LABELS[m]).join(", ")}`}
-              </DialogDescription>
-            </DialogHeader>
-
-            {/* Der Dialog selbst ist ein Grid mit begrenzter Höhe. Darin
-                schrumpft die Medienbox mit, sobald der Inhalt darunter wächst —
-                sie hat nur ein Seitenverhältnis und keine eigene Höhe, an der
-                sich das Grid festhalten könnte, und lief dann über die Zahlen.
-                Eine Flex-Spalte mit shrink-0 an der Box hält alles gestapelt.
-
-                Quadratisch, weil die Quelldateien es sind (180×180): so füllt
-                das Bild die Dialogbreite genau aus, ohne weiße Bänder oben und
-                unten. Hier standen vorher 144 Pixel fester Höhe — das Bild ist
-                aber der Grund, warum man den Dialog überhaupt öffnet.
-
-                Größer geht nicht ohne Zuschnitt, und Zuschnitt verbietet sich:
-                die Illustrationen bringen ihren weißen Rand selbst mit, aber
-                unterschiedlich viel. Bei liegenden Übungen wäre reichlich Platz,
-                bei Klimmzügen reichen Stange und Füße fast an die Kante — ein
-                fester Zoom würde sie abschneiden.
-
-                Die Deckelung greift im Querformat, wo 70dvh Dialoghöhe weniger
-                sind als die Breite. */}
-            <div className="flex min-w-0 flex-col gap-3">
-              {/* bg-white statt bg-muted: die Illustrationen sind selbst
-                  weiß hinterlegt, nicht transparent — auf grauem Grund stand
-                  deshalb ein sichtbarer Rand um jedes Bild, als läge es in
-                  einer eigenen Box. Bewusst fest statt themefähig, aus
-                  demselben Grund wie im dunklen Modus des Bilds selbst. */}
-              {gif && (
-                <div className="relative aspect-square max-h-[45dvh] w-full shrink-0 overflow-hidden rounded-card bg-white">
-                  <Image
-                    src={gif}
-                    alt={`Bewegungsablauf: ${exercise.name}`}
-                    fill
-                    sizes="(max-width: 640px) 100vw, 384px"
-                    className="object-contain"
-                    unoptimized
-                  />
-                </div>
-              )}
-
-              {(bestLabel || last) && (
-                <div className="flex flex-col gap-1 text-sm">
-                  {bestLabel && (
-                    <p className="text-muted-foreground">
-                      Bestwert <span className="nums text-foreground">{bestLabel}</span>
-                    </p>
-                  )}
-                  {last && (
-                    <p className="text-muted-foreground">
-                      Letztes Mal ({formatDayLabel(last.date, today)}):{" "}
-                      <span className="nums text-foreground">{formatLoggedSets(lastSets)}</span>
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {steps.length > 0 && (
-                <section className="flex flex-col gap-3">
-                  <h3 className="text-sm font-medium">So geht&apos;s</h3>
-                  {/* Die Ziffer als eigene Fläche statt als Listenpunkt: beim
-                      Nachmachen sucht man den Schritt, an dem man ist, und ein
-                      graues "3." im Fließtext findet der Blick nicht wieder. */}
-                  <ol className="flex flex-col gap-2.5">
-                    {steps.map((step, i) => (
-                      <li key={i} className="flex gap-3">
-                        <span className="nums mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-elevated text-[11px] text-muted-foreground">
-                          {i + 1}
-                        </span>
-                        <span className="min-w-0 flex-1 text-sm leading-snug">{step}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </section>
-              )}
-
-              {/* Groß-/Kleinschreibung zählt hier nicht als Abweichung: der Name
-                  ist der Originaltext, nur je Wort großgeschrieben statt
-                  durchgehend klein. Diese Zeile ist für den Fall gedacht, dass
-                  jemand die Übung später über den Editor umbenennt. */}
-              {exercise.en && exercise.en.toLowerCase() !== exercise.name.toLowerCase() && (
-                <p className="text-xs text-muted-foreground">Original: {exercise.en}</p>
-              )}
-
-              {/* Ganz unten, nicht oben: wer hier landet, will erst wissen, wie
-                  die Übung geht — der Knopf ist die Antwort auf „die nehme
-                  ich", und die kommt nach dem Lesen. */}
-              {onAddToPlan && (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => onAddToPlan(exercise)}
-                >
-                  <Plus />
-                  Zu einem Trainingstag hinzufügen
-                </Button>
-              )}
-            </div>
+            {/* Für Screenreader — sichtbar ist hier ausschließlich das Bild.
+                Der Schließen-Knopf bleibt: ohne ihn gäbe es auf dem Handy
+                keinen Weg zurück außer dem Antippen des Hintergrunds. */}
+            <DialogTitle className="sr-only">{exercise.name}</DialogTitle>
+            {/* bg-white statt bg-muted: die Illustrationen sind selbst weiß
+                hinterlegt, nicht transparent — auf grauem Grund stand deshalb
+                ein sichtbarer Rand um jedes Bild, als läge es in einer eigenen
+                Box. Bewusst fest statt themefähig, aus demselben Grund wie im
+                dunklen Modus des Bilds selbst. */}
+            {gif && (
+              <div className="relative aspect-square w-full bg-white">
+                <Image
+                  src={gif}
+                  alt={`Bewegungsablauf: ${exercise.name}`}
+                  fill
+                  sizes="(max-width: 640px) 100vw, 448px"
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            )}
           </>
         )}
       </DialogContent>

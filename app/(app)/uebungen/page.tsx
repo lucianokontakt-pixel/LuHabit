@@ -6,18 +6,11 @@ import { Eye, EyeOff, Pencil, Plus, Search, Star, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { ExercisePicker } from "@/components/training/exercise-picker";
 import { ExerciseEditor } from "@/components/training/exercise-editor";
 import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
 import { useTraining } from "@/lib/training-store";
-import { dayToInput, deleteExercise, updateExercise, updatePlan } from "@/lib/api-training";
+import { deleteExercise, updateExercise } from "@/lib/api-training";
 import {
   EQUIPMENT,
   EQUIPMENT_LABELS,
@@ -26,7 +19,6 @@ import {
   type Equipment,
   type Exercise,
   type Muscle,
-  type WorkoutPlan,
 } from "@/lib/training";
 import { cn } from "@/lib/utils";
 import { MUSCLE_TINT, TINT_FILL } from "@/lib/tints";
@@ -72,7 +64,7 @@ function zusatzZeile(exercise: Exercise): string | null {
 }
 
 export default function ExercisesPage() {
-  const { exercises, plans, setPlans, upsertExercise, reload, loading } = useTraining();
+  const { exercises, upsertExercise, reload, loading } = useTraining();
   const [query, setQuery] = useState("");
   const [muscle, setMuscle] = useState<Muscle | "all">("all");
   const [equipment, setEquipment] = useState<Equipment | "all">("all");
@@ -83,51 +75,6 @@ export default function ExercisesPage() {
   const [detail, setDetail] = useState<Exercise | null>(null);
   const [expanded, setExpanded] = useState<Set<Muscle>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
-  /** Die Übung, die gerade in einen Plantag soll — null heißt: kein Dialog. */
-  const [inPlan, setInPlan] = useState<Exercise | null>(null);
-
-  /**
-   * Die Übung ans Ende eines Trainingstages hängen. Dieselben Vorgaben, die
-   * auch der Plan-Editor einer frisch hinzugefügten Übung gibt.
-   *
-   * updatePlan baut die Tage immer vollständig neu auf, deshalb geht der
-   * unveränderte Rest über dayToInput mit.
-   */
-  async function addToDay(plan: WorkoutPlan, dayId: string, exercise: Exercise) {
-    setBusy(dayId);
-    try {
-      const days = [...plan.days]
-        .sort((a, b) => a.position - b.position)
-        .map((original) => {
-          const tag = dayToInput(original);
-          if (original.id !== dayId) return tag;
-          return {
-            ...tag,
-            exercises: [
-              ...tag.exercises,
-              {
-                exerciseId: exercise.id,
-                sets: 3,
-                repMin: 8,
-                repMax: 12,
-                restSeconds: 120,
-                increment: null,
-                startWeight: null,
-              },
-            ],
-          };
-        });
-      const { plans: next } = await updatePlan({ id: plan.id, days });
-      setPlans(next);
-      const dayName = plan.days.find((d) => d.id === dayId)?.name ?? "den Tag";
-      toast.success(`${exercise.name} zu ${dayName} hinzugefügt`);
-      setInPlan(null);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Konnte die Übung nicht hinzufügen");
-    } finally {
-      setBusy(null);
-    }
-  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -446,63 +393,7 @@ export default function ExercisesPage() {
         onOpenChange={(open) => !open && setEditing(null)}
       />
 
-      <ExerciseDetail
-        exercise={detail}
-        onOpenChange={(open) => !open && setDetail(null)}
-        onAddToPlan={(exercise) => {
-          setDetail(null);
-          setInPlan(exercise);
-        }}
-      />
-
-      {/* Der Weg führte bisher nur andersherum: Übungen kamen im Plan-Editor
-          dazu, und wer sie hier gefunden hatte, musste sich den Namen merken
-          und dorthin wechseln. */}
-      <Dialog open={inPlan !== null} onOpenChange={(open) => !open && setInPlan(null)}>
-        <DialogContent className="max-h-[85dvh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Zu welchem Tag?</DialogTitle>
-            <DialogDescription>
-              {inPlan?.name} kommt ans Ende des Tages — mit 3 × 8–12 und 120 s Pause.
-              Anpassen lässt sich das danach im Plan.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-3">
-            {plans.map((plan) => (
-              <div key={plan.id} className="flex flex-col gap-1.5">
-                <p className="text-xs text-muted-foreground">{plan.name}</p>
-                {plan.days.length === 0 ? (
-                  <p className="px-3 text-xs text-muted-foreground/70">
-                    Dieser Plan hat noch keine Tage.
-                  </p>
-                ) : (
-                  [...plan.days]
-                    .sort((a, b) => a.position - b.position)
-                    .map((day) => (
-                      <button
-                        key={day.id}
-                        type="button"
-                        disabled={busy === day.id}
-                        onClick={() => inPlan && addToDay(plan, day.id, inPlan)}
-                        className="flex items-center gap-3 rounded-tile bg-foreground/5 px-3 py-2.5 text-left transition-colors hover:bg-foreground/10 disabled:opacity-50"
-                      >
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium">{day.name}</span>
-                          <span className="block truncate text-xs text-muted-foreground">
-                            {day.exercises.length}{" "}
-                            {day.exercises.length === 1 ? "Übung" : "Übungen"}
-                          </span>
-                        </span>
-                        <Plus className="size-4 shrink-0 text-muted-foreground" />
-                      </button>
-                    ))
-                )}
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ExerciseDetail exercise={detail} onOpenChange={(open) => !open && setDetail(null)} />
     </div>
   );
 }
