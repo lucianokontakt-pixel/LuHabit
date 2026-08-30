@@ -226,7 +226,7 @@ export default function ExercisesPage() {
           </Button>
         </div>
 
-        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
+        <div className="-mx-4 flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-1">
           <button
             type="button"
             onClick={() => setMuscle("all")}
@@ -256,7 +256,7 @@ export default function ExercisesPage() {
           ))}
         </div>
 
-        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
+        <div className="-mx-4 flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-1">
           <button
             type="button"
             onClick={() => setEquipment("all")}

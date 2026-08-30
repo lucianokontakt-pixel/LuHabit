@@ -118,7 +118,7 @@ export function ExerciseProgress({
         />
       </div>
 
-      <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-(--card-spacing)">
+      <div className="-mx-4 flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-(--card-spacing)">
         {filtered.map((exercise) => (
           <button
             key={exercise.id}

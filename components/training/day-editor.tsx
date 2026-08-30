@@ -123,7 +123,7 @@ export function DayEditor({
 
       <div className="flex flex-col gap-1.5 px-(--card-spacing)">
         <p className="text-[11px] text-muted-foreground">Fester Wochentag (optional)</p>
-        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
+        <div className="-mx-4 flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-1">
           <button
             type="button"
             onClick={() => onChange({ ...day, weekday: null })}
