@@ -213,7 +213,7 @@ export default function ProgressionPage() {
                 {stagnatingCount === 1
                   ? "Eine Übung steht seit mindestens 3 Einheiten still."
                   : `${stagnatingCount} Übungen stehen seit mindestens 3 Einheiten still.`}{" "}
-                Im Training bekommst du dort einen Deload vorgeschlagen.
+                Die App hält das Gewicht — ob du zurückgehst, entscheidest du.
               </p>
             </Card>
           )}

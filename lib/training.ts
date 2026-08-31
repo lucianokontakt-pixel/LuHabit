@@ -221,106 +221,10 @@ export type ProgressionResult = {
    * Welche Regel entschieden hat. Die App zeigt sie immer an — ein Vorschlag,
    * den man nicht nachprüfen kann, ist einer, dem man aufhört zu vertrauen.
    */
-  kind: "first" | "up" | "hold" | "deload" | "ceiling";
+  kind: "first" | "up" | "hold";
   /** Die Begründung im Klartext, fertig zum Anzeigen. */
   why: string;
-  /** Wie viele Einheiten in Folge die Vorgabe verfehlt wurde. */
-  stalls: number;
-  /**
-   * Gesetzt, wenn die Eigengewichts-Progression einen Satz mehr vorsieht.
-   * Sonst bleibt es bei der geplanten Satzzahl.
-   */
-  sets?: number;
-  /**
-   * Das Gewicht, auf das ein Rückschritt ginge — gesetzt, sobald genug
-   * Einheiten in Folge verfehlt wurden. Die Vorgabe selbst bleibt davon
-   * unberührt: den Schritt macht ein Knopfdruck, nicht die App.
-   */
-  deload?: number | null;
 };
-
-/**
- * Nach wie vielen verfehlten Einheiten in Folge zurückgegangen wird. Zweimal
- * darf es schiefgehen — beim dritten Mal liegt es nicht mehr am Tag.
- */
-export const DELOAD_AFTER = 3;
-
-/**
- * Ab hier ist noch ein Satz Liegestütze keine Steigerung mehr, sondern eine
- * Art, den Abend zu verbringen. Danach hilft nur Zusatzgewicht oder eine
- * schwerere Variante — und das ist eine Entscheidung für einen Menschen.
- */
-export const MAX_BODYWEIGHT_SETS = 6;
-
-/**
- * Wie eine vergangene Einheit für die Progression zu lesen ist.
- *
- * Ehrlich heißt streng: die Vorgabe gilt als erfüllt, wenn die volle geplante
- * Satzzahl auf dem Arbeitsgewicht stand und jeder dieser Sätze mindestens die
- * Untergrenze erreicht hat. Weniger Sätze als geplant zählt als verfehlt —
- * eine Einheit, die auseinandergefallen ist, darf die Last nie steigern.
- *
- * Gemessen wird gegen den *heutigen* Plan: Steps speichert die Vorgabe einer
- * Einheit nicht mit. Wer den Plan ändert, ändert damit rückwirkend die
- * Lesart der Historie — das ist der Preis dafür, dass nichts zurückgeschrieben
- * wird, und immer noch besser, als alte Einheiten gegen nichts zu messen.
- */
-export function readSession(
-  sets: WorkoutSet[],
-  planExercise: Pick<PlanExercise, "sets" | "repMin">
-): { ok: boolean; weight: number; lowestReps: number; sets: number } {
-  const working = workingSets(sets);
-  if (working.length === 0) {
-    return { ok: false, weight: 0, lowestReps: 0, sets: 0 };
-  }
-  const weight = workingWeight(working, planExercise.repMin);
-  const atTop = working.filter((s) => s.weight === weight);
-  const lowestReps = Math.min(...atTop.map((s) => s.reps));
-  return {
-    ok: atTop.length >= planExercise.sets && lowestReps >= planExercise.repMin,
-    weight,
-    lowestReps,
-    sets: atTop.length,
-  };
-}
-
-/**
- * Wie viele Einheiten in Folge — von der jüngsten rückwärts — die Vorgabe
- * verfehlt haben.
- *
- * Bewusst nicht „seit wann steigt das Gewicht nicht mehr": wer sich bei
- * gleichem Gewicht von 8 auf 10 Wiederholungen hocharbeitet, macht genau das,
- * was Double Progression will. Das als Stillstand zu lesen und einen Deload
- * vorzuschlagen, wäre ein Fehlalarm mitten im Fortschritt.
- */
-export function stallCount(
-  history: WorkoutSet[][],
-  planExercise: Pick<PlanExercise, "sets" | "repMin">
-): number {
-  let n = 0;
-  // Bei i >= 1: die allererste Einheit mit einer Übung zählt nie als
-  // Fehlschlag. Dort tastet man sich an ein Gewicht heran, statt eine Vorgabe
-  // zu erfüllen — sonst stünde man nach zwei echten Fehlversuchen schon vor
-  // einem Rückschritt, den nur das Kennenlernen ausgelöst hat.
-  for (let i = history.length - 1; i >= 1; i--) {
-    if (readSession(history[i], planExercise).ok) break;
-    n++;
-  }
-  return n;
-}
-
-/**
- * Einmal zurückgehen, um wieder Anlauf nehmen zu können: 10 % runter, auf ein
- * ladbares Vielfaches gerundet. Hätte die Rundung nichts reduziert — bei
- * kleinen Gewichten liegt das nächste Vielfache oft auf dem Ausgangswert —
- * geht es stattdessen einen Sprung runter. Nie unter einen Sprung.
- */
-export function deloadTo(weight: number, increment: number): number {
-  if (increment <= 0) return weight;
-  let next = roundToIncrement(weight * 0.9, increment);
-  if (next >= weight) next = roundToIncrement(weight - increment, increment);
-  return Math.max(increment, next);
-}
 
 /**
  * Das Gewicht, auf dem tatsächlich gearbeitet wurde.
@@ -346,8 +250,14 @@ function workingWeight(working: WorkoutSet[], repMin: number): number {
 /**
  * Double Progression: erst wenn ALLE Arbeitssätze die Obergrenze des
  * Wiederholungsbereichs erreicht haben, steigt das Gewicht — und der
- * Bereich beginnt wieder unten. Sonst bleibt das Gewicht stehen und es
- * gilt, eine Wiederholung mehr zu schaffen.
+ * Bereich beginnt wieder unten. Sonst bleibt alles stehen, wie es war.
+ *
+ * Bewusst kurz gehalten: Grundlage ist die letzte Einheit mit dieser Übung,
+ * sonst nichts. Kein Zählen von Fehlschlägen über Einheiten hinweg und kein
+ * Rückschritt aus der Automatik — ob jemand wirklich festhängt oder nur krank,
+ * müde oder schlecht geschlafen war, weiß der Verlauf nicht. Eine Regel, die
+ * man im Gym nicht in einem Satz nachrechnen kann, ist eine Regel, der man
+ * aufhört zu vertrauen.
  */
 export function computeTargets({
   exercise,
@@ -359,8 +269,9 @@ export function computeTargets({
   planExercise: PlanExercise;
   /**
    * Alle Einheiten mit dieser Übung, älteste zuerst — je Eintrag die Sätze
-   * dieser einen Einheit. Der Vorschlag wird jedes Mal neu daraus abgeleitet;
-   * es gibt keinen gespeicherten Zähler, der aus dem Tritt geraten könnte.
+   * dieser einen Einheit. Entschieden wird allein aus der letzten; der
+   * Vorschlag wird jedes Mal neu daraus abgeleitet, es gibt keinen
+   * gespeicherten Zähler, der aus dem Tritt geraten könnte.
    */
   history: WorkoutSet[][];
   bodyweight?: number | null;
@@ -380,34 +291,10 @@ export function computeTargets({
       isFirstTime: true,
       kind: "first",
       why: "Noch nichts protokolliert — diese Einheit setzt den Ausgangswert.",
-      stalls: 0,
     };
   }
 
   const topWeight = workingWeight(working, repMin);
-
-  // Die erste Einheit mit einer Übung ist eine Erkundung: man tastet sich an
-  // ein Gewicht heran, statt eine Vorgabe zu erfüllen, die man noch gar nicht
-  // hatte. Sie als Fehlschlag zu lesen wäre der schnellste Weg, das Vertrauen
-  // in die Vorschläge zu verlieren — drei solcher Einheiten hintereinander
-  // würden sogar einen Rückschritt auslösen, ohne dass je etwas misslungen
-  // wäre. Gefunden ist das Gewicht trotzdem: von hier zählt der Plan.
-  if (history.length === 1 && !readSession(lastSets, planExercise).ok) {
-    return {
-      targets: Array.from({ length: sets }, () => ({ weight: topWeight, reps: repMin })),
-      progressed: false,
-      progressionKind: null,
-      isFirstTime: false,
-      kind: "first",
-      why:
-        topWeight > 0
-          ? `Beim ersten Mal rangetastet — diesmal ${formatNumber(topWeight)} kg von Anfang an.`
-          : "Beim ersten Mal rangetastet — diesmal von Anfang an nach Plan.",
-      stalls: 0,
-    };
-  }
-
-  const stalls = stallCount(history, planExercise);
   // Nur die Sätze auf dem Arbeitsgewicht zählen —
   // Aufwärmsätze mit weniger Gewicht sollen die Progression nicht blockieren.
   const workingAtTop = working.filter((s) => s.weight === topWeight);
@@ -418,52 +305,28 @@ export function computeTargets({
     workingAtTop.length >= sets && workingAtTop.every((s) => s.reps >= repMax);
 
   if (allAtCeiling) {
+    // Der schwächste Satz auf dem Topgewicht gibt den Takt vor.
+    const achieved = Math.min(...workingAtTop.map((s) => s.reps));
+
     // Ohne Zusatzgewicht (Klimmzüge, Dips, Liegestütze) wäre ein Sprung auf
     // 2,5 kg ein Vorschlag, den man im Gym erst mal nicht umsetzen kann.
     // Dort wächst stattdessen das Wiederholungsziel — Calisthenics-Logik.
     if (topWeight === 0) {
-      // Ohne Zusatzgewicht (Klimmzüge, Dips, Liegestütze) gibt es nichts
-      // draufzulegen. Dort wächst stattdessen die Satzzahl: an der Obergrenze
-      // des Bereichs kommt ein Satz dazu und die Wiederholungen fangen unten
-      // wieder an — dieselbe Doppelprogression wie beim Gewicht, nur mit dem
-      // einzigen Hebel, den es hier gibt.
-      //
-      // Der alte Weg — jedes Mal eine Wiederholung mehr — ist ein Plan bis
-      // 30 Liegestütze und danach keiner mehr.
-      const achieved = Math.min(...workingAtTop.map((s) => s.reps));
-      const grown = Math.max(1, sets) + 1;
-
-      if (grown <= MAX_BODYWEIGHT_SETS) {
-        return {
-          targets: Array.from({ length: grown }, () => ({ weight: 0, reps: repMin })),
-          progressed: true,
-          progressionKind: "reps",
-          isFirstTime: false,
-          kind: "up",
-          why: `${achieved} Wiederholungen in jedem Satz — ein Satz mehr, zurück auf ${repMin}.`,
-          stalls,
-          sets: grown,
-        };
-      }
-
-      // Mehr Volumen ist ab hier nicht mehr die Antwort. Zusatzgewicht oder
-      // eine schwerere Variante wäre es — und das entscheidet kein
-      // Automatismus, sondern ein Mensch.
+      // Vom tatsächlich Geschafften aus weiterzählen, nicht von repMax —
+      // sonst bliebe das Ziel für immer bei repMax + 1 stehen.
+      const nextReps = achieved + 1;
       return {
-        targets: Array.from({ length: sets }, () => ({ weight: 0, reps: achieved })),
-        progressed: false,
-        progressionKind: null,
+        targets: Array.from({ length: sets }, () => ({ weight: 0, reps: nextReps })),
+        progressed: true,
+        progressionKind: "reps",
         isFirstTime: false,
-        kind: "ceiling",
-        why: `${sets} Sätze à ${achieved} — Zeit für Zusatzgewicht oder eine schwerere Variante.`,
-        stalls,
+        kind: "up",
+        why: `${achieved} Wiederholungen in jedem Satz — diesmal ${nextReps}.`,
       };
     }
 
     // Die Sprunghöhe richtet sich danach, wie deutlich die Obergrenze
-    // überschritten wurde. Der schwächste Satz auf dem Topgewicht gibt den
-    // Takt vor — dieselbe konservative Regel wie im Zweig darüber.
-    const achieved = Math.min(...workingAtTop.map((s) => s.reps));
+    // überschritten wurde.
     const next = retargetWeight({
       weight: topWeight,
       reps: achieved,
@@ -481,61 +344,34 @@ export function computeTargets({
         achieved > repMax
           ? `${achieved} Wiederholungen statt ${repMax} — ${formatNumber(jump)} kg mehr.`
           : `Obergrenze in jedem Satz erreicht — ${formatNumber(jump)} kg mehr.`,
-      stalls,
     };
   }
 
-  // Dreimal in Folge die Vorgabe verfehlt heißt: es liegt nicht am Tag. Einmal
-  // zurückgehen und mit Schwung wieder heran ist der Ausweg aus einer Mauer,
-  // gegen die man sonst noch wochenlang läuft.
-  //
-  // Vorgeschlagen, nicht vollzogen: ob jemand wirklich festhängt oder nur krank,
-  // müde oder schlecht geschlafen war, weiß die Historie nicht. Das Gewicht
-  // bleibt deshalb stehen und `deload` hält bereit, worauf ein Knopfdruck
-  // zurückginge. Bei Eigengewicht gibt es nichts wegzunehmen.
-  const deload = stalls >= DELOAD_AFTER && topWeight > 0 ? deloadTo(topWeight, increment) : null;
-  if (deload !== null) {
-    return {
-      targets: Array.from({ length: sets }, () => ({ weight: topWeight, reps: repMin })),
-      progressed: false,
-      progressionKind: null,
-      isFirstTime: false,
-      kind: "deload",
-      why: `${stalls} Einheiten auf ${formatNumber(topWeight)} kg — einmal zurück auf ${formatNumber(deload)} kg und neu anlaufen?`,
-      stalls,
-      deload,
-    };
-  }
-
-  // Saß die letzte Einheit, aber noch nicht an der Obergrenze, ist der Weg nach
-  // oben die Wiederholung — eine mehr in jedem Satz. Einfach zu wiederholen,
-  // was schon stand, wäre kein Ziel, sondern eine Abschrift: wer 3 × 8 gemacht
-  // hat und wieder 3 × 8 vorgeschlagen bekommt, kommt nie bei 12 an.
-  //
-  // Aufgesetzt wird dabei auf den einzelnen Satz, nicht auf den schwächsten:
-  // aus 12/10/8 wird 12/11/9, nicht dreimal 9. Sätze fallen im Verlauf einer
-  // Übung natürlich ab; das einzuebnen nähme dem ersten Satz seine Leistung.
-  const climbing = stalls === 0;
+  // Sonst bleibt stehen, was stand: dasselbe Gewicht, dasselbe Ziel je Satz.
+  // Aufgesetzt wird auf den einzelnen Satz, nicht auf den schwächsten — aus
+  // 12/10/8 wird wieder 12/10/8, nicht dreimal 8. Sätze fallen im Verlauf
+  // einer Übung natürlich ab; das einzuebnen nähme dem ersten Satz seine
+  // Leistung.
   const targets = Array.from({ length: sets }, (_, i) => {
     const previous = workingAtTop[i] ?? workingAtTop[workingAtTop.length - 1];
     // Bei Eigengewicht darf das Ziel über repMax hinausgewachsen sein.
     const ceiling = topWeight === 0 ? Math.max(repMax, previous?.reps ?? repMax) : repMax;
-    if (!previous) return { weight: topWeight, reps: repMin };
-    const base = Math.max(repMin, previous.reps + (climbing ? 1 : 0));
-    return { weight: topWeight, reps: Math.min(ceiling, base) };
+    const reps = previous ? Math.min(ceiling, Math.max(repMin, previous.reps)) : repMin;
+    return { weight: topWeight, reps };
   });
+  // Woran die Übung diesmal gemessen wird: die Obergrenze, bei Eigengewicht
+  // das schon darüber gewachsene Ziel.
+  const goal = targets.reduce((max, t) => Math.max(max, t.reps), repMax);
   return {
     targets,
     progressed: false,
     progressionKind: null,
     isFirstTime: false,
     kind: "hold",
-    // Sachlich bleiben. Ein Zähler bis zum Rückschritt wäre Druck ohne Nutzen —
-    // der Rückschritt erklärt sich selbst, wenn er kommt.
-    why: climbing
-      ? `Gleiches Gewicht — eine Wiederholung mehr pro Satz, bis überall ${repMax} steht.`
-      : `Nochmal ${formatNumber(topWeight)} kg.`,
-    stalls,
+    why:
+      topWeight > 0
+        ? `Nochmal ${formatNumber(topWeight)} kg — bis in jedem Satz ${goal} Wiederholungen stehen.`
+        : `Wie beim letzten Mal — bis in jedem Satz ${goal} Wiederholungen stehen.`,
   };
 }
 
@@ -744,6 +580,11 @@ export type SetAdjustment = {
   nextReps: number;
   /** Es gibt noch offene Sätze — sonst ginge es um einen zusätzlichen. */
   hasRemaining: boolean;
+  /**
+   * Ausgelöst von einer Aufwärmzeile. Dann geht es nicht um den Satz selbst,
+   * sondern um das Gewicht, das für die Arbeitssätze steht.
+   */
+  warmup: boolean;
 };
 
 /**
@@ -769,11 +610,19 @@ export function suggestAdjustment({
   repMin,
   repMax,
   increment,
+  warmupTarget,
 }: {
   sets: LoggedSet[];
   repMin: number;
   repMax: number;
   increment: number;
+  /**
+   * Wofür die Rampe gedacht war: welcher Anteil des Arbeitsgewichts und wie
+   * viele Wiederholungen (siehe lib/warmup.ts). Ohne diese Angabe bleiben
+   * Aufwärmzeilen stumm — die Werte kommen von der Seite, die die Rampe auch
+   * gesetzt hat, statt dass diese Datei sie sich zurückrechnet.
+   */
+  warmupTarget?: { percent: number; reps: number };
 }): SetAdjustment | null {
   // Der jüngste abgehakte Satz zählt, nicht der erste — wer mittendrin
   // nachjustiert, bekommt den Vorschlag zum aktuellen Stand.
@@ -786,7 +635,8 @@ export function suggestAdjustment({
       break;
     }
   }
-  if (index === -1) return null;
+  // Steht noch kein Arbeitssatz, kann höchstens die Rampe etwas verraten.
+  if (index === -1) return warmupSuggestion({ sets, increment, warmupTarget });
 
   const set = sets[index];
   if (set.reps <= 0) return null;
@@ -821,6 +671,7 @@ export function suggestAdjustment({
     // Nach einem Gewichtssprung beginnt der Wiederholungsbereich wieder unten.
     nextReps: repMin,
     hasRemaining,
+    warmup: false,
   };
 }
 
@@ -856,6 +707,7 @@ function repsSuggestion({
       nextWeight: 0,
       nextReps: set.reps,
       hasRemaining: false,
+      warmup: false,
     };
   }
 
@@ -873,6 +725,92 @@ function repsSuggestion({
     nextWeight: 0,
     nextReps: set.reps,
     hasRemaining: true,
+    warmup: false,
+  };
+}
+
+/**
+ * Ab dem Wievielfachen der vorgesehenen Wiederholungen eine Aufwärmzeile keine
+ * mehr ist. Beim Doppelten — 16 statt 8 — war das kein Aufwärmen, sondern ein
+ * Satz auf zu leichtem Gewicht.
+ */
+export const WARMUP_WORK_FACTOR = 2;
+
+/**
+ * Was eine Aufwärmzeile über das Arbeitsgewicht verrät.
+ *
+ * Normalerweise nichts: dass die Rampe leicht war, ist ihr Sinn, und dieselbe
+ * Zeile mit ein paar Wiederholungen mehr bleibt eine Rampe. Wer aber das
+ * Doppelte der vorgesehenen Wiederholungen macht — 30 statt 8 —, hat keinen
+ * Aufwärmsatz protokolliert, sondern gezeigt, dass das Gewicht zu leicht steht.
+ *
+ * Gerechnet wird über den Zweck der Rampe, nicht über die Physiologie: welches
+ * Gewicht hätte für diese Leistung auf der Rampe stehen müssen, und welches
+ * Arbeitsgewicht gehört zu so einer Rampe. Der Weg über Epley allein trüge
+ * nicht — ein langer Satz auf halbem Gewicht schätzt sich schwächer als der
+ * geplante Arbeitssatz und könnte ihn nie anheben.
+ *
+ * Nach unten sagt die Rampe nie etwas: eine leichte Rampe ist kein Grund, das
+ * Arbeitsgewicht zu senken.
+ */
+function warmupSuggestion({
+  sets,
+  increment,
+  warmupTarget,
+}: {
+  sets: LoggedSet[];
+  increment: number;
+  warmupTarget?: { percent: number; reps: number };
+}): SetAdjustment | null {
+  if (!warmupTarget || warmupTarget.percent <= 0 || warmupTarget.reps <= 0) return null;
+  if (increment <= 0) return null;
+
+  let index = -1;
+  for (let i = sets.length - 1; i >= 0; i--) {
+    if (sets[i].done && sets[i].warmup) {
+      index = i;
+      break;
+    }
+  }
+  if (index === -1) return null;
+
+  const set = sets[index];
+  if (set.weight <= 0 || set.reps <= 0) return null;
+  // Solange es eine Rampe sein könnte, ist es eine.
+  if (set.reps < warmupTarget.reps * WARMUP_WORK_FACTOR) return null;
+
+  const open = sets.filter((s, i) => i > index && !s.done && !s.warmup);
+  if (open.length === 0) return null;
+
+  const planned = open[0].weight;
+  const targetReps = open[0].reps;
+  if (planned <= 0 || targetReps <= 0) return null;
+
+  // Das Gewicht, das für diese Leistung auf der Rampe hätte stehen müssen —
+  // und daraus das Arbeitsgewicht, dessen Rampe das gewesen wäre.
+  const rampShouldBe = retargetWeight({
+    weight: set.weight,
+    reps: set.reps,
+    targetReps: warmupTarget.reps,
+    increment,
+  });
+  const implied = roundToIncrement(rampShouldBe / warmupTarget.percent, increment);
+  // Derselbe Deckel wie überall: höchstens vier Sprünge auf einmal.
+  const nextWeight = Math.min(implied, planned + MAX_RETARGET_STEPS * increment);
+  if (nextWeight < planned + increment) return null;
+
+  return {
+    axis: "weight",
+    direction: "up",
+    index,
+    reps: set.reps,
+    weight: set.weight,
+    targetReps: warmupTarget.reps,
+    nextWeight,
+    // Das Wiederholungsziel der Arbeitssätze bleibt, wonach gerechnet wurde.
+    nextReps: targetReps,
+    hasRemaining: true,
+    warmup: true,
   };
 }
 

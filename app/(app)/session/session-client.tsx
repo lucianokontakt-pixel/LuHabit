@@ -73,7 +73,7 @@ import {
   type WorkoutPlan,
   type WorkoutSet,
 } from "@/lib/training";
-import { needsWarmup, warmupWeight, WARMUP_REPS } from "@/lib/warmup";
+import { needsWarmup, warmupWeight, WARMUP_PERCENT, WARMUP_REPS } from "@/lib/warmup";
 import { useSignalSound } from "@/lib/use-signal-sound";
 import { cn } from "@/lib/utils";
 import { STATE_DONE, STATE_HINT } from "@/lib/tints";
@@ -127,9 +127,6 @@ type Target = {
   kind: ProgressionResult["kind"];
   /** Warum genau diese Zahlen — wird bei jeder Übung angezeigt. */
   why: string;
-  sets: number;
-  /** Worauf ein Rückschritt ginge — die Entscheidung bleibt beim Nutzer. */
-  deload: number | null;
 };
 
 function targetFor(
@@ -149,9 +146,6 @@ function targetFor(
     step: incrementFor(exercise, planExercise),
     kind: result.kind,
     why: result.why,
-    // Die Eigengewichts-Progression darf die Satzzahl wachsen lassen.
-    sets: result.sets ?? planExercise.sets,
-    deload: result.deload ?? null,
   };
 }
 
@@ -170,9 +164,7 @@ function buildRows({
   target: Target | undefined;
   isFirst: boolean;
 }): SessionSet[] {
-  // Die Eigengewichts-Progression darf einen Satz anhängen — dann zählt ihre
-  // Satzzahl, nicht die des Plans.
-  const rowCount = target?.sets ?? planExercise.sets;
+  const rowCount = planExercise.sets;
   const perSet = expandTargets(target?.perSet ?? [], rowCount);
   const workingRows = Array.from({ length: rowCount }, (_, i) => ({
     weight: perSet[i]?.weight ?? 0,
@@ -451,9 +443,8 @@ export function SessionClient() {
   );
 
   /**
-   * Alle noch offenen Sätze der Übung auf ein neues Gewicht und die Untergrenze
-   * stellen. Trägt sowohl den Deload als auch die Korrektur mitten in der
-   * Einheit — abgehakte Sätze bleiben in beiden Fällen unangetastet.
+   * Alle noch offenen Sätze der Übung auf ein neues Gewicht und Ziel stellen —
+   * die Korrektur mitten in der Einheit. Abgehakte Sätze bleiben unangetastet.
    */
   const retargetOpenSets = useCallback(
     (planExerciseId: string, weight: number, reps: number) => {
@@ -506,6 +497,9 @@ export function SessionClient() {
             repMin: pe.repMin,
             repMax: pe.repMax,
             increment: step,
+            // Wofür die Rampe gedacht war — nur damit kann eine Aufwärmzeile
+            // überhaupt etwas über das Arbeitsgewicht sagen.
+            warmupTarget: { percent: WARMUP_PERCENT, reps: WARMUP_REPS },
           })
         : null;
     }
@@ -1166,19 +1160,25 @@ export function SessionClient() {
                         <TrendingDown className="size-3.5 shrink-0 text-muted-foreground" />
                       )}
                       <span className="min-w-0 flex-1 text-muted-foreground">
-                        Satz {suggestion.index + 1}:{" "}
-                        {suggestion.direction === "up"
-                          ? `${suggestion.reps} statt ${suggestion.targetReps} Wdh — `
-                          : `nur ${suggestion.reps} statt ${suggestion.targetReps} Wdh — `}
-                        {/* Ohne Zusatzgewicht wandert das Wiederholungsziel,
-                            sonst das Gewicht. */}
-                        {suggestion.axis === "reps"
-                          ? suggestion.hasRemaining
-                            ? `restliche Sätze auf ${suggestion.nextReps} Wdh?`
-                            : `noch einen Satz mit ${suggestion.nextReps} Wdh?`
-                          : suggestion.hasRemaining
-                            ? `restliche Sätze auf ${formatNumber(suggestion.nextWeight)} kg?`
-                            : `noch einen Satz mit ${formatNumber(suggestion.nextWeight)} kg?`}
+                        {/* Die Rampe redet nicht über sich selbst, sondern über
+                            das Gewicht, das gleich dran ist. */}
+                        {suggestion.warmup
+                          ? `Aufwärmsatz: ${suggestion.reps} Wdh mit ${formatNumber(suggestion.weight)} kg — Arbeitssätze auf ${formatNumber(suggestion.nextWeight)} kg?`
+                          : `Satz ${labels[suggestion.index] ?? suggestion.index + 1}: ${
+                              suggestion.direction === "up"
+                                ? `${suggestion.reps} statt ${suggestion.targetReps} Wdh — `
+                                : `nur ${suggestion.reps} statt ${suggestion.targetReps} Wdh — `
+                            }${
+                              // Ohne Zusatzgewicht wandert das
+                              // Wiederholungsziel, sonst das Gewicht.
+                              suggestion.axis === "reps"
+                                ? suggestion.hasRemaining
+                                  ? `restliche Sätze auf ${suggestion.nextReps} Wdh?`
+                                  : `noch einen Satz mit ${suggestion.nextReps} Wdh?`
+                                : suggestion.hasRemaining
+                                  ? `restliche Sätze auf ${formatNumber(suggestion.nextWeight)} kg?`
+                                  : `noch einen Satz mit ${formatNumber(suggestion.nextWeight)} kg?`
+                            }`}
                       </span>
                       <Button
                         variant="outline"
@@ -1220,28 +1220,12 @@ export function SessionClient() {
                     >
                       {target.kind === "up" ? (
                         <TrendingUp className="size-3.5 shrink-0" />
-                      ) : target.kind === "deload" ? (
-                        <TrendingDown className="size-3.5 shrink-0" />
                       ) : target.kind === "first" ? (
                         <Flame className="size-3.5 shrink-0" />
                       ) : (
                         <Lightbulb className="size-3.5 shrink-0" />
                       )}
                       <span className="min-w-0 flex-1">{target.why}</span>
-                      {/* Ob jemand wirklich festhängt oder nur krank war, weiß
-                          die Historie nicht — deshalb schlägt die App den
-                          Rückschritt vor und vollzieht ihn nicht. */}
-                      {target.deload !== null && (
-                        <Button
-                          variant="outline"
-                          size="xs"
-                          onClick={() =>
-                            retargetOpenSets(pe.id, target.deload!, pe.repMin)
-                          }
-                        >
-                          Auf {formatNumber(target.deload)} kg
-                        </Button>
-                      )}
                     </p>
                   )}
 
