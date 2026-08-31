@@ -211,7 +211,7 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
           e("og-0199", 2, 12, 15, 60), // Cable Pushdown (Straight Arm) V. 2
           e("og-0604", 2, 10, 15, 75), // Lever Shrug
           e("og-0602", 3, 12, 15, 60), // Lever Seated Reverse Fly
-          e("og-0203", 2, 15, 20, 60), // Cable Rear Delt Row (With Rope) — Face Pull
+          e("og-0202", 2, 15, 20, 60), // Cable Rear Delt Row (Stirrups) — Face Pull
           e("og-0868", 3, 10, 15, 60), // Cable Curl
           e("og-0165", 2, 10, 15, 60), // Cable Hammer Curl (With Rope)
           e("og-0599", 3, 10, 15, 90), // Lever Seated Leg Curl
