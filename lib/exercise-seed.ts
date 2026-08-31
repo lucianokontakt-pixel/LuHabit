@@ -190,7 +190,7 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
           e("og-0869", 3, 8, 12, 120), // Lever Shoulder Press V. 2
           e("og-0192", 3, 12, 15, 60), // Cable One Arm Lateral Raise
           e("og-0194", 2, 10, 15, 75), // Cable Overhead Triceps Extension (Rope Attachment)
-          e("og-0201", 2, 12, 15, 60), // Cable Pushdown — Stange, nicht Seil
+          e("og-0200", 2, 12, 15, 60), // Cable Pushdown (With Rope Attachment)
           e("og-0739", 3, 8, 12, 150), // Sled 45° Leg Press
           e("og-0585", 2, 12, 15, 75), // Lever Leg Extension
           e("og-0605", 3, 12, 20, 60), // Lever Standing Calf Raise
@@ -205,7 +205,10 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
           e("og-0150", 3, 6, 10, 150), // Cable Bar Lateral Pulldown
           e("og-1350", 3, 6, 10, 150), // Lever Seated Row
           e("og-0606", 3, 8, 12, 120), // Lever T Bar Row — weiter Obergriff
-          e("og-0238", 2, 12, 15, 60), // Cable Straight Arm Pulldown
+          // Überzüge am Kabel. Heißt im Katalog "Pushdown", ist aber die
+          // Lat-Bewegung mit gestreckten Armen — nicht mit dem Trizeps-
+          // Pushdown im Push-Tag verwechseln.
+          e("og-0199", 2, 12, 15, 60), // Cable Pushdown (Straight Arm) V. 2
           e("og-0604", 2, 10, 15, 75), // Lever Shrug
           e("og-0602", 3, 12, 15, 60), // Lever Seated Reverse Fly
           e("og-0203", 2, 15, 20, 60), // Cable Rear Delt Row (With Rope) — Face Pull
