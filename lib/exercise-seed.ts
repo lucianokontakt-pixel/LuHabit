@@ -187,7 +187,7 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
           e("og-1299", 3, 6, 10, 150), // Lever Incline Chest Press — obere Brust
           e("og-0576", 3, 6, 10, 150), // Lever Chest Press — steht doppelt im Katalog
           e("og-0596", 2, 12, 15, 75), // Lever Seated Fly
-          e("og-0603", 3, 8, 12, 120), // Lever Shoulder Press
+          e("og-0869", 3, 8, 12, 120), // Lever Shoulder Press V. 2
           e("og-0192", 3, 12, 15, 60), // Cable One Arm Lateral Raise
           e("og-0584", 2, 12, 15, 60), // Lever Lateral Raise
           e("og-1724", 2, 10, 15, 75), // Overhead Tricep Extension am Seil
