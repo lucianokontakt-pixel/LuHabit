@@ -203,8 +203,10 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
         name: "Pull",
         exercises: [
           e("og-0150", 3, 6, 10, 150), // Cable Bar Lateral Pulldown
-          e("og-1350", 3, 6, 10, 150), // Lever Seated Row
-          e("og-0606", 3, 8, 12, 120), // Lever T Bar Row — weiter Obergriff
+          // Zweimal dieselbe Maschine, zwei Griffbreiten: breit für die
+          // Rückentiefe, eng für den Zug an den Rumpf.
+          e("og-1350", 3, 6, 10, 150), // Lever Seated Row — breit fahren
+          e("og-0588", 3, 8, 12, 120), // Lever Narrow Grip Seated Row — eng fahren
           // Überzüge am Kabel. Heißt im Katalog "Pushdown", ist aber die
           // Lat-Bewegung mit gestreckten Armen — nicht mit dem Trizeps-
           // Pushdown im Push-Tag verwechseln.
