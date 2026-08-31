@@ -251,6 +251,44 @@ describe("computeTargets — Eigengewicht ohne Zusatzgewicht", () => {
     expect(result.targets.every((t) => t.weight === 0 && t.reps === 11)).toBe(true);
   });
 
+  it("hört bei zwanzig Wiederholungen auf und sagt, was jetzt dran wäre", () => {
+    const result = computeTargets({
+      exercise: pullup,
+      planExercise: pullupPlan,
+      history: [sets(3, 0, 20).map((s) => ({ ...s, exerciseId: "pullup" }))],
+      bodyweight: 80,
+    });
+    expect(result.kind).toBe("ceiling");
+    expect(result.progressed).toBe(false);
+    // Das Ziel bleibt, wo es steht — es wächst nur nicht weiter.
+    expect(result.targets.every((t) => t.reps === 20)).toBe(true);
+    expect(result.why).toContain("schwerere Variante");
+  });
+
+  it("zählt bis zum Deckel ganz normal weiter", () => {
+    const result = computeTargets({
+      exercise: pullup,
+      planExercise: pullupPlan,
+      history: [sets(3, 0, 19).map((s) => ({ ...s, exerciseId: "pullup" }))],
+      bodyweight: 80,
+    });
+    expect(result.kind).toBe("up");
+    expect(result.targets.every((t) => t.reps === 20)).toBe(true);
+  });
+
+  it("endet bei einem Plan mit hoher Obergrenze an dessen eigener Grenze", () => {
+    // Gewachsen wird immer von der erreichten Obergrenze aus — ein Plan bis 25
+    // läuft also bis 25 und meldet dann, dass es so nicht weitergeht.
+    const result = computeTargets({
+      exercise: pullup,
+      planExercise: plan({ exerciseId: "pullup", repMin: 15, repMax: 25 }),
+      history: [sets(3, 0, 25).map((s) => ({ ...s, exerciseId: "pullup" }))],
+      bodyweight: 80,
+    });
+    expect(result.kind).toBe("ceiling");
+    expect(result.targets.every((t) => t.reps === 25)).toBe(true);
+  });
+
   it("lässt ein über die Obergrenze gewachsenes Ziel stehen", () => {
     const lastSets = [
       set({ exerciseId: "pullup", setIndex: 0, weight: 0, reps: 14 }),

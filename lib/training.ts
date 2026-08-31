@@ -221,7 +221,7 @@ export type ProgressionResult = {
    * Welche Regel entschieden hat. Die App zeigt sie immer an — ein Vorschlag,
    * den man nicht nachprüfen kann, ist einer, dem man aufhört zu vertrauen.
    */
-  kind: "first" | "up" | "hold";
+  kind: "first" | "up" | "hold" | "ceiling";
   /** Die Begründung im Klartext, fertig zum Anzeigen. */
   why: string;
 };
@@ -246,6 +246,18 @@ function workingWeight(working: WorkoutSet[], repMin: number): number {
   );
   return reached ?? weights[0];
 }
+
+/**
+ * Ab hier ist noch eine Wiederholung keine Steigerung mehr, sondern eine Art,
+ * den Abend zu verbringen: Sätze jenseits der zwanzig trainieren Ausdauer, nicht
+ * Kraft. Weiter geht es dort nur mit Zusatzgewicht oder einer schwereren
+ * Variante — und das ist eine Entscheidung für einen Menschen, keine für eine
+ * Automatik.
+ *
+ * Ein Plan, dessen Obergrenze selbst über zwanzig liegt, endet ohnehin an ihr:
+ * gewachsen wird hier immer von der erreichten Obergrenze aus.
+ */
+export const BODYWEIGHT_REP_CAP = 20;
 
 /**
  * Double Progression: erst wenn ALLE Arbeitssätze die Obergrenze des
@@ -315,6 +327,21 @@ export function computeTargets({
       // Vom tatsächlich Geschafften aus weiterzählen, nicht von repMax —
       // sonst bliebe das Ziel für immer bei repMax + 1 stehen.
       const nextReps = achieved + 1;
+
+      // Nur bis zum Deckel. Darüber wächst nichts mehr von selbst; die App
+      // sagt einmal, was jetzt dran wäre, und überlässt den Schritt dem
+      // Menschen, der ihn machen muss.
+      if (nextReps > BODYWEIGHT_REP_CAP) {
+        return {
+          targets: Array.from({ length: sets }, () => ({ weight: 0, reps: achieved })),
+          progressed: false,
+          progressionKind: null,
+          isFirstTime: false,
+          kind: "ceiling",
+          why: `${sets} Sätze à ${achieved} — mehr Wiederholungen bringen hier wenig. Zusatzgewicht oder eine schwerere Variante?`,
+        };
+      }
+
       return {
         targets: Array.from({ length: sets }, () => ({ weight: 0, reps: nextReps })),
         progressed: true,
