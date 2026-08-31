@@ -190,7 +190,7 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
           e("og-0869", 3, 8, 12, 120), // Lever Shoulder Press V. 2
           e("og-0192", 3, 12, 15, 60), // Cable One Arm Lateral Raise
           e("og-0194", 2, 10, 15, 75), // Cable Overhead Triceps Extension (Rope Attachment)
-          e("og-0200", 2, 12, 15, 60), // Cable Pushdown (With Rope Attachment)
+          e("og-0201", 2, 12, 15, 60), // Cable Pushdown — Stange, nicht Seil
           e("og-0739", 3, 8, 12, 150), // Sled 45° Leg Press
           e("og-0585", 2, 12, 15, 75), // Lever Leg Extension
           e("og-0605", 3, 12, 20, 60), // Lever Standing Calf Raise
