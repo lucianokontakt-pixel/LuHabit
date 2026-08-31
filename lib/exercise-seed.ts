@@ -15,9 +15,10 @@ export type SplitTemplate = {
 };
 
 /**
- * Die Vorlagen nennen ihre Übungen weiterhin unter den Namen der alten
+ * Die älteren Vorlagen nennen ihre Übungen weiterhin unter den Namen der alten
  * Bibliothek — lesbar und unverändert seit sie zusammengestellt wurden. Erst
- * hier werden sie auf die IDs des openGym-Katalogs aufgelöst.
+ * hier werden sie auf die IDs des openGym-Katalogs aufgelöst. Neuere Vorlagen
+ * geben die Katalog-ID direkt an; die geht unverändert durch.
  */
 const e = (
   exerciseId: string,
@@ -166,6 +167,54 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
           e("rumaenisches-kreuzheben", 3, 8, 12, 120),
           e("sz-curls", 2, 10, 15, 75),
           e("beinheben-haengend", 3, 10, 15, 60),
+        ],
+      },
+    ],
+  },
+  {
+    id: "push-pull-maschinen",
+    name: "Push / Pull an Maschinen",
+    weeklyTarget: 4,
+    description:
+      "Zwei feste Einheiten im Wechsel, nur Maschinen und Kabel. Oberkörper führt, Beine laufen mit.",
+    days: [
+      {
+        // Reihenfolge ist Absicht: schwere Maschinen zuerst, danach Isolation,
+        // Beine und Bauch zum Schluss. Feste Plätze, keine Rotation innerhalb
+        // des Tages.
+        name: "Push",
+        exercises: [
+          e("og-1299", 3, 6, 10, 150), // Lever Incline Chest Press — obere Brust
+          e("og-0576", 3, 6, 10, 150), // Lever Chest Press — steht doppelt im Katalog
+          e("og-0596", 2, 12, 15, 75), // Lever Seated Fly
+          e("og-0603", 3, 8, 12, 120), // Lever Shoulder Press
+          e("og-0192", 3, 12, 15, 60), // Cable One Arm Lateral Raise
+          e("og-0584", 2, 12, 15, 60), // Lever Lateral Raise
+          e("og-1724", 2, 10, 15, 75), // Overhead Tricep Extension am Seil
+          e("og-0200", 2, 12, 15, 60), // Cable Pushdown (With Rope Attachment)
+          e("og-0739", 3, 8, 12, 150), // Sled 45° Leg Press
+          e("og-0585", 2, 12, 15, 75), // Lever Leg Extension
+          e("og-0605", 3, 12, 20, 60), // Lever Standing Calf Raise
+          // Rotation aus dem Rumpf, leichtes Gewicht — der hohe Bereich hält die
+          // Doppelprogression bei den Wiederholungen statt beim Gewicht.
+          e("og-0243", 2, 12, 15, 45), // Cable Twist
+        ],
+      },
+      {
+        name: "Pull",
+        exercises: [
+          e("og-0150", 3, 6, 10, 150), // Cable Bar Lateral Pulldown
+          e("og-1350", 3, 6, 10, 150), // Lever Seated Row
+          e("og-0606", 3, 8, 12, 120), // Lever T Bar Row — weiter Obergriff
+          e("og-0238", 2, 12, 15, 60), // Cable Straight Arm Pulldown
+          e("og-0604", 2, 10, 15, 75), // Lever Shrug
+          e("og-0602", 3, 12, 15, 60), // Lever Seated Reverse Fly
+          e("og-0203", 2, 15, 20, 60), // Cable Rear Delt Row (With Rope) — Face Pull
+          e("og-0868", 3, 10, 15, 60), // Cable Curl
+          e("og-0165", 2, 10, 15, 60), // Cable Hammer Curl (With Rope)
+          e("og-0599", 3, 10, 15, 90), // Lever Seated Leg Curl
+          e("og-0175", 2, 12, 15, 60), // Cable Kneeling Crunch
+          e("og-0594", 3, 12, 20, 60), // Lever Seated Calf Raise
         ],
       },
     ],
