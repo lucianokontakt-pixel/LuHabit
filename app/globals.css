@@ -288,6 +288,24 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "cv05" 1;
+    /* Die App wird angetippt, nicht gelesen wie ein Dokument. Ohne das
+       markiert iOS beim etwas zu langen Druck auf eine Satzzeile den Text,
+       zeigt die Lupe und blendet „Kopieren" ein — mitten im Training, wo der
+       Finger ohnehin ungenau ist. touch-callout schaltet zusätzlich das
+       Aufklappmenü ab, das lange Drücken sonst über Links legt.
+
+       Das Gegenstück steht direkt darunter: Eingabefelder MÜSSEN markierbar
+       bleiben, sonst lässt sich in ihnen auf iOS weder der Cursor setzen noch
+       etwas ersetzen. Wer diese Regel hier ändert, muss die dort mitdenken. */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  input,
+  textarea,
+  [contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
   }
   html {
     @apply font-sans;

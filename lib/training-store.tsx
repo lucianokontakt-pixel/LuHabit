@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import * as api from "@/lib/api-training";
 import { subscribeLocalData } from "@/lib/local-events";
 import { subscribeQueue } from "@/lib/write-queue";
@@ -45,9 +53,22 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadedOnce = useRef(false);
 
   const reload = useCallback(async () => {
-    setLoading(true);
+    // Nur der allererste Lauf zeigt den Ladezustand. Danach bleibt der alte
+    // Bestand stehen, bis der neue da ist.
+    //
+    // Das war die Ursache eines Flackerns, das schwer zuzuordnen war, weil es
+    // scheinbar wahllos auftrat: reload() hängt an subscribeLocalData und
+    // läuft damit nicht nur beim Öffnen, sondern nach jedem eigenen
+    // Schreibvorgang UND nach jedem Abgleich — und der Abgleich startet unter
+    // anderem bei jeder Rückkehr zur App (siehe components/sync-runner.tsx).
+    // Wer also kurz das Handy weglegte und zurückkam, sah für einen Moment
+    // überall graue Platzhalter statt seiner Daten. Der lokale Bestand liegt
+    // in IndexedDB und ist in Millisekunden da; ihn währenddessen zu
+    // verstecken bringt nichts und kostet nur Ruhe.
+    if (!loadedOnce.current) setLoading(true);
     setError(null);
     try {
       const [ex, pl, se] = await Promise.all([
@@ -58,6 +79,9 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
       setExercises(ex);
       setPlans(pl);
       setSessions(se);
+      // Erst nach einem geglückten Lauf — scheitert der erste, soll der
+      // nächste Versuch wieder laden dürfen statt stumm zu bleiben.
+      loadedOnce.current = true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Trainingsdaten konnten nicht geladen werden");
     } finally {
