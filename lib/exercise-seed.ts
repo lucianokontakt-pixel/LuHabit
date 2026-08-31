@@ -189,7 +189,6 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
           e("og-0596", 2, 12, 15, 75), // Lever Seated Fly
           e("og-0869", 3, 8, 12, 120), // Lever Shoulder Press V. 2
           e("og-0192", 3, 12, 15, 60), // Cable One Arm Lateral Raise
-          e("og-0584", 2, 12, 15, 60), // Lever Lateral Raise
           e("og-1724", 2, 10, 15, 75), // Overhead Tricep Extension am Seil
           e("og-0200", 2, 12, 15, 60), // Cable Pushdown (With Rope Attachment)
           e("og-0739", 3, 8, 12, 150), // Sled 45° Leg Press
