@@ -20,6 +20,14 @@ import { useStartZiel } from "@/lib/use-start-ziel";
  * Beschriftungen fallen weg. Vier feste Ziele, jedes mit eigenem Sinnbild —
  * wer die App zweimal geöffnet hat, liest sie ohnehin nicht mehr, und ohne sie
  * bleibt die Pille schlank genug, um zu schweben statt zu lasten.
+ *
+ * `justify-between` statt `justify-around`, und daran hängt mehr als es
+ * aussieht: die Pille ist 64 px hoch, der aktive Kreis 48 — oben und unten
+ * bleiben also 8 px. Damit der Kreis in der Rundung *sitzt* statt darin zu
+ * schwimmen, muss außen dasselbe stehen, und das leisten genau die 8 px aus
+ * `px-2`. `justify-around` legte davor noch eine halbe Lücke (auf 390 px
+ * Bildschirm rund 19 px, und mit der Breite wachsend): der Kreis stand dann
+ * mittig in der Kappe statt konzentrisch zu ihr.
  */
 export function BottomNav() {
   const pathname = usePathname();
@@ -33,7 +41,7 @@ export function BottomNav() {
       style={{ "--edge": "0.75rem" } as React.CSSProperties}
     >
       <div className="flex items-center gap-2">
-        <div className="flex h-16 min-w-0 flex-1 items-center justify-around rounded-pill bg-nav px-2 text-nav-foreground shadow-float">
+        <div className="flex h-16 min-w-0 flex-1 items-center justify-between rounded-pill bg-nav px-2 text-nav-foreground shadow-float">
           {NAV_LINKS.map((link) => {
             const active = isActiveLink(link.activePrefix ?? link.href, pathname);
             const Icon = link.icon;
