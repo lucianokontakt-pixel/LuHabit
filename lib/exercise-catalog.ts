@@ -1,6 +1,13 @@
 import catalogData from "@/lib/exercise-catalog.json";
 import { CATALOG_DEFAULTS } from "@/lib/exercise-legacy-map";
-import { DEFAULT_BODYWEIGHT_LOAD, type Equipment, type Exercise, type Muscle } from "@/lib/training";
+import {
+  CUSTOM_RANK,
+  DEFAULT_BODYWEIGHT_LOAD,
+  type Equipment,
+  type Exercise,
+  type Muscle,
+  type Region,
+} from "@/lib/training";
 
 /**
  * Die Übungsbibliothek. Sie steht bewusst nicht in der Datenbank: sie ist für
@@ -20,6 +27,10 @@ export type CatalogExercise = {
   secondary: Muscle[];
   media: string;
   en: string;
+  /** Untergruppe innerhalb der Muskelgruppe — null, wo es keine gibt. */
+  region: Region | null;
+  /** Wie üblich die Übung ist, 1–5. Sortiert die Suche und blendet unten aus. */
+  rank: number;
 };
 
 export const CATALOG = catalogData as CatalogExercise[];
@@ -43,6 +54,8 @@ export type ExerciseRecord = {
   bodyweightFactor: number | null;
   loadFactor: number | null;
   warmup: "always" | "never" | null;
+  /** Selbst vergebene Beliebtheitsstufe, oder null für die aus dem Katalog. */
+  rating: number | null;
 };
 
 /** Eine Katalogübung so, wie sie ohne jede Anpassung aussieht. */
@@ -65,7 +78,22 @@ export function fromCatalog(entry: CatalogExercise): Exercise {
     media: entry.media,
     secondary: entry.secondary,
     en: entry.en,
+    region: entry.region,
+    rank: entry.rank,
+    rating: null,
   };
+}
+
+/**
+ * Was eine Zeile mitbekommt, zu der es keinen Katalogeintrag gibt: eigene
+ * Übungen und Reste aus der alten Bibliothek. Kein Bild, keine Nebenmuskeln,
+ * kein englischer Name, keine Region — und die volle Beliebtheitsstufe, damit
+ * eine selbst angelegte Übung nie im ausgeblendeten Teil landet.
+ */
+function ohneKatalog(): Pick<Exercise, "media" | "secondary" | "en" | "region" | "rank"> {
+  // Jedes Mal ein frisches Objekt: ein geteiltes `secondary`-Array wäre eines,
+  // das sich eine Übung mit allen anderen teilt.
+  return { media: null, secondary: [], en: null, region: null, rank: CUSTOM_RANK };
 }
 
 /**
@@ -101,11 +129,12 @@ export function mergeExercises(records: ExerciseRecord[]): Exercise[] {
       bodyweightFactor: row.bodyweightFactor ?? base.bodyweightFactor,
       loadFactor: row.loadFactor ?? base.loadFactor,
       warmup: row.warmup,
+      rating: row.rating,
     });
   }
 
   for (const row of overrides.values()) {
-    merged.push({ ...row, media: null, secondary: [], en: null });
+    merged.push({ ...row, ...ohneKatalog() });
   }
 
   return merged.sort((a, b) => a.name.localeCompare(b.name, "de"));
@@ -114,7 +143,7 @@ export function mergeExercises(records: ExerciseRecord[]): Exercise[] {
 /** Eine einzelne Zeile zusammenlegen, ohne über den ganzen Katalog zu laufen. */
 export function mergeOne(record: ExerciseRecord): Exercise {
   const entry = BY_ID.get(record.id);
-  if (!entry) return { ...record, media: null, secondary: [], en: null };
+  if (!entry) return { ...record, ...ohneKatalog() };
   const base = fromCatalog(entry);
   return {
     ...base,
@@ -127,6 +156,7 @@ export function mergeOne(record: ExerciseRecord): Exercise {
     bodyweightFactor: record.bodyweightFactor ?? base.bodyweightFactor,
     loadFactor: record.loadFactor ?? base.loadFactor,
     warmup: record.warmup,
+    rating: record.rating,
   };
 }
 

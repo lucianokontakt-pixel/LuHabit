@@ -17,6 +17,9 @@ const exercise: Exercise = {
   media: null,
   secondary: [],
   en: null,
+  region: null,
+  rank: 5,
+  rating: null,
 };
 
 describe("needsWarmup", () => {

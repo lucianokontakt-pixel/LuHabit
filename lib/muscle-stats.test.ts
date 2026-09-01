@@ -17,6 +17,9 @@ const bench: Exercise = {
   media: null,
   secondary: [],
   en: null,
+  region: null,
+  rank: 5,
+  rating: null,
 };
 
 const exerciseById = { bench };

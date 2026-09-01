@@ -55,7 +55,7 @@ describe("localEffect", () => {
       exercise: {
         id: "ab-wheel", name: "Ab Wheel", muscle: "core", equipment: "bodyweight",
         isCustom: true, hidden: false, favorite: false, increment: null, bodyweightFactor: null,
-        loadFactor: null, warmup: null,
+        loadFactor: null, warmup: null, rating: null,
       },
     });
     expect(effect.action).toBe("put");

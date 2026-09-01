@@ -1,4 +1,5 @@
 import {
+  CUSTOM_RANK,
   DEFAULT_BODYWEIGHT_LOAD,
   type Equipment,
   type Exercise,
@@ -122,6 +123,11 @@ export async function createExercise(params: {
     media: null,
     secondary: [],
     en: null,
+    region: null,
+    // Selbst angelegt heißt: gewollt. Volle Stufe, damit die Übung nicht im
+    // ausgeblendeten Teil der Bibliothek landet.
+    rank: CUSTOM_RANK,
+    rating: null,
   };
   await enqueue({ kind: "exercise.save", exercise, isNew: true });
   void flushQueue();
@@ -139,6 +145,7 @@ export async function updateExercise(params: {
   warmup?: "always" | "never" | null;
   hidden?: boolean;
   favorite?: boolean;
+  rating?: number | null;
 }): Promise<Exercise> {
   // Eine Katalogübung, die noch nie angefasst wurde, hat keine Zeile — ihre
   // Ausgangswerte kommen dann aus dem Katalog.
@@ -162,6 +169,9 @@ export async function updateExercise(params: {
     media: before?.media ?? null,
     secondary: before?.secondary ?? [],
     en: before?.en ?? null,
+    region: before?.region ?? entry?.region ?? null,
+    rank: before?.rank ?? entry?.rank ?? CUSTOM_RANK,
+    rating: params.rating === undefined ? before?.rating ?? null : params.rating,
   };
   await enqueue({ kind: "exercise.save", exercise, isNew: false });
   void flushQueue();

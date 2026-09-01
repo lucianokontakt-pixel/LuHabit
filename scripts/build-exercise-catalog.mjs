@@ -15,7 +15,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { EQUIPMENT, MUSCLE, SECONDARY } from "./exercise-mapping.mjs";
-import { translateName } from "./exercise-names.mjs";
+import { beliebtheit } from "./exercise-beliebtheit.mjs";
+import { region } from "./exercise-regionen.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "..");
@@ -37,11 +38,24 @@ const all = JSON.parse(raw.match(/\[\s*\{[\s\S]*\}\s*\]/)[0]);
 // nur Rauschen in der Volumenstatistik.
 const db = all.filter((e) => e.bp !== "cardio");
 
-const seenNames = new Map();
 const catalog = [];
 const instructions = {};
 const unknown = { equipment: new Set(), muscle: new Set() };
-let untranslated = 0;
+
+/**
+ * Der Anzeigename: das Original, nur mit großem Anfangsbuchstaben je Wort.
+ *
+ * Hier stand einmal eine Übersetzung ins Deutsche (scripts/exercise-names.mjs).
+ * Sie ist am 30. August zurückgenommen worden — aber nur in der fertigen JSON,
+ * nicht hier. Wer das Skript danach laufen ließ, holte die deutschen Namen
+ * unbemerkt zurück und überschrieb damit die Rücknahme. Die Regel steht jetzt
+ * dort, wo sie hingehört: neben den Daten, die sie erzeugt.
+ *
+ * Doppelte Namen bleiben doppelt. Sechs Übungen des Datensatzes heißen gleich
+ * und unterscheiden sich nur in der Ausführung ("Lever Chest Press" gibt es
+ * zweimal); eine angehängte Nummer behauptete eine Ordnung, die es nicht gibt.
+ */
+const grossGeschrieben = (n) => n.replace(/\b[a-z]/g, (c) => c.toUpperCase());
 
 for (const e of db) {
   const equipment = EQUIPMENT[e.eq];
@@ -49,19 +63,9 @@ for (const e of db) {
   if (!equipment) unknown.equipment.add(e.eq);
   if (!muscle) unknown.muscle.add(e.tg);
 
-  const translation = translateName(e.n, equipment);
-  if (!translation.translated) untranslated++;
-
-  // Ein paar Übungen des Datensatzes unterscheiden sich nur in Nuancen, die
-  // beim Übersetzen verloren gehen. Statt sie zu verschlucken, nummerieren wir.
-  let name = translation.name;
-  const seen = (seenNames.get(name) ?? 0) + 1;
-  seenNames.set(name, seen);
-  if (seen > 1) {
-    name = name.endsWith(")")
-      ? `${name.slice(0, -1)}, Variante ${seen})`
-      : `${name} (Variante ${seen})`;
-  }
+  // в° ist ein Fehler im Datensatz: aus "45°" wurde beim Einlesen "45в°".
+  const en = e.n.replace(/в°/g, "°");
+  const name = grossGeschrieben(en);
 
   const secondary = [
     ...new Set(
@@ -75,10 +79,15 @@ for (const e of db) {
     muscle,
     equipment,
     secondary,
+    // Untergruppe und Beliebtheitsstufe. Beides wird hier einmal ausgerechnet
+    // statt bei jedem Tastendruck in der Suche — es hängt nur an Daten, die
+    // sich zwischen zwei Läufen dieses Skripts nicht ändern.
+    region: region({ tg: e.tg, name: e.n, muscle }),
+    rank: beliebtheit({ name: e.n, equipment }),
     // Die Mediendateien heißen durchweg "<id>-<hash>.gif" bzw. ".jpg" — es
     // reicht, den Hash zu speichern.
     media: e.gif.slice(e.id.length + 1, -4),
-    en: e.n.replace(/в°/g, "°"),
+    en,
   });
 
   instructions[`og-${e.id}`] = e.st;
@@ -118,9 +127,22 @@ fs.writeFileSync(
 
 const kb = (p) => Math.round(fs.statSync(p).size / 1024);
 console.log(`Übungen:      ${catalog.length} (${all.length - db.length} Cardio-Übungen ausgelassen)`);
-console.log(`Namen:        ${catalog.length - untranslated} vollständig übersetzt, ${untranslated} mit englischem Rest`);
 console.log(`Katalog:      ${kb(path.join(repo, "lib", "exercise-catalog.json"))} KB`);
 console.log(`Anleitungen:  ${kb(path.join(mediaDir, "anleitungen.json"))} KB`);
 console.log(`Medien:       ${copied} Dateien kopiert`);
+
+const zaehle = (fn) => {
+  const m = {};
+  for (const e of catalog) m[fn(e)] = (m[fn(e)] ?? 0) + 1;
+  return m;
+};
+const stufen = zaehle((e) => e.rank);
+console.log(
+  `Beliebtheit:  ${[5, 4, 3, 2, 1].map((s) => `${s}★ ${stufen[s] ?? 0}`).join("  ")}`
+);
+const mitRegion = catalog.filter((e) => e.region).length;
+console.log(`Regionen:     ${mitRegion} von ${catalog.length} zugeordnet`);
+const ohneNeben = catalog.filter((e) => e.secondary.length === 0).length;
+console.log(`Nebenmuskeln: ${catalog.length - ohneNeben} Übungen haben welche, ${ohneNeben} nicht`);
 if (unknown.equipment.size) console.log(`Unbekanntes Gerät:  ${[...unknown.equipment].join(", ")}`);
 if (unknown.muscle.size) console.log(`Unbekannter Muskel: ${[...unknown.muscle].join(", ")}`);

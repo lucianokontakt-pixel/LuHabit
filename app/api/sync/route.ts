@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
     ),
     d1Query<Row>(
       `SELECT id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor,
-              load_factor, warmup, deleted_at
+              load_factor, warmup, rating, deleted_at
          FROM exercises WHERE user_id = ? AND COALESCE(updated_at, created_at, '0000-01-01 00:00:00') >= ?`,
       [userId, since]
     ),

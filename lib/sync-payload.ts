@@ -36,6 +36,8 @@ export type StoredExercise = {
   bodyweightFactor: number | null;
   loadFactor: number | null;
   warmup: "always" | "never" | null;
+  /** Selbst vergebene Beliebtheitsstufe; die aus dem Katalog steht nicht in der DB. */
+  rating: number | null;
 };
 export type StoredBodyProfile = {
   age: number | null;
@@ -195,6 +197,7 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
       bodyweightFactor: numOrNull(r.bodyweight_factor),
       loadFactor: numOrNull(r.load_factor),
       warmup: r.warmup === "always" || r.warmup === "never" ? r.warmup : null,
+      rating: numOrNull(r.rating),
     }),
     // Route: ORDER BY name COLLATE NOCASE ASC
     (r) => str(r.name).toLowerCase()

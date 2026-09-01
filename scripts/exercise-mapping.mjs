@@ -61,8 +61,56 @@ export const MUSCLE = {
   calves: "calves",
 };
 
-/** Nur fürs Anzeigen der Nebenmuskeln — gröber als MUSCLE, aber vollständig. */
+/**
+ * Die Nebenmuskeln. Eigenes Vokabular, und das ist der Punkt: sie stehen im
+ * Datensatz im Feld `sm`, das ganz andere Wörter benutzt als der Zielmuskel in
+ * `tg` — "shoulders" statt "delts", "quadriceps" statt "quads", "chest" statt
+ * "pectorals".
+ *
+ * Hier stand vorher `{ ...MUSCLE }`, also die Zuordnung für `tg`, angewendet
+ * auf `sm`. Die häufigsten Nebenmuskeln überhaupt — shoulders (400×),
+ * quadriceps (161×), chest (91×), core (94×), obliques (72×), lower back (71×)
+ * — waren darin keine Schlüssel und fielen still heraus. Ergebnis: 530 Übungen
+ * ohne einen einzigen Nebenmuskel, und chest, shoulders, quads und core kamen
+ * in `secondary` überhaupt nie vor.
+ *
+ * Was hier fehlt, fehlt mit Absicht: Knöchel, Handgelenke, Hände, Füße und der
+ * Kopfwender tragen keine Last, die LuHabit zählen würde.
+ */
 export const SECONDARY = {
-  ...MUSCLE,
+  chest: "chest",
+  "upper chest": "chest",
+  back: "back",
+  "upper back": "back",
+  "lower back": "back",
+  lats: "back",
+  "latissimus dorsi": "back",
+  rhomboids: "back",
+  trapezius: "back",
+  traps: "back",
+  shoulders: "shoulders",
+  deltoids: "shoulders",
+  "rear deltoids": "shoulders",
+  "rotator cuff": "shoulders",
+  biceps: "biceps",
+  brachialis: "biceps",
+  forearms: "biceps",
+  "grip muscles": "biceps",
+  "wrist flexors": "biceps",
+  "wrist extensors": "biceps",
+  triceps: "triceps",
+  quadriceps: "quads",
+  "hip flexors": "quads",
+  groin: "quads",
+  "inner thighs": "quads",
+  hamstrings: "hamstrings",
+  glutes: "glutes",
+  calves: "calves",
+  soleus: "calves",
+  shins: "calves",
+  core: "core",
+  abdominals: "core",
+  "lower abs": "core",
+  obliques: "core",
   "cardiovascular system": "core",
 };

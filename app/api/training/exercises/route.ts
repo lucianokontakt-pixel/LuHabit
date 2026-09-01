@@ -18,6 +18,7 @@ type ExerciseRow = {
   bodyweight_factor: number | null;
   load_factor: number | null;
   warmup: string | null;
+  rating: number | null;
 };
 
 /**
@@ -38,6 +39,7 @@ function toRecord(row: ExerciseRow): ExerciseRecord {
     bodyweightFactor: row.bodyweight_factor,
     loadFactor: row.load_factor,
     warmup: row.warmup as Exercise["warmup"],
+    rating: row.rating,
   };
 }
 
@@ -54,7 +56,7 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json(UNAUTHORIZED, { status: 401 });
 
   const rows = await d1Query<ExerciseRow>(
-    `SELECT id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup
+    `SELECT id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup, rating
        FROM exercises WHERE user_id = ? AND deleted_at IS NULL ORDER BY name COLLATE NOCASE ASC`,
     [userId]
   );
@@ -134,7 +136,7 @@ export async function POST(req: NextRequest) {
   );
 
   const rows = await d1Query<ExerciseRow>(
-    `SELECT id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup
+    `SELECT id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup, rating
        FROM exercises WHERE user_id = ? AND deleted_at IS NULL AND id = ?`,
     [userId, id]
   );
@@ -156,6 +158,7 @@ export async function PUT(req: NextRequest) {
     warmup?: string | null;
     hidden?: boolean;
     favorite?: boolean;
+    rating?: number | null;
   };
 
   if (!body.id) {
@@ -163,7 +166,7 @@ export async function PUT(req: NextRequest) {
   }
 
   const current = await d1Query<ExerciseRow>(
-    `SELECT id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup
+    `SELECT id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup, rating
        FROM exercises WHERE user_id = ? AND deleted_at IS NULL AND id = ?`,
     [userId, body.id]
   );
@@ -189,6 +192,7 @@ export async function PUT(req: NextRequest) {
             bodyweight_factor: base.bodyweightFactor,
             load_factor: base.loadFactor,
             warmup: base.warmup,
+            rating: null,
           };
         })()
       : null);
@@ -198,13 +202,14 @@ export async function PUT(req: NextRequest) {
   }
 
   await d1Query(
-    `INSERT INTO exercises (user_id, id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `INSERT INTO exercises (user_id, id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup, rating, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
      ON CONFLICT(user_id, id) DO UPDATE
        SET name = excluded.name, muscle = excluded.muscle, equipment = excluded.equipment,
            hidden = excluded.hidden, favorite = excluded.favorite, increment = excluded.increment,
            bodyweight_factor = excluded.bodyweight_factor, load_factor = excluded.load_factor,
-           warmup = excluded.warmup, deleted_at = NULL, updated_at = datetime('now')`,
+           warmup = excluded.warmup, rating = excluded.rating,
+           deleted_at = NULL, updated_at = datetime('now')`,
     [
       userId,
       body.id,
@@ -218,11 +223,12 @@ export async function PUT(req: NextRequest) {
       body.bodyweightFactor === undefined ? before.bodyweight_factor : body.bodyweightFactor,
       body.loadFactor === undefined ? before.load_factor : body.loadFactor,
       body.warmup === undefined ? before.warmup : body.warmup,
+      body.rating === undefined ? before.rating : body.rating,
     ]
   );
 
   const rows = await d1Query<ExerciseRow>(
-    `SELECT id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup
+    `SELECT id, name, muscle, equipment, is_custom, hidden, favorite, increment, bodyweight_factor, load_factor, warmup, rating
        FROM exercises WHERE user_id = ? AND deleted_at IS NULL AND id = ?`,
     [userId, body.id]
   );

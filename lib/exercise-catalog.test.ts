@@ -8,7 +8,14 @@ import {
 } from "@/lib/exercise-catalog";
 import { CATALOG_DEFAULTS, LEGACY_EXERCISE_MAP } from "@/lib/exercise-legacy-map";
 import { SPLIT_TEMPLATES } from "@/lib/exercise-seed";
-import { EQUIPMENT, MUSCLES } from "@/lib/training";
+import {
+  CUSTOM_RANK,
+  EQUIPMENT,
+  MUSCLES,
+  RANK_SICHTBAR_AB,
+  REGIONS,
+  stufeVon,
+} from "@/lib/training";
 
 const MUSCLE_KEYS = new Set(MUSCLES.map((m) => m.key));
 const EQUIPMENT_KEYS = new Set(EQUIPMENT);
@@ -61,6 +68,81 @@ describe("Katalog", () => {
   });
 });
 
+describe("Beliebtheit", () => {
+  it("gibt jeder Übung eine ganze Stufe zwischen 1 und 5", () => {
+    const daneben = CATALOG.filter(
+      (e) => !Number.isInteger(e.rank) || e.rank < 1 || e.rank > 5
+    );
+    expect(daneben.map((e) => `${e.id} ${e.rank}`)).toEqual([]);
+  });
+
+  it("blendet nicht mehr als ein Fünftel der Bibliothek aus", () => {
+    // Der Sinn der Stufe ist, den Rand wegzuräumen, nicht die Mitte. Wächst
+    // die Liste in scripts/exercise-beliebtheit.mjs über dieses Maß hinaus,
+    // filtert sie nicht mehr — dann versteckt sie.
+    const versteckt = CATALOG.filter((e) => e.rank < RANK_SICHTBAR_AB);
+    expect(versteckt.length).toBeLessThan(CATALOG.length / 5);
+  });
+
+  it("lässt kein echtes Gerät vollständig verschwinden", () => {
+    // Ein Gerätefilter, der nie einen Treffer hat, ist kaputt und nicht
+    // streng. Zwei Ausnahmen sind gewollt: der Ball ist der Anlass für die
+    // ganze Stufe, und "Sonstiges" ist der Restehaufen — dort stehen nur
+    // Dehnübungen, Seile, Reifen und Faszienrollen, keine einzige Übung, die
+    // in einem Krafttagebuch von selbst auftauchen sollte. Wer sie sucht,
+    // legt den Schalter um.
+    for (const eq of EQUIPMENT) {
+      if (eq === "ball" || eq === "other") continue;
+      const alle = CATALOG.filter((e) => e.equipment === eq);
+      if (alle.length === 0) continue;
+      const sichtbar = alle.filter((e) => e.rank >= RANK_SICHTBAR_AB);
+      expect(sichtbar.length, eq).toBeGreaterThan(0);
+    }
+  });
+
+  it("stuft Ball und Sonstiges unter die Sichtbarkeitsgrenze", () => {
+    // Der Anlass für die ganze Stufe: Gymnastikbälle sollen nicht zwischen
+    // Bank und Maschine stehen.
+    const rand = CATALOG.filter(
+      (e) => e.equipment === "ball" || e.equipment === "other"
+    );
+    expect(rand.filter((e) => e.rank >= RANK_SICHTBAR_AB).map((e) => e.name)).toEqual([]);
+  });
+
+  it("lässt das eigene Urteil die Schätzung schlagen", () => {
+    const uebung = fromCatalog(CATALOG[0]);
+    expect(stufeVon(uebung)).toBe(uebung.rank);
+    expect(stufeVon({ ...uebung, rating: 1 })).toBe(1);
+  });
+});
+
+describe("Regionen", () => {
+  it("vergibt nur Regionen, die zur Muskelgruppe der Übung gehören", () => {
+    const erlaubt = new Map(REGIONS.map((r) => [r.key, r.muscle]));
+    const falsch = CATALOG.filter(
+      (e) => e.region !== null && erlaubt.get(e.region) !== e.muscle
+    );
+    expect(falsch.map((e) => `${e.id} ${e.muscle}/${e.region}`)).toEqual([]);
+  });
+
+  it("teilt Brust, Schultern, Rücken und Rumpf auf", () => {
+    for (const muscle of ["chest", "shoulders", "back", "core"] as const) {
+      const alle = CATALOG.filter((e) => e.muscle === muscle);
+      const mitRegion = alle.filter((e) => e.region !== null);
+      // Nicht jede Übung bekommt eine — aber die Mehrheit muss, sonst ist der
+      // Filter für diese Gruppe eine leere Zusage.
+      expect(mitRegion.length, muscle).toBeGreaterThan(alle.length / 2);
+    }
+  });
+
+  it("lässt die sechs Muskelgruppen ohne Untergruppen in Ruhe", () => {
+    // Bizeps weiter zu unterteilen hilft niemandem, der vor einem Gerät steht.
+    const ohne = ["biceps", "triceps", "quads", "hamstrings", "glutes", "calves"];
+    const mit = CATALOG.filter((e) => ohne.includes(e.muscle) && e.region !== null);
+    expect(mit.map((e) => e.id)).toEqual([]);
+  });
+});
+
 describe("Zuordnung der alten Bibliothek", () => {
   it("zeigt nur auf Übungen, die es im Katalog gibt", () => {
     const kaputt = Object.entries(LEGACY_EXERCISE_MAP)
@@ -102,6 +184,7 @@ describe("mergeExercises", () => {
     bodyweightFactor: null,
     loadFactor: null,
     warmup: "always" as const,
+    rating: null,
   };
 
   it("liefert ohne eigene Zeilen genau den Katalog", () => {
@@ -120,6 +203,25 @@ describe("mergeExercises", () => {
     const eigen = { ...record, id: "eigene-uebung", isCustom: true };
     const merged = mergeExercises([eigen]);
     expect(merged).toHaveLength(CATALOG.length + 1);
-    expect(merged.find((e) => e.id === "eigene-uebung")?.media).toBeNull();
+    const gefunden = merged.find((e) => e.id === "eigene-uebung");
+    expect(gefunden?.media).toBeNull();
+    // Wer sie selbst angelegt hat, will sie sehen — nie im ausgeblendeten Teil.
+    expect(gefunden?.rank).toBe(CUSTOM_RANK);
+    expect(gefunden?.region).toBeNull();
+  });
+
+  it("gibt jeder eigenen Übung ein eigenes secondary-Array", () => {
+    const [a, b] = mergeExercises([
+      { ...record, id: "eigen-a", isCustom: true },
+      { ...record, id: "eigen-b", isCustom: true },
+    ]).filter((e) => e.id.startsWith("eigen-"));
+    expect(a.secondary).not.toBe(b.secondary);
+  });
+
+  it("übernimmt Region und Stufe aus dem Katalog, das Urteil aus der Zeile", () => {
+    const merged = mergeOne({ ...record, rating: 2 });
+    expect(merged.rank).toBe(catalogEntry("og-0025")?.rank);
+    expect(merged.region).toBe(catalogEntry("og-0025")?.region);
+    expect(stufeVon(merged)).toBe(2);
   });
 });

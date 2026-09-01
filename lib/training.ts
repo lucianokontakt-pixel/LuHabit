@@ -40,6 +40,87 @@ export const MUSCLE_LABELS: Record<Muscle, string> = Object.fromEntries(
   MUSCLES.map((m) => [m.key, m.label])
 ) as Record<Muscle, string>;
 
+/**
+ * Die Untergruppen innerhalb einer Muskelgruppe.
+ *
+ * Nur vier der zehn Gruppen zerfallen sinnvoll weiter. Die anderen sechs sind
+ * selbst schon Untergruppen — "Bizeps" weiter zu unterteilen hilft niemandem,
+ * der vor einem Gerät steht. Deshalb gibt es hier keine vollständige Abdeckung
+ * und soll es auch keine geben: Übungen ohne Region zeigen einfach ihre
+ * Muskelgruppe.
+ *
+ * Woher der Wert kommt, steht in scripts/exercise-regionen.mjs — beim Rücken
+ * aus dem Datensatz selbst, bei Brust, Schultern und Rumpf aus dem Namen.
+ */
+export type Region =
+  | "chest-upper"
+  | "chest-mid"
+  | "chest-lower"
+  | "delts-front"
+  | "delts-side"
+  | "delts-rear"
+  | "lats"
+  | "back-upper"
+  | "traps"
+  | "back-lower"
+  | "abs"
+  | "obliques";
+
+/**
+ * Reihenfolge wie am Körper: oben nach unten, vorn nach hinten.
+ *
+ * Zwei Beschriftungen je Region. Die lange steht in der Auswahl, wo sie für
+ * sich allein verständlich sein muss. Die kurze steht in einer Liste, die
+ * ohnehin schon nach Muskelgruppen sortiert ist — unter der Überschrift
+ * „Brust“ ist „Mittlere Brust“ zur Hälfte Wiederholung, und die Hälfte fehlt
+ * am anderen Ende der Zeile.
+ */
+export const REGIONS: { key: Region; muscle: Muscle; label: string; short: string }[] = [
+  { key: "chest-upper", muscle: "chest", label: "Obere Brust", short: "oben" },
+  { key: "chest-mid", muscle: "chest", label: "Mittlere Brust", short: "Mitte" },
+  { key: "chest-lower", muscle: "chest", label: "Untere Brust", short: "unten" },
+  { key: "delts-front", muscle: "shoulders", label: "Vordere Schulter", short: "vorne" },
+  { key: "delts-side", muscle: "shoulders", label: "Seitliche Schulter", short: "seitlich" },
+  { key: "delts-rear", muscle: "shoulders", label: "Hintere Schulter", short: "hinten" },
+  { key: "lats", muscle: "back", label: "Lat", short: "Lat" },
+  { key: "back-upper", muscle: "back", label: "Oberer Rücken", short: "oben" },
+  { key: "traps", muscle: "back", label: "Nacken", short: "Nacken" },
+  { key: "back-lower", muscle: "back", label: "Unterer Rücken", short: "unten" },
+  { key: "abs", muscle: "core", label: "Bauch", short: "Bauch" },
+  { key: "obliques", muscle: "core", label: "Seitlicher Bauch", short: "seitlich" },
+];
+
+export const REGION_LABELS: Record<Region, string> = Object.fromEntries(
+  REGIONS.map((r) => [r.key, r.label])
+) as Record<Region, string>;
+
+/** Die Kurzform — nur dort, wo die Muskelgruppe schon danebensteht. */
+export const REGION_SHORT: Record<Region, string> = Object.fromEntries(
+  REGIONS.map((r) => [r.key, r.short])
+) as Record<Region, string>;
+
+/** Die Untergruppen einer Muskelgruppe — leer, wo es keine gibt. */
+export function regionsFor(muscle: Muscle): { key: Region; label: string }[] {
+  return REGIONS.filter((r) => r.muscle === muscle).map((r) => ({
+    key: r.key,
+    label: r.label,
+  }));
+}
+
+/**
+ * Die Beliebtheitsstufe, die eine eigene Übung bekommt.
+ *
+ * Wer sie selbst angelegt hat, will sie sehen — sonst hätte er sich die Mühe
+ * gespart. Sie steht damit nie im ausgeblendeten Teil der Bibliothek.
+ */
+export const CUSTOM_RANK = 5;
+
+/**
+ * Ab dieser Stufe steht eine Übung standardmäßig in der Trefferliste.
+ * Darunter braucht es den Schalter „Auch ungewöhnliche zeigen“.
+ */
+export const RANK_SICHTBAR_AB = 3;
+
 export const EQUIPMENT_LABELS: Record<Equipment, string> = {
   barbell: "Langhantel",
   dumbbell: "Kurzhantel",
@@ -116,7 +197,21 @@ export type Exercise = {
   secondary: Muscle[];
   /** Der englische Originalname — die Suche findet Übungen auch darüber. */
   en: string | null;
+  /** Untergruppe innerhalb der Muskelgruppe, oder null. Kommt aus dem Katalog. */
+  region: Region | null;
+  /** Beliebtheitsstufe 1–5 aus dem Katalog. Siehe scripts/exercise-beliebtheit.mjs. */
+  rank: number;
+  /**
+   * Die selbst vergebene Stufe. Schlägt `rank`, wenn gesetzt — die Schätzung
+   * aus dem Namen soll nie gegen ein Urteil stehen, das jemand gefällt hat.
+   */
+  rating: number | null;
 };
+
+/** Die Stufe, die zählt: das eigene Urteil, sonst die Schätzung. */
+export function stufeVon(exercise: Pick<Exercise, "rank" | "rating">): number {
+  return exercise.rating ?? exercise.rank;
+}
 
 export type PlanExercise = {
   id: string;
