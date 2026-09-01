@@ -30,11 +30,9 @@ const TONES: Record<Signal, { frequency: number; duration: number }[]> = {
  * bei YouTube) wurde ausprobiert, klang aber hörbar schlechter — der Ton lief
  * dabei durch die Videowiedergabe-Pipeline statt direkt raus.
  *
- * Der Stummschalter wird stattdessen über die Audio Session API abgehandelt
- * (siehe unlock): iOS schaltet Web Audio am Klingelschalter stumm, solange die
- * Seite keine Sitzungsart anfordert. Das ist der Grund, warum in der Halle
- * nichts zu hören war — und der einzige Weg dorthin, der den Klang nicht
- * verschlechtert.
+ * Der Stummschalter wird stattdessen über die Audio Session API abgehandelt —
+ * siehe SESSION_TYPE. Das ist der Grund, warum in der Halle nichts zu hören
+ * war, und der einzige Weg dorthin, der den Klang nicht verschlechtert.
  */
 
 /**
@@ -44,9 +42,35 @@ const TONES: Record<Signal, { frequency: number; duration: number }[]> = {
 type AudioSessionNavigator = Navigator & {
   audioSession?: { type: string };
 };
+
+/**
+ * Die Sitzungsart für den Ton — und die Stelle, an der eine Trainings-App
+ * gegenüber laufender Musik höflich sein muss.
+ *
+ * Hier stand 'playback'. Das ist die Einstufung für Inhalt, den jemand hören
+ * will — ein Podcast, ein Video —, und iOS räumt dafür das Feld: Spotify wird
+ * *unterbrochen*, nicht leiser gemacht. Solange die Sitzungsart stehen blieb
+ * (und sie blieb stehen, vom ersten abgehakten Satz bis zum Verlassen der
+ * Seite), erfuhr Spotify nie, dass die Unterbrechung vorbei ist. Es blieb
+ * stumm, bis man von Hand auf Play drückte.
+ *
+ * 'transient' ist die Einstufung für genau das, was hier passiert: ein kurzes
+ * Signal über fremder Musik. Sie duckt die Musik für die Dauer des Tons,
+ * danach kommt sie von allein zurück.
+ */
+const SESSION_TYPE = "transient";
+
+/**
+ * Wie lange nach dem letzten Oszillator die Sitzungsart stehen bleibt, bevor
+ * sie auf 'auto' zurückfällt. Ohne diese Rückgabe endet die Unterbrechung nie.
+ * Etwas Luft, damit das Zurücksetzen nicht in den ausklingenden Ton fällt.
+ */
+const SESSION_RELEASE_MS = 400;
+
 export function useSignalSound() {
   const [enabled, setEnabled] = useState(true);
   const contextRef = useRef<AudioContext | null>(null);
+  const releaseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     try {
@@ -74,17 +98,14 @@ export function useSignalSound() {
    * Muss aus einem echten Tap heraus laufen. Danach darf der Ton auch aus
    * einem Timer kommen — ohne diese Freigabe bleibt der Kontext "suspended"
    * und jeder spätere Ton fiele lautlos aus.
+   *
+   * Die Sitzungsart wird hier bewusst *nicht* gesetzt: sie gilt nur um den Ton
+   * herum (siehe play), sonst hielte ein einziger abgehakter Satz die Musik
+   * für die ganze Einheit unten.
    */
   const unlock = useCallback(() => {
     if (typeof window === "undefined") return;
     try {
-      // Ohne angeforderte Sitzungsart behandelt iOS die Seite wie eine
-      // Klingelton-Quelle und schweigt am Stummschalter. 'playback' sagt: das
-      // hier ist Inhalt, den jemand hören will — dieselbe Einstufung wie ein
-      // Podcast. Der Preis ist, dass laufende Musik kurz zurücktritt.
-      const nav = navigator as AudioSessionNavigator;
-      if (nav.audioSession) nav.audioSession.type = "playback";
-
       if (!contextRef.current) {
         const Ctor =
           window.AudioContext ??
@@ -92,17 +113,47 @@ export function useSignalSound() {
         if (!Ctor) return;
         contextRef.current = new Ctor();
       }
-      if (contextRef.current.state === "suspended") void contextRef.current.resume();
+      if (contextRef.current.state !== "running") void contextRef.current.resume();
     } catch {
       // Ohne Audio läuft der Timer trotzdem — die Vibration bleibt.
     }
+  }, []);
+
+  /**
+   * Holt den Kontext zurück, wenn iOS ihn weggelegt hat.
+   *
+   * Nach einer Unterbrechung — ein Anruf, ein Wechsel in den Hintergrund, der
+   * eigene Ton über fremder Musik — steht der Kontext auf "suspended" oder auf
+   * Safaris eigenem "interrupted". Vorher stieg play() an dieser Stelle still
+   * aus und die App blieb für den Rest der Einheit stumm.
+   */
+  useEffect(() => {
+    const wecken = () => {
+      const ctx = contextRef.current;
+      if (ctx && ctx.state !== "running" && ctx.state !== "closed") void ctx.resume();
+    };
+    document.addEventListener("visibilitychange", wecken);
+    return () => document.removeEventListener("visibilitychange", wecken);
   }, []);
 
   const play = useCallback(
     (signal: Signal) => {
       if (!enabled) return;
       const ctx = contextRef.current;
-      if (!ctx || ctx.state !== "running") return;
+      if (!ctx || ctx.state === "closed") return;
+
+      // Weggelegt heißt nicht verloren: aufwecken und trotzdem spielen. Die
+      // Töne werden auf ctx.currentTime geplant, das läuft nach dem resume
+      // weiter — schlimmstenfalls kommt der Ton einen Wimpernschlag später.
+      if (ctx.state !== "running") void ctx.resume();
+
+      try {
+        const nav = navigator as AudioSessionNavigator;
+        if (nav.audioSession) nav.audioSession.type = SESSION_TYPE;
+      } catch {
+        // Ohne Audio Session API klingt es wie vorher — nur eben am
+        // Stummschalter des iPhones.
+      }
 
       let offset = 0;
       for (const tone of TONES[signal]) {
@@ -123,12 +174,25 @@ export function useSignalSound() {
         oscillator.stop(startAt + tone.duration);
         offset += tone.duration + 0.05;
       }
+
+      // Das Feld wieder freigeben. Ohne diese Zeile bliebe die fremde Musik
+      // geduckt bzw. unterbrochen, bis jemand die Seite verlässt.
+      if (releaseRef.current) clearTimeout(releaseRef.current);
+      releaseRef.current = setTimeout(() => {
+        try {
+          const nav = navigator as AudioSessionNavigator;
+          if (nav.audioSession) nav.audioSession.type = "auto";
+        } catch {
+          // dann eben nicht
+        }
+      }, offset * 1000 + SESSION_RELEASE_MS);
     },
     [enabled]
   );
 
   useEffect(() => {
     return () => {
+      if (releaseRef.current) clearTimeout(releaseRef.current);
       void contextRef.current?.close();
       contextRef.current = null;
     };

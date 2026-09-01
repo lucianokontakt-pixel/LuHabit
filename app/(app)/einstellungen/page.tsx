@@ -335,7 +335,7 @@ export default function EinstellungenPage() {
           icon={Bell}
           iconTint="var(--chart-1)"
           title="Signalton"
-          subtitle="Am Ende der Pause und beim Rundenwechsel."
+          subtitle="Am Ende der Pause und beim Rundenwechsel. Laufende Musik wird kurz leiser, statt zu stoppen."
         >
           <Switch checked={soundOn} onCheckedChange={toggleSound} />
         </Row>
