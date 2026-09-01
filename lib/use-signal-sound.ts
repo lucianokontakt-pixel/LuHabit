@@ -44,21 +44,25 @@ type AudioSessionNavigator = Navigator & {
 };
 
 /**
- * Die Sitzungsart für den Ton — und die Stelle, an der eine Trainings-App
- * gegenüber laufender Musik höflich sein muss.
+ * Die Sitzungsart für den Ton.
  *
- * Hier stand 'playback'. Das ist die Einstufung für Inhalt, den jemand hören
- * will — ein Podcast, ein Video —, und iOS räumt dafür das Feld: Spotify wird
- * *unterbrochen*, nicht leiser gemacht. Solange die Sitzungsart stehen blieb
- * (und sie blieb stehen, vom ersten abgehakten Satz bis zum Verlassen der
- * Seite), erfuhr Spotify nie, dass die Unterbrechung vorbei ist. Es blieb
- * stumm, bis man von Hand auf Play drückte.
+ * 'playback' ist die einzige, die am Klingelschalter des iPhones vorbeikommt.
+ * Alles andere — 'auto', 'ambient', 'transient' — behandelt die Seite wie
+ * einen Klingelton und schweigt, sobald der Schalter auf lautlos steht. In
+ * einer Halle steht er das immer. Ein Versuch mit 'transient', das fremde
+ * Musik nur ducken statt unterbrechen sollte, ergab genau deshalb gar keinen
+ * Ton mehr.
  *
- * 'transient' ist die Einstufung für genau das, was hier passiert: ein kurzes
- * Signal über fremder Musik. Sie duckt die Musik für die Dauer des Tons,
- * danach kommt sie von allein zurück.
+ * Der Preis von 'playback' ist, dass iOS dafür das Feld räumt: laufende Musik
+ * wird unterbrochen, nicht leiser gemacht. Das ist verkraftbar, solange die
+ * Unterbrechung *endet* — dann meldet iOS „interruption ended, du darfst
+ * weiterspielen“ und Spotify macht von allein weiter.
+ *
+ * Genau das fehlte: die Sitzungsart wurde beim ersten abgehakten Satz gesetzt
+ * und nie zurückgenommen, also endete die Unterbrechung nie. Sie gilt jetzt
+ * nur um den Ton herum (siehe play) und fällt danach auf 'auto' zurück.
  */
-const SESSION_TYPE = "transient";
+const SESSION_TYPE = "playback";
 
 /**
  * Wie lange nach dem letzten Oszillator die Sitzungsart stehen bleibt, bevor
@@ -142,11 +146,9 @@ export function useSignalSound() {
       const ctx = contextRef.current;
       if (!ctx || ctx.state === "closed") return;
 
-      // Weggelegt heißt nicht verloren: aufwecken und trotzdem spielen. Die
-      // Töne werden auf ctx.currentTime geplant, das läuft nach dem resume
-      // weiter — schlimmstenfalls kommt der Ton einen Wimpernschlag später.
-      if (ctx.state !== "running") void ctx.resume();
-
+      // Erst die Sitzungsart, dann aufwecken: ein Wechsel der Kategorie kann
+      // den Kontext selbst kurz unterbrechen, und was davor geplant wurde,
+      // fiele dabei aus.
       try {
         const nav = navigator as AudioSessionNavigator;
         if (nav.audioSession) nav.audioSession.type = SESSION_TYPE;
@@ -154,6 +156,11 @@ export function useSignalSound() {
         // Ohne Audio Session API klingt es wie vorher — nur eben am
         // Stummschalter des iPhones.
       }
+
+      // Weggelegt heißt nicht verloren: aufwecken und trotzdem spielen. Die
+      // Töne werden auf ctx.currentTime geplant, das läuft nach dem resume
+      // weiter — schlimmstenfalls kommt der Ton einen Wimpernschlag später.
+      if (ctx.state !== "running") void ctx.resume();
 
       let offset = 0;
       for (const tone of TONES[signal]) {
@@ -175,8 +182,9 @@ export function useSignalSound() {
         offset += tone.duration + 0.05;
       }
 
-      // Das Feld wieder freigeben. Ohne diese Zeile bliebe die fremde Musik
-      // geduckt bzw. unterbrochen, bis jemand die Seite verlässt.
+      // Das Feld wieder freigeben — das ist der eigentliche Fix. Ohne diese
+      // Zeile bliebe fremde Musik unterbrochen, bis jemand die Seite verlässt,
+      // und Spotify erführe nie, dass es weitergehen darf.
       if (releaseRef.current) clearTimeout(releaseRef.current);
       releaseRef.current = setTimeout(() => {
         try {
@@ -198,5 +206,21 @@ export function useSignalSound() {
     };
   }, []);
 
-  return { enabled, toggle, unlock, play };
+  /**
+   * Einmal hören, was am Ende der Pause kommt — ohne eine Pause abzuwarten.
+   *
+   * Der Ton hängt an Dingen, die sich nur am Gerät zeigen: am Klingelschalter,
+   * an der Sitzungsart, an laufender Musik. Ihn nur über einen echten
+   * Pausentimer prüfen zu können hieß, für jede Änderung eine Einheit zu
+   * starten und Minuten zu warten.
+   */
+  const test = useCallback(() => {
+    unlock();
+    // Der Kontext wird im selben Tap erzeugt; ein Sprung durch die Ereignis-
+    // schleife gibt ihm die Gelegenheit, wirklich zu laufen, bevor der Ton
+    // geplant wird.
+    setTimeout(() => play("finish"), 60);
+  }, [unlock, play]);
+
+  return { enabled, toggle, unlock, play, test };
 }
