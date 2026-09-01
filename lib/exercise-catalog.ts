@@ -31,6 +31,12 @@ export type CatalogExercise = {
   region: Region | null;
   /** Wie üblich die Übung ist, 1–5. Sortiert die Suche und blendet unten aus. */
   rank: number;
+  /**
+   * Womit man anfängt, als Anteil des Körpergewichts — geschätzt in
+   * scripts/exercise-startgewicht.mjs. null heißt Eigengewicht: dort ist das
+   * Gewicht der Körper und es gibt nichts zu schätzen.
+   */
+  startFactor: number | null;
 };
 
 export const CATALOG = catalogData as CatalogExercise[];
@@ -70,7 +76,9 @@ export function fromCatalog(entry: CatalogExercise): Exercise {
     hidden: false,
     favorite: false,
     increment: null,
-    bodyweightFactor: defaults?.factor ?? null,
+    // Von Hand gesetzt schlägt geschätzt — auch eine ausdrückliche Null, die
+    // heißt „für diese Übung gibt es keinen Startwert" und keine Lücke.
+    bodyweightFactor: defaults && "factor" in defaults ? defaults.factor : entry.startFactor,
     loadFactor:
       defaults?.load ??
       (entry.equipment === "bodyweight" ? DEFAULT_BODYWEIGHT_LOAD : null),

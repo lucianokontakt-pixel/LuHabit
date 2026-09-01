@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { EQUIPMENT, MUSCLE, SECONDARY } from "./exercise-mapping.mjs";
 import { beliebtheit } from "./exercise-beliebtheit.mjs";
 import { region } from "./exercise-regionen.mjs";
+import { startFaktor } from "./exercise-startgewicht.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "..");
@@ -84,6 +85,9 @@ for (const e of db) {
     // sich zwischen zwei Läufen dieses Skripts nicht ändern.
     region: region({ tg: e.tg, name: e.n, muscle }),
     rank: beliebtheit({ name: e.n, equipment }),
+    // Womit man anfängt, als Anteil des Körpergewichts. null bei Eigengewicht:
+    // dort gibt es nichts zu schätzen, das Gewicht ist der Körper.
+    startFactor: startFaktor({ name: e.n, muscle, equipment }),
     // Die Mediendateien heißen durchweg "<id>-<hash>.gif" bzw. ".jpg" — es
     // reicht, den Hash zu speichern.
     media: e.gif.slice(e.id.length + 1, -4),
@@ -142,6 +146,10 @@ console.log(
 );
 const mitRegion = catalog.filter((e) => e.region).length;
 console.log(`Regionen:     ${mitRegion} von ${catalog.length} zugeordnet`);
+const mitStart = catalog.filter((e) => e.startFactor !== null).length;
+console.log(
+  `Startgewicht: ${mitStart} geschätzt, ${catalog.length - mitStart} ohne (Eigengewicht)`
+);
 const ohneNeben = catalog.filter((e) => e.secondary.length === 0).length;
 console.log(`Nebenmuskeln: ${catalog.length - ohneNeben} Übungen haben welche, ${ohneNeben} nicht`);
 if (unknown.equipment.size) console.log(`Unbekanntes Gerät:  ${[...unknown.equipment].join(", ")}`);

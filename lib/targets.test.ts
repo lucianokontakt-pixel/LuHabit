@@ -518,11 +518,40 @@ describe("suggestAdjustment", () => {
     ).toBeNull();
   });
 
-  it("schweigt an der Obergrenze — das ist normale Progression", () => {
+  it("meldet sich schon an der Obergrenze, nicht erst darüber", () => {
+    // Vorher schwieg die App hier: zwölf von 8–12 war das Ziel, kein
+    // Überschreiten. Nur ist ein erreichtes Ziel genau der Moment, in dem
+    // etwas passieren soll — und dass die Steigerung erst die nächste Einheit
+    // betraf, war in der Halle nicht zu erkennen.
+    const result = suggestAdjustment({
+      sets: [
+        { weight: 40, reps: 12, done: true },
+        { weight: 40, reps: 8, done: false },
+      ],
+      ...range,
+    });
+    expect(result?.direction).toBe("up");
+    expect(result?.hasRemaining).toBe(true);
+    // Mindestens ein Sprung, obwohl die Formel bei genau getroffener Grenze
+    // das Ausgangsgewicht ergäbe.
+    expect(result?.nextWeight).toBeGreaterThan(40);
+  });
+
+  it("hängt an der Obergrenze ohne offene Sätze einen Satz an", () => {
+    const result = suggestAdjustment({
+      sets: [{ weight: 40, reps: 12, done: true }],
+      ...range,
+    });
+    expect(result?.hasRemaining).toBe(false);
+    expect(result?.direction).toBe("up");
+    expect(result?.nextWeight).toBeGreaterThan(40);
+  });
+
+  it("schweigt weiterhin innerhalb des Bereichs", () => {
     expect(
       suggestAdjustment({
         sets: [
-          { weight: 40, reps: 12, done: true },
+          { weight: 40, reps: 10, done: true },
           { weight: 40, reps: 8, done: false },
         ],
         ...range,

@@ -116,6 +116,40 @@ describe("Beliebtheit", () => {
   });
 });
 
+describe("Startgewicht", () => {
+  it("schätzt für jede Übung mit Gerät, für keine ohne", () => {
+    const falsch = CATALOG.filter((e) =>
+      e.equipment === "bodyweight" ? e.startFactor !== null : e.startFactor === null
+    );
+    expect(falsch.map((e) => `${e.name} (${e.equipment})`)).toEqual([]);
+  });
+
+  it("bleibt in einem Rahmen, den ein Mensch heben kann", () => {
+    // Über dem Eineinhalbfachen des Körpergewichts anzufangen ist kein
+    // Vorschlag mehr, sondern ein Vorwurf.
+    const daneben = CATALOG.filter(
+      (e) => e.startFactor !== null && (e.startFactor <= 0 || e.startFactor > 1.5)
+    );
+    expect(daneben.map((e) => `${e.name} ${e.startFactor}`)).toEqual([]);
+  });
+
+  it("lässt die von Hand gesetzten Werte gewinnen", () => {
+    for (const [id, d] of Object.entries(CATALOG_DEFAULTS)) {
+      const entry = catalogEntry(id);
+      if (!entry) continue;
+      expect(fromCatalog(entry).bodyweightFactor, entry.name).toBe(d.factor);
+    }
+  });
+
+  it("gibt Drücken mehr als Fliegenden am selben Gerät", () => {
+    // Die halbe Begründung der ganzen Tabelle: der Unterschied zwischen zwei
+    // Bewegungen ist größer als der zwischen zwei Muskelgruppen.
+    const druecken = CATALOG.find((e) => e.name === "Dumbbell Bench Press");
+    const fliegende = CATALOG.find((e) => e.name === "Dumbbell Fly");
+    expect(druecken?.startFactor).toBeGreaterThan(fliegende?.startFactor ?? 0);
+  });
+});
+
 describe("Regionen", () => {
   it("vergibt nur Regionen, die zur Muskelgruppe der Übung gehören", () => {
     const erlaubt = new Map(REGIONS.map((r) => [r.key, r.muscle]));

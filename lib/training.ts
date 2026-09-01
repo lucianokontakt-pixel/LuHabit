@@ -770,8 +770,16 @@ export function suggestAdjustment({
     return repsSuggestion({ set, index, open, hasRemaining, repMax });
   }
 
+  // Die Obergrenze zu *erreichen* zählt schon, nicht erst sie zu überschreiten.
+  // Vorher stand hier `>`: wer in einem 12–20-Plan zwanzig Wiederholungen
+  // machte, bekam nichts zu sehen — der Satz war ja auf dem Ziel. Nur ist ein
+  // erreichtes Ziel genau der Moment, in dem etwas passieren soll; dass das
+  // erst die nächste Einheit betraf, war im Gym nicht zu erkennen und las sich
+  // wie ein Fehler. retargetWeight sorgt dafür, dass dabei mindestens ein
+  // Sprung herauskommt, auch wenn die Formel bei genau getroffener Grenze das
+  // Ausgangsgewicht ergäbe.
   const direction: "up" | "down" | null =
-    set.reps > repMax ? "up" : set.reps < repMin ? "down" : null;
+    set.reps >= repMax ? "up" : set.reps < repMin ? "down" : null;
   if (!direction) return null;
 
   const targetReps = direction === "up" ? repMax : repMin;
@@ -816,9 +824,10 @@ function repsSuggestion({
   repMax: number;
 }): SetAdjustment | null {
   // Ohne offene Sätze lohnt nur der starke Fall: einen Satz dranhängen, wenn
-  // die Obergrenze klar gefallen ist.
+  // die Obergrenze erreicht ist. Dieselbe Grenze wie oben — auch hier zählt
+  // das Erreichen, nicht erst das Überschreiten.
   if (!hasRemaining) {
-    if (set.reps <= repMax) return null;
+    if (set.reps < repMax) return null;
     return {
       axis: "reps",
       direction: "up",

@@ -1165,9 +1165,14 @@ export function SessionClient() {
                         {suggestion.warmup
                           ? `Aufwärmsatz: ${suggestion.reps} Wdh mit ${formatNumber(suggestion.weight)} kg — Arbeitssätze auf ${formatNumber(suggestion.nextWeight)} kg?`
                           : `Satz ${labels[suggestion.index] ?? suggestion.index + 1}: ${
-                              suggestion.direction === "up"
-                                ? `${suggestion.reps} statt ${suggestion.targetReps} Wdh — `
-                                : `nur ${suggestion.reps} statt ${suggestion.targetReps} Wdh — `
+                              suggestion.direction === "down"
+                                ? `nur ${suggestion.reps} statt ${suggestion.targetReps} Wdh — `
+                                : // Genau die Grenze getroffen: „20 statt 20 Wdh"
+                                  // wäre keine Auskunft, sondern eine Zahl
+                                  // zweimal.
+                                  suggestion.reps === suggestion.targetReps
+                                  ? `Obergrenze mit ${suggestion.reps} Wdh erreicht — `
+                                  : `${suggestion.reps} statt ${suggestion.targetReps} Wdh — `
                             }${
                               // Ohne Zusatzgewicht wandert das
                               // Wiederholungsziel, sonst das Gewicht.
