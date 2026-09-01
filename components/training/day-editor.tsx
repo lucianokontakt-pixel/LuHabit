@@ -65,7 +65,10 @@ export function DayEditor({
     });
   }
 
-  const { displayOrder, draggingId, setItemRef, dragHandlers } = useDragSort(order, reorder);
+  const { displayOrder, draggingId, setItemRef, dragHandlers, pressHandlers } = useDragSort(
+    order,
+    reorder
+  );
   const byKey = new Map(day.exercises.map((e) => [e.key, e]));
 
   function patchExercise(key: string, patch: Partial<EditExercise>) {
@@ -178,8 +181,12 @@ export function DayEditor({
             <div
               key={key}
               ref={(el) => setItemRef(key, el)}
+              {...pressHandlers(key)}
               className={cn(
                 "rounded-panel bg-elevated ring-1 ring-foreground/8",
+                // select-none: sonst markiert der lange Druck den Text unter
+                // dem Finger, statt die Kachel zu lösen.
+                "select-none",
                 draggingId === key && "relative z-20 shadow-float"
               )}
             >

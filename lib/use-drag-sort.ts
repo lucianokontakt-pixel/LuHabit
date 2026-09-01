@@ -5,6 +5,27 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 
 const SETTLE = "transform 220ms cubic-bezier(0.2, 0, 0, 1)";
 
+/**
+ * Wie lange der Finger liegen bleiben muss, bis eine Kachel sich löst.
+ *
+ * Am Griff geht es weiterhin sofort — der ist eindeutig zum Ziehen da. Auf der
+ * Kachel selbst braucht es die Pause: dieselbe Fläche muss auch scrollen
+ * können, und ohne Wartezeit hinge die Liste bei jedem Wischen an der ersten
+ * Karte fest. 350 ms ist die Größenordnung, die iOS für dasselbe benutzt —
+ * lang genug, dass Scrollen sich nicht anfühlt wie Ziehen, kurz genug, dass
+ * Ziehen sich nicht anfühlt wie Warten.
+ */
+const LONG_PRESS_MS = 350;
+
+/**
+ * Bewegt sich der Finger vorher weiter als das, war es ein Wisch und kein
+ * Halten — der Zug wird abgeblasen und die Liste scrollt wie immer.
+ */
+const CANCEL_DISTANCE = 10;
+
+/** Die Kachel hebt sich beim Lösen an: sichtbar, aber ohne Zirkus. */
+const LIFT_SCALE = 1.04;
+
 /* Die Drag-Animation läuft bewusst am DOM statt über React-State: bei 60 fps
    wäre ein Re-Render pro Frame Verschwendung. Die Helfer stehen außerhalb des
    Hooks, damit klar bleibt, dass hier nur imperativ das Layout bewegt wird. */
@@ -69,6 +90,9 @@ export function useDragSort(order: string[], onReorder: (next: string[]) => void
   const orderRef = useRef<string[]>(order);
   const movedRef = useRef(false);
   const autoScrollRef = useRef<number | null>(null);
+  /** Der Zug ist freigegeben — am Griff sofort, auf der Kachel nach LONG_PRESS_MS. */
+  const armedRef = useRef(false);
+  const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Die Vorschau überlagert die Quelle nur so lange, bis diese nachgezogen
   // hat — und immer gefiltert auf tatsächlich vorhandene Einträge, damit ein
@@ -113,7 +137,7 @@ export function useDragSort(order: string[], onReorder: (next: string[]) => void
       el,
       pointerRef.current.x - originRef.current.x,
       pointerRef.current.y - originRef.current.y,
-      1.04
+      LIFT_SCALE
     );
   }, []);
 
@@ -243,36 +267,83 @@ export function useDragSort(order: string[], onReorder: (next: string[]) => void
      Move und Up für die Dauer des Ziehens am window. */
   const detachRef = useRef<(() => void) | null>(null);
 
+  /**
+   * Die Kachel löst sich: sie hebt sich an, die Vorschau beginnt, das
+   * Mitscrollen am Rand läuft an. Beim langen Druck passiert das im Stand —
+   * die Kachel liegt dann schon unter dem Finger und wartet auf ihn.
+   */
+  const activate = useCallback(() => {
+    const id = draggingIdRef.current;
+    if (!id || movedRef.current) return;
+    movedRef.current = true;
+    remeasure();
+    setDraggingId(id);
+    setPreviewOrder(orderRef.current);
+    const el = itemRefs.current.get(id);
+    if (el) {
+      beginDrag(el);
+      // Sofort anheben, auch ohne Bewegung: das ist die Rückmeldung, dass die
+      // Kachel jetzt am Finger hängt.
+      applyTransform(
+        el,
+        pointerRef.current.x - originRef.current.x,
+        pointerRef.current.y - originRef.current.y,
+        LIFT_SCALE
+      );
+    }
+    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(8);
+    startAutoScroll();
+  }, [remeasure, startAutoScroll]);
+
+  /** Doch kein Zug — Wartezeit abbrechen und die Geste dem Browser lassen. */
+  const abort = useCallback(() => {
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+    draggingIdRef.current = null;
+    armedRef.current = false;
+    detachRef.current?.();
+    detachRef.current = null;
+  }, []);
+
   const handleMove = useCallback(
     (clientX: number, clientY: number) => {
       const id = draggingIdRef.current;
       if (!id) return;
       pointerRef.current = { x: clientX, y: clientY };
 
+      // Noch nicht freigegeben: der Finger liegt und wartet auf den langen
+      // Druck. Wandert er dabei zu weit, war es ein Wisch — dann fällt der Zug
+      // aus und die Liste scrollt, als hätte niemand etwas vorgehabt.
+      if (!armedRef.current) {
+        const dx = clientX - originRef.current.x;
+        const dy = clientY - originRef.current.y;
+        if (Math.hypot(dx, dy) > CANCEL_DISTANCE) abort();
+        return;
+      }
+
       if (!movedRef.current) {
         const dx = clientX - originRef.current.x;
         const dy = clientY - originRef.current.y;
         // Kleine Schwelle, damit ein Tap kein Drag auslöst.
         if (Math.hypot(dx, dy) < 5) return;
-
-        movedRef.current = true;
-        remeasure();
-        setDraggingId(id);
-        setPreviewOrder(orderRef.current);
-        const el = itemRefs.current.get(id);
-        if (el) beginDrag(el);
-        if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(8);
-        startAutoScroll();
+        activate();
       }
 
       moveDraggedToPointer();
       reorderToPointer();
     },
-    [moveDraggedToPointer, reorderToPointer, remeasure, startAutoScroll]
+    [moveDraggedToPointer, reorderToPointer, activate, abort]
   );
 
   const handleUp = useCallback(() => {
     const id = draggingIdRef.current;
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+    armedRef.current = false;
     detachRef.current?.();
     detachRef.current = null;
     if (!id) return;
@@ -296,7 +367,7 @@ export function useDragSort(order: string[], onReorder: (next: string[]) => void
   }, [onReorder, order, stopAutoScroll]);
 
   const onPointerDown = useCallback(
-    (id: string, e: ReactPointerEvent<HTMLElement>) => {
+    (id: string, e: ReactPointerEvent<HTMLElement>, sofort: boolean) => {
       // Taps auf Buttons und Links im Inneren bleiben Taps.
       if ((e.target as HTMLElement).closest("button, a, input, [data-no-drag]")) return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -307,18 +378,39 @@ export function useDragSort(order: string[], onReorder: (next: string[]) => void
       originRef.current = { x: e.clientX, y: e.clientY };
       pointerRef.current = { x: e.clientX, y: e.clientY };
 
+      // Am Griff ist die Absicht eindeutig, dort zählt die erste Bewegung. Auf
+      // der Kachel muss der Finger erst liegen bleiben.
+      armedRef.current = sofort;
+      if (!sofort) {
+        pressTimerRef.current = setTimeout(() => {
+          pressTimerRef.current = null;
+          armedRef.current = true;
+          activate();
+        }, LONG_PRESS_MS);
+      }
+
       const move = (ev: PointerEvent) => handleMove(ev.clientX, ev.clientY);
       const up = () => handleUp();
+      /* Sobald die Kachel am Finger hängt, darf die Seite nicht mehr
+         mitscrollen. Am Griff erledigt das `touch-none` im CSS; auf der Kachel
+         geht das nicht, weil dieselbe Fläche vorher scrollen können muss.
+         Also nicht-passiv zuhören und die Geste erst dann abfangen, wenn der
+         Zug wirklich läuft. */
+      const touchMove = (ev: TouchEvent) => {
+        if (movedRef.current) ev.preventDefault();
+      };
       window.addEventListener("pointermove", move);
       window.addEventListener("pointerup", up);
       window.addEventListener("pointercancel", up);
+      window.addEventListener("touchmove", touchMove, { passive: false });
       detachRef.current = () => {
         window.removeEventListener("pointermove", move);
         window.removeEventListener("pointerup", up);
         window.removeEventListener("pointercancel", up);
+        window.removeEventListener("touchmove", touchMove);
       };
     },
-    [handleMove, handleUp]
+    [handleMove, handleUp, activate]
   );
 
   // Beim Verlassen der Seite mitten im Ziehen nichts hängen lassen.
@@ -330,12 +422,32 @@ export function useDragSort(order: string[], onReorder: (next: string[]) => void
     []
   );
 
+  /** Der Griff: Absicht ist eindeutig, die erste Bewegung zieht. */
   const dragHandlers = useCallback(
     (id: string) => ({
-      onPointerDown: (e: ReactPointerEvent<HTMLElement>) => onPointerDown(id, e),
+      onPointerDown: (e: ReactPointerEvent<HTMLElement>) => onPointerDown(id, e, true),
     }),
     [onPointerDown]
   );
 
-  return { displayOrder, draggingId, setItemRef, dragHandlers };
+  /**
+   * Die ganze Kachel: langer Druck löst sie, wie auf dem Homescreen. Der Griff
+   * bleibt trotzdem — er sagt, dass sich hier überhaupt etwas verschieben
+   * lässt, und wer ihn trifft, muss nicht warten.
+   */
+  const pressHandlers = useCallback(
+    (id: string) => ({
+      onPointerDown: (e: ReactPointerEvent<HTMLElement>) => onPointerDown(id, e, false),
+    }),
+    [onPointerDown]
+  );
+
+  useEffect(
+    () => () => {
+      if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
+    },
+    []
+  );
+
+  return { displayOrder, draggingId, setItemRef, dragHandlers, pressHandlers };
 }
