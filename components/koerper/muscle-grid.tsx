@@ -217,7 +217,14 @@ export function MuscleGrid({ progress }: { progress: MuscleProgress[] }) {
           </ChartContainer>
         </div>
 
-        <div className="-mx-4 flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-(--card-spacing)">
+        {/* Umbrechen statt schieben, und hier bewusst kein Auswahlblatt: das
+            ist keine Suche, sondern die Legende des Diagramms darüber — welche
+            Linien gezeichnet sind, steht in denselben Knöpfen, mit denen man
+            sie an- und ausschaltet. In ein Blatt verschoben wäre die Auskunft
+            weg, sobald man es zumacht. Sichtbar bleiben muss sie trotzdem:
+            zehn Knöpfe brauchten 775 px und hatten 375, die Hälfte lag
+            außerhalb. */}
+        <div className="flex flex-wrap gap-1.5 px-(--card-spacing)">
           {progress.map((entry) => (
             <button
               key={entry.muscle}

@@ -1463,6 +1463,16 @@ export function SessionClient() {
             ? "Der Ersatz behält Satzzahl, Wiederholungen und Pause des Plans. Nur für heute — der Plan bleibt, wie er ist."
             : "Aus der Bibliothek wählen oder eine eigene Übung anlegen."
         }
+        // Die Übung, die gerade auf dem Platz steht — nach einem früheren
+        // Tausch ist das eine andere als die im Plan. `exercises` trägt den
+        // aktuellen Stand, `day.exercises` den geplanten.
+        alternativeTo={
+          tauschFuer
+            ? exerciseById[
+                exercises.find((pe) => slotVon[pe.id] === tauschFuer)?.exerciseId ?? ""
+              ] ?? null
+            : null
+        }
       />
 
       <AlertDialog open={confirmAbort} onOpenChange={setConfirmAbort}>

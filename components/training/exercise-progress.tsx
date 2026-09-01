@@ -9,16 +9,16 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { StatValue } from "@/components/stat-value";
+import { FilterSelect } from "@/components/training/filter-sheet";
 import {
+  MUSCLE_LABELS,
   displayOneRepMax,
   workingSets,
   type Exercise,
   type WorkoutSession,
 } from "@/lib/training";
 import { formatNumber } from "@/lib/format";
-import { cn } from "@/lib/utils";
 
 const chartConfig = {
   weight: { label: "Arbeitsgewicht", color: "var(--chart-1)" },
@@ -32,8 +32,6 @@ export function ExerciseProgress({
   sessions: WorkoutSession[];
   exerciseById: Record<string, Exercise>;
 }) {
-  const [query, setQuery] = useState("");
-
   // Nur Übungen anbieten, für die es auch Verlauf gibt.
   const trained = useMemo(() => {
     const ids = new Set<string>();
@@ -49,11 +47,6 @@ export function ExerciseProgress({
   const [selected, setSelected] = useState<string | null>(null);
   const activeId = selected && trained.some((e) => e.id === selected) ? selected : trained[0]?.id;
   const active = activeId ? exerciseById[activeId] : null;
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return q ? trained.filter((e) => e.name.toLowerCase().includes(q)) : trained;
-  }, [trained, query]);
 
   const history = useMemo(() => {
     if (!activeId) return [];
@@ -109,31 +102,25 @@ export function ExerciseProgress({
         </p>
       </div>
 
-      <div className="px-(--card-spacing)">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Übung filtern"
-          className="h-10"
+      {/* Ein Suchfeld und eine quer scrollende Reihe für dieselbe Sache — und
+          das auf einer Seite, die oben schon beides hat. Jetzt ein Knopf, der
+          die trainierten Übungen untereinander zeigt; der Name der gewählten
+          steht darin, statt aus der Reihe herausgescrollt zu sein. */}
+      <div className="flex px-(--card-spacing)">
+        <FilterSelect
+          label="Übung"
+          allLabel="Übung wählen"
+          value={activeId ?? null}
+          options={trained.map((e) => ({
+            value: e.id,
+            label: e.name,
+            hint: MUSCLE_LABELS[e.muscle],
+          }))}
+          // Ohne Auswahl steht die erste Übung im Diagramm — eine leere Karte
+          // wäre kein sinnvoller Zustand. Darum führt „Übung wählen“ zurück
+          // auf sie, statt auf nichts.
+          onChange={(next) => setSelected(next ?? trained[0]?.id ?? null)}
         />
-      </div>
-
-      <div className="-mx-4 flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-(--card-spacing)">
-        {filtered.map((exercise) => (
-          <button
-            key={exercise.id}
-            type="button"
-            onClick={() => setSelected(exercise.id)}
-            className={cn(
-              "shrink-0 rounded-pill px-3 py-1.5 text-xs transition-colors",
-              exercise.id === activeId
-                ? "bg-primary text-primary-foreground"
-                : "bg-elevated text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {exercise.name}
-          </button>
-        ))}
       </div>
 
       {active && latest && (

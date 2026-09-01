@@ -10,6 +10,7 @@ import { STATISTIK_TABS } from "@/lib/nav-links";
 import { ExerciseTrendChart } from "@/components/training/exercise-trend-chart";
 import { ExerciseProgress } from "@/components/training/exercise-progress";
 import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
+import { FilterSelect } from "@/components/training/filter-sheet";
 import { useTraining } from "@/lib/training-store";
 import { summarizeProgress, type ProgressSummary } from "@/lib/progression";
 import { MUSCLES, workingSets, type Exercise, type Muscle } from "@/lib/training";
@@ -71,7 +72,7 @@ function ProgressRow({
           aria-label={`${summary.exercise.name} ansehen`}
           className="shrink-0 rounded-md transition-opacity hover:opacity-80"
         >
-          <ExerciseThumb exercise={summary.exercise} className="size-9" />
+          <ExerciseThumb exercise={summary.exercise} className="size-11" />
         </button>
 
         <button
@@ -138,7 +139,7 @@ function ProgressRow({
 export default function ProgressionPage() {
   const { exercises, sessions, exerciseById, loading } = useTraining();
   const [query, setQuery] = useState("");
-  const [muscle, setMuscle] = useState<Muscle | "all">("all");
+  const [muscle, setMuscle] = useState<Muscle | null>(null);
   const [sort, setSort] = useState<"activity" | "stagnating" | "gain">("activity");
 
   const summaries = useMemo(() => {
@@ -156,7 +157,7 @@ export default function ProgressionPage() {
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = summaries
-      .filter((s) => (muscle === "all" ? true : s.exercise.muscle === muscle))
+      .filter((s) => (muscle === null ? true : s.exercise.muscle === muscle))
       .filter((s) => (q ? s.exercise.name.toLowerCase().includes(q) : true));
 
     return [...filtered].sort((a, b) => {
@@ -237,36 +238,18 @@ export default function ProgressionPage() {
               </TabsList>
             </Tabs>
 
-            <div className="-mx-4 flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-1">
-              <button
-                type="button"
-                onClick={() => setMuscle("all")}
-                className={cn(
-                  "shrink-0 rounded-pill px-3 py-1.5 text-xs transition-colors",
-                  muscle === "all"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Alle
-              </button>
-              {MUSCLES.filter((m) => summaries.some((s) => s.exercise.muscle === m.key)).map(
-                (m) => (
-                  <button
-                    key={m.key}
-                    type="button"
-                    onClick={() => setMuscle(muscle === m.key ? "all" : m.key)}
-                    className={cn(
-                      "shrink-0 rounded-pill px-3 py-1.5 text-xs transition-colors",
-                      muscle === m.key
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-card text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {m.label}
-                  </button>
-                )
-              )}
+            {/* Nur die Muskelgruppen, für die es überhaupt Verlauf gibt —
+                eine Auswahl, die ins Leere führt, ist keine. */}
+            <div className="flex">
+              <FilterSelect
+                label="Muskelgruppe"
+                allLabel="Alle Muskeln"
+                value={muscle}
+                options={MUSCLES.filter((m) =>
+                  summaries.some((s) => s.exercise.muscle === m.key)
+                ).map((m) => ({ value: m.key, label: m.label }))}
+                onChange={setMuscle}
+              />
             </div>
           </div>
 

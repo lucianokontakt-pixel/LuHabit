@@ -61,6 +61,8 @@ export function ExerciseEditor({
   const [loadFactor, setLoadFactor] = useState("");
   const [startFactor, setStartFactor] = useState("");
   const [warmup, setWarmup] = useState<"always" | "never" | null>(null);
+  /** null heißt: es gilt die Stufe aus dem Katalog. */
+  const [rating, setRating] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +77,7 @@ export function ExerciseEditor({
     setLoadFactor(toField(exercise.loadFactor));
     setStartFactor(toField(exercise.bodyweightFactor));
     setWarmup(exercise.warmup);
+    setRating(exercise.rating);
     setError(null);
   }, [exercise]);
 
@@ -110,6 +113,7 @@ export function ExerciseEditor({
           loadFactor: nextLoad,
           bodyweightFactor: nextStart,
           warmup,
+          rating,
         })
       );
       toast.success(`„${trimmed}“ gespeichert`);
@@ -271,6 +275,39 @@ export function ExerciseEditor({
               {isBodyweight && warmup === "always"
                 ? "Wirkt nur mit eingetragenem Zusatzgewicht — bei 0 kg gibt es nichts abzustufen."
                 : "Automatisch: die erste Übung des Tages immer, sonst ab 40 kg Arbeitsgewicht."}
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs text-muted-foreground">Beliebtheit</Label>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((stufe) => (
+                <button
+                  key={stufe}
+                  type="button"
+                  // Nochmal auf denselben Balken tippen gibt die Entscheidung
+                  // zurück an die Automatik — sonst käme man nie wieder dorthin.
+                  onClick={() => setRating(rating === stufe ? null : stufe)}
+                  aria-label={`Stufe ${stufe}`}
+                  aria-pressed={(rating ?? exercise.rank) >= stufe}
+                  className={cn(
+                    "h-9 flex-1 rounded-field transition-colors",
+                    (rating ?? exercise.rank) >= stufe
+                      ? rating !== null
+                        ? "bg-primary"
+                        : "bg-muted-foreground/40"
+                      : "bg-card"
+                  )}
+                />
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              {rating === null
+                ? `Automatisch Stufe ${exercise.rank} — geschätzt aus Gerät und Name. Antippen, um selbst zu entscheiden.`
+                : `Stufe ${rating}, selbst vergeben. Nochmal antippen für die Automatik.` +
+                  (rating < 3
+                    ? " Unter Stufe 3 taucht die Übung in der Suche nur noch mit „Ungewöhnliche zeigen“ auf."
+                    : "")}
             </p>
           </div>
 

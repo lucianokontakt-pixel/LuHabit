@@ -123,7 +123,11 @@ export function DayEditor({
 
       <div className="flex flex-col gap-1.5 px-(--card-spacing)">
         <p className="text-[11px] text-muted-foreground">Fester Wochentag (optional)</p>
-        <div className="-mx-4 flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-1">
+        {/* Umbrechen statt schieben: acht Knöpfe brauchen 412 px und haben
+            343 — der Sonntag lag außerhalb, und dass dort noch etwas kommt,
+            sah man nicht. Zwei Zeilen zeigen die ganze Woche auf einmal, und
+            um mehr geht es bei einer Woche nicht. */}
+        <div className="flex flex-wrap gap-1.5">
           <button
             type="button"
             onClick={() => onChange({ ...day, weekday: null })}
@@ -202,7 +206,7 @@ export function DayEditor({
                 >
                   <ExerciseThumb
                     exercise={exercise ?? { id: entry.exerciseId, name: "", media: null }}
-                    className="size-10"
+                    className="size-12"
                   />
                 </button>
 
@@ -374,6 +378,13 @@ export function DayEditor({
           tauschFuer
             ? "Der Ersatz behält Sätze, Wiederholungen und Pause dieses Platzes."
             : "Aus der Bibliothek wählen oder eine eigene Übung anlegen."
+        }
+        alternativeTo={
+          tauschFuer
+            ? exerciseById[
+                day.exercises.find((e) => e.key === tauschFuer)?.exerciseId ?? ""
+              ] ?? null
+            : null
         }
       />
 

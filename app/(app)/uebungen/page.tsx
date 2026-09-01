@@ -2,24 +2,39 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Eye, EyeOff, Pencil, Plus, Search, Star, Trash2 } from "lucide-react";
+import { Ellipsis, Eye, EyeOff, Pencil, Plus, Search, Sparkles, Star, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ExercisePicker } from "@/components/training/exercise-picker";
 import { ExerciseEditor } from "@/components/training/exercise-editor";
 import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
+import { FilterSelect } from "@/components/training/filter-sheet";
+import { RankBars } from "@/components/training/rank-bars";
 import { useTraining } from "@/lib/training-store";
 import { deleteExercise, updateExercise } from "@/lib/api-training";
 import {
   EQUIPMENT,
   EQUIPMENT_LABELS,
   MUSCLES,
+  MUSCLE_LABELS,
+  RANK_SICHTBAR_AB,
+  REGION_SHORT,
+  REGIONS,
   defaultIncrement,
+  stufeVon,
   type Equipment,
   type Exercise,
   type Muscle,
+  type Region,
 } from "@/lib/training";
+import { useShowRare } from "@/lib/use-show-rare";
 import { cn } from "@/lib/utils";
 import { MUSCLE_TINT, TINT_FILL } from "@/lib/tints";
 
@@ -31,6 +46,21 @@ const EQUIPMENT_KEYS = EQUIPMENT;
  * Zeilen samt Vorschaubild im Dokument, nur damit jemand nach unten wischt.
  */
 const VORSCHAU = 24;
+
+/**
+ * Wonach die Liste innerhalb einer Muskelgruppe sortiert.
+ *
+ * Gruppiert bleibt sie immer nach Muskel — das ist die Ordnung, in der man
+ * eine Übungsbibliothek durchsieht, und eine flache Liste von 1295 Einträgen
+ * wäre nach keiner Sortierung übersichtlich.
+ */
+type Sortierung = "beliebtheit" | "name" | "zuletzt";
+
+const SORT_OPTIONS: { value: Sortierung; label: string; hint: string }[] = [
+  { value: "beliebtheit", label: "Beliebtheit", hint: "Favoriten zuerst" },
+  { value: "name", label: "Name", hint: "A–Z" },
+  { value: "zuletzt", label: "Zuletzt trainiert", hint: "Neueste zuerst" },
+];
 
 /**
  * Die Zeile unter dem Übungsnamen — oder nichts.
@@ -50,6 +80,9 @@ function zusatzZeile(exercise: Exercise): string | null {
   const geraet = EQUIPMENT_LABELS[exercise.equipment];
   const teile = [
     exercise.name.toLowerCase().includes(geraet.toLowerCase()) ? null : geraet,
+    // Der Bereich steht vor dem Sprung: er sagt etwas über die Bewegung, alles
+    // Weitere nur über die Einstellungen.
+    exercise.region ? REGION_SHORT[exercise.region] : null,
     exercise.increment !== null ? `${exercise.increment} kg Sprung` : null,
     // Der Lastanteil erklärt, warum eine Übung ohne Hantel überhaupt Volumen
     // erzeugt.
@@ -64,12 +97,15 @@ function zusatzZeile(exercise: Exercise): string | null {
 }
 
 export default function ExercisesPage() {
-  const { exercises, upsertExercise, reload, loading } = useTraining();
+  const { exercises, sessions, upsertExercise, reload, loading } = useTraining();
   const [query, setQuery] = useState("");
-  const [muscle, setMuscle] = useState<Muscle | "all">("all");
-  const [equipment, setEquipment] = useState<Equipment | "all">("all");
+  const [muscle, setMuscle] = useState<Muscle | null>(null);
+  const [equipment, setEquipment] = useState<Equipment | null>(null);
+  const [region, setRegion] = useState<Region | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [showRare, toggleShowRare] = useShowRare();
+  const [sort, setSort] = useState<Sortierung>("beliebtheit");
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Exercise | null>(null);
   const [detail, setDetail] = useState<Exercise | null>(null);
@@ -81,8 +117,12 @@ export default function ExercisesPage() {
     return exercises
       .filter((e) => (showHidden ? true : !e.hidden))
       .filter((e) => (favoritesOnly ? e.favorite : true))
-      .filter((e) => (muscle === "all" ? true : e.muscle === muscle))
-      .filter((e) => (equipment === "all" ? true : e.equipment === equipment))
+      // Die ungewöhnlichen bleiben draußen, bis jemand danach fragt — außer er
+      // hat die Übung als Favorit markiert, dann ist die Frage beantwortet.
+      .filter((e) => showRare || e.favorite || stufeVon(e) >= RANK_SICHTBAR_AB)
+      .filter((e) => (muscle === null ? true : e.muscle === muscle))
+      .filter((e) => (equipment === null ? true : e.equipment === equipment))
+      .filter((e) => (region === null ? true : e.region === region))
       // Auch der englische Originalname zählt — wer "bench press" tippt, soll
       // Bankdrücken finden.
       .filter((e) =>
@@ -90,7 +130,36 @@ export default function ExercisesPage() {
           ? e.name.toLowerCase().includes(q) || (e.en?.toLowerCase().includes(q) ?? false)
           : true
       );
-  }, [exercises, query, muscle, equipment, showHidden, favoritesOnly]);
+  }, [exercises, query, muscle, equipment, region, showHidden, favoritesOnly, showRare]);
+
+  /**
+   * Wann eine Übung zuletzt vorkam. Aus den Einheiten, nicht aus der Übung
+   * selbst — die weiß nichts über den Verlauf. sessions kommt absteigend nach
+   * Datum, der erste Treffer ist also schon der jüngste.
+   */
+  const zuletztAm = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const session of sessions) {
+      for (const set of session.sets) {
+        if (map[set.exerciseId] === undefined) map[set.exerciseId] = session.date;
+      }
+    }
+    return map;
+  }, [sessions]);
+
+  /**
+   * Die Regionen, die zur Auswahl stehen. Ist eine Muskelgruppe gewählt, nur
+   * ihre — sonst stünde unter „Brust“ auch „Lat“ und liefe ins Leere.
+   */
+  const regionOptions = useMemo(
+    () =>
+      REGIONS.filter((r) => muscle === null || r.muscle === muscle).map((r) => ({
+        value: r.key,
+        label: r.label,
+        hint: muscle === null ? MUSCLE_LABELS[r.muscle] : undefined,
+      })),
+    [muscle]
+  );
 
   const grouped = useMemo(() => {
     const map = new Map<Muscle, typeof filtered>();
@@ -99,14 +168,33 @@ export default function ExercisesPage() {
       list.push(e);
       map.set(e.muscle, list);
     }
-    // Favoriten zuerst, sonst bleibt die alphabetische Reihenfolge erhalten.
-    for (const list of map.values()) {
-      list.sort((a, b) => Number(b.favorite) - Number(a.favorite));
-    }
+    // Jede Sortierung tut genau das, was auf ihrem Knopf steht. Favoriten
+    // stehen nur bei „Beliebtheit“ vorn: dort gehören sie hin, weil die Frage
+    // „was ist für mich das Naheliegendste“ lautet. Bei „Name“ wären sie eine
+    // Lüge — eine Liste A–Z, die nicht bei A anfängt.
+    const nachName = (a: Exercise, b: Exercise) => a.name.localeCompare(b.name, "de");
+    const vergleich: Record<Sortierung, (a: Exercise, b: Exercise) => number> = {
+      beliebtheit: (a, b) =>
+        Number(b.favorite) - Number(a.favorite) ||
+        stufeVon(b) - stufeVon(a) ||
+        nachName(a, b),
+      name: nachName,
+      // Nie trainiert heißt ganz nach hinten, nicht ganz nach vorn: ein leeres
+      // Datum ist keine Null, sondern eine fehlende Angabe.
+      zuletzt: (a, b) => {
+        const da = zuletztAm[a.id];
+        const db = zuletztAm[b.id];
+        if (da && db) return db.localeCompare(da) || nachName(a, b);
+        if (da) return -1;
+        if (db) return 1;
+        return stufeVon(b) - stufeVon(a) || nachName(a, b);
+      },
+    };
+    for (const list of map.values()) list.sort(vergleich[sort]);
     return MUSCLES.map((m) => ({ key: m.key, label: m.label, items: map.get(m.key) ?? [] })).filter(
       (g) => g.items.length > 0
     );
-  }, [filtered]);
+  }, [filtered, sort, zuletztAm]);
 
   async function toggleHidden(id: string, hidden: boolean) {
     setBusy(id);
@@ -174,64 +262,51 @@ export default function ExercisesPage() {
           </Button>
         </div>
 
-        <div className="-mx-4 flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-1">
-          <button
-            type="button"
-            onClick={() => setMuscle("all")}
-            className={cn(
-              "shrink-0 rounded-pill px-3 py-1.5 text-xs transition-colors",
-              muscle === "all"
-                ? "bg-primary text-primary-foreground"
-                : "bg-card text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Alle Muskeln
-          </button>
-          {MUSCLES.map((m) => (
-            <button
-              key={m.key}
-              type="button"
-              onClick={() => setMuscle(muscle === m.key ? "all" : m.key)}
-              className={cn(
-                "shrink-0 rounded-pill px-3 py-1.5 text-xs transition-colors",
-                muscle === m.key
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="-mx-4 flex shrink-0 gap-1.5 overflow-x-auto px-4 pb-1">
-          <button
-            type="button"
-            onClick={() => setEquipment("all")}
-            className={cn(
-              "shrink-0 rounded-pill px-3 py-1.5 text-xs transition-colors",
-              equipment === "all"
-                ? "bg-primary text-primary-foreground"
-                : "bg-card text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Alle Geräte
-          </button>
-          {EQUIPMENT_KEYS.map((key) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setEquipment(equipment === key ? "all" : key)}
-              className={cn(
-                "shrink-0 rounded-pill px-3 py-1.5 text-xs transition-colors",
-                equipment === key
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {EQUIPMENT_LABELS[key]}
-            </button>
-          ))}
+        {/* Antippen statt schieben. Der Wert steht im Knopf — vorher musste
+            man die Reihe erst zurückscrollen, um zu sehen, was eingestellt
+            war. */}
+        <div className="flex flex-wrap gap-1.5">
+          <FilterSelect
+            label="Muskelgruppe"
+            allLabel="Alle Muskeln"
+            value={muscle}
+            options={MUSCLES.map((m) => ({ value: m.key, label: m.label }))}
+            onChange={(next) => {
+              setMuscle(next);
+              // Eine Region gehört immer zu genau einer Muskelgruppe; wechselt
+              // die Gruppe, passt die alte Region nicht mehr.
+              setRegion(null);
+            }}
+          />
+          <FilterSelect
+            label="Gerät"
+            allLabel="Alle Geräte"
+            value={equipment}
+            options={EQUIPMENT_KEYS.map((key) => ({
+              value: key,
+              label: EQUIPMENT_LABELS[key],
+            }))}
+            onChange={setEquipment}
+          />
+          {regionOptions.length > 0 && (
+            <FilterSelect
+              label="Bereich"
+              allLabel="Alle Bereiche"
+              value={region}
+              options={regionOptions}
+              onChange={setRegion}
+            />
+          )}
+          {/* Die Sortierung hat kein „Alle“ — es ist immer eine gewählt.
+              Darum trägt der Knopf sie auch immer im Text, und ein Tipp auf
+              die schon gewählte Zeile lässt sie stehen. */}
+          <FilterSelect
+            label="Sortierung"
+            allLabel={SORT_OPTIONS[0].label}
+            value={sort === "beliebtheit" ? null : sort}
+            options={SORT_OPTIONS.filter((o) => o.value !== "beliebtheit")}
+            onChange={(next) => setSort(next ?? "beliebtheit")}
+          />
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -243,6 +318,16 @@ export default function ExercisesPage() {
           >
             <Star className={cn("size-4", favoritesOnly && "fill-current")} />
             Favoriten
+          </Button>
+
+          <Button
+            variant={showRare ? "default" : "ghost"}
+            size="sm"
+            className="w-fit"
+            onClick={toggleShowRare}
+          >
+            <Sparkles className="size-4" />
+            {showRare ? "Ungewöhnliche gezeigt" : "Ungewöhnliche zeigen"}
           </Button>
 
           {hiddenCount > 0 && (
@@ -305,11 +390,12 @@ export default function ExercisesPage() {
                           des Namens und ist genau das, was die sechs
                           Bankdrück-Varianten voneinander unterscheidet. */}
                       <p className="line-clamp-2 text-sm">{exercise.name}</p>
-                      {zusatzZeile(exercise) && (
-                        <p className="truncate text-xs text-muted-foreground">
-                          {zusatzZeile(exercise)}
-                        </p>
-                      )}
+                      <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                        <RankBars exercise={exercise} />
+                        {zusatzZeile(exercise) && (
+                          <span className="truncate">{zusatzZeile(exercise)}</span>
+                        )}
+                      </p>
                       </div>
                     </button>
 
@@ -327,41 +413,44 @@ export default function ExercisesPage() {
                       <Star className={cn("size-4", exercise.favorite && "fill-current text-primary")} />
                     </Button>
 
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => setEditing(exercise)}
-                      aria-label={`${exercise.name} bearbeiten`}
-                    >
-                      <Pencil />
-                    </Button>
-
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      disabled={busy === exercise.id}
-                      onClick={() => toggleHidden(exercise.id, !exercise.hidden)}
-                      aria-label={
-                        exercise.hidden
-                          ? `${exercise.name} einblenden`
-                          : `${exercise.name} ausblenden`
-                      }
-                    >
-                      {exercise.hidden ? <Eye /> : <EyeOff />}
-                    </Button>
-
-                    {exercise.isCustom && (
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={busy === exercise.id}
-                        onClick={() => remove(exercise.id, exercise.name)}
-                        aria-label={`${exercise.name} löschen`}
-                        className="hover:text-destructive"
+                    {/* Bearbeiten, Ausblenden und Löschen zusammen unter
+                        einem Knopf. Nebeneinander nahmen sie in einer 375 px
+                        breiten Zeile so viel Platz, dass vom Gerät nur noch
+                        „Langhantel · Mi…“ übrig blieb — und keine der drei
+                        Handlungen kommt beim Durchsehen der Liste vor. Der
+                        Stern bleibt draußen: der ist genau dafür da. Dasselbe
+                        Muster wie in der laufenden Einheit. */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        aria-label={`Weitere Aktionen für ${exercise.name}`}
+                        className="flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
                       >
-                        <Trash2 />
-                      </Button>
-                    )}
+                        <Ellipsis className="size-4" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setEditing(exercise)}>
+                          <Pencil />
+                          Bearbeiten
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={busy === exercise.id}
+                          onClick={() => toggleHidden(exercise.id, !exercise.hidden)}
+                        >
+                          {exercise.hidden ? <Eye /> : <EyeOff />}
+                          {exercise.hidden ? "Einblenden" : "Ausblenden"}
+                        </DropdownMenuItem>
+                        {exercise.isCustom && (
+                          <DropdownMenuItem
+                            variant="destructive"
+                            disabled={busy === exercise.id}
+                            onClick={() => remove(exercise.id, exercise.name)}
+                          >
+                            <Trash2 />
+                            Löschen
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 ))}
 
