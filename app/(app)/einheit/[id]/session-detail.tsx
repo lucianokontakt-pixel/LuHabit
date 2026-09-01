@@ -268,7 +268,7 @@ export function SessionDetail({ id }: { id: string }) {
                   >
                     <ExerciseThumb
                       exercise={exercise ?? { id: group.exerciseId, name: "", media: null }}
-                      className="size-9"
+                      className="size-11"
                     />
                   </button>
                   <p className="line-clamp-2 min-w-0 flex-1 text-body font-medium">
