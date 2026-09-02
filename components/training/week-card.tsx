@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { Area, AreaChart, CartesianGrid } from "recharts";
+import dynamic from "next/dynamic";
 import { Flame } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { trainingWeekSummary } from "@/lib/training-weeks";
 import { muscleProgress, weekStartISO } from "@/lib/muscle-stats";
 import { addDaysISO, todayISO } from "@/lib/datum";
@@ -15,9 +14,15 @@ import { StatValue } from "@/components/stat-value";
 import { formatCompact, formatNumber, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-const chartConfig = {
-  volume: { label: "Volumen", color: "var(--chart-1)" },
-} satisfies ChartConfig;
+/**
+ * Die Kurve kommt erst, wenn sie gebraucht wird. recharts wiegt 106 KB gepackt
+ * und hing bisher an der Startseite — für ein Diagramm, das drei Wochen mit
+ * Volumen voraussetzt und davor gar nicht erscheint.
+ */
+const WeekVolumeChart = dynamic(
+  () => import("@/components/training/week-volume-chart").then((m) => m.WeekVolumeChart),
+  { ssr: false, loading: () => <div className="h-[90px] w-full" /> }
+);
 
 /** Ab wann eine Muskelgruppe als vernachlässigt gilt. */
 const NEGLECTED_DAYS = 14;
@@ -174,30 +179,7 @@ export function WeekCard({
       {hasVolume && (
         <div className="flex flex-col gap-1 px-(--card-spacing)">
           <p className="text-xs text-muted-foreground">Volumen pro Woche</p>
-          <ChartContainer config={chartConfig} className="h-[90px] w-full">
-            <AreaChart data={chartData} margin={{ left: 0, right: 0, top: 4, bottom: 0 }}>
-              <defs>
-                <linearGradient id="weekVolumeFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--color-volume)" stopOpacity={0.18} />
-                  <stop offset="100%" stopColor="var(--color-volume)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                vertical={false}
-                strokeDasharray="2 4"
-                stroke="var(--border)"
-                strokeOpacity={1}
-              />
-              <Area
-                type="monotone"
-                dataKey="volume"
-                stroke="var(--color-volume)"
-                strokeWidth={2}
-                fill="url(#weekVolumeFill)"
-                dot={false}
-              />
-            </AreaChart>
-          </ChartContainer>
+          <WeekVolumeChart data={chartData} />
           <p className="text-[11px] text-muted-foreground">
             {summary.weeks.length} Wochen
             {summary.volumeDeltaPercent !== null &&
