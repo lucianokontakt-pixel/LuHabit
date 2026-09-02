@@ -14,7 +14,8 @@ const STORAGE_KEY = "luhabit-ungewoehnliche";
  * einstellen zu müssen — und nach jedem Schließen des Wählers erneut — wäre
  * genau die Sorte Arbeit, die eine App abnehmen sollte.
  *
- * Dieselbe Machart wie die Toneinstellung in lib/use-signal-sound.ts.
+ * Gespeichert wie eine Einstellung, nicht wie ein Filter: in localStorage,
+ * unter einem eigenen Schlüssel.
  */
 export function useShowRare(): [boolean, () => void] {
   const [showRare, setShowRare] = useState(false);

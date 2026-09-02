@@ -74,7 +74,6 @@ import {
   type WorkoutSet,
 } from "@/lib/training";
 import { needsWarmup, warmupWeight, WARMUP_PERCENT, WARMUP_REPS } from "@/lib/warmup";
-import { useSignalSound } from "@/lib/use-signal-sound";
 import { cn } from "@/lib/utils";
 import { STATE_DONE, STATE_HINT } from "@/lib/tints";
 import { DRAFT_KEY, uebungenDerEinheit } from "@/lib/session-draft";
@@ -246,7 +245,6 @@ export function SessionClient() {
   const [elapsed, setElapsed] = useState(0);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
   const [restTotal, setRestTotal] = useState(0);
-  const { unlock: unlockSignalSound, play: playSignal } = useSignalSound();
   const [activeExercise, setActiveExercise] = useState<string | null>(null);
   const [detail, setDetail] = useState<Exercise | null>(null);
   const [confirmAbort, setConfirmAbort] = useState(false);
@@ -720,10 +718,6 @@ export function SessionClient() {
           const pause = current.warmup ? Math.max(45, Math.round(restSeconds / 2)) : restSeconds;
           setRestTotal(pause);
           setRestEndsAt(Date.now() + pause * 1000);
-          // Muss aus diesem echten Tap heraus laufen — der Ton selbst kommt
-          // erst am Ende der Pause, aber der AudioContext lässt sich nur
-          // innerhalb einer Nutzergeste entsperren.
-          unlockSignalSound();
         }
         if (nextDone && typeof navigator !== "undefined" && navigator.vibrate) {
           navigator.vibrate(10);
@@ -751,7 +745,7 @@ export function SessionClient() {
         return next;
       });
     },
-    [advanceFrom, dismissed, unlockSignalSound]
+    [advanceFrom, dismissed]
   );
 
   // Die frisch aufgeklappte Übung in den Blick holen — sonst steht man nach dem
@@ -1416,7 +1410,6 @@ export function SessionClient() {
                 );
               }}
               onDismiss={() => setRestEndsAt(null)}
-              onFinish={() => playSignal("finish")}
             />
           </div>
         )}

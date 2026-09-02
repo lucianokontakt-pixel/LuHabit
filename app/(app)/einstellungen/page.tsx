@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import {
-  Bell,
   Copy,
   Download,
   ImageDown,
@@ -18,15 +17,12 @@ import {
   Sun,
   Trash2,
   User,
-  Volume2,
   Webhook,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Section } from "@/components/ui/section";
 import { Row } from "@/components/ui/row";
 import { Segmented } from "@/components/ui/segmented";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -39,7 +35,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useTraining } from "@/lib/training-store";
-import { useSignalSound } from "@/lib/use-signal-sound";
 import { raeumeAbmeldungAuf } from "@/lib/abmelden";
 import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
 import { registerPasskey } from "@/lib/passkey-client";
@@ -122,7 +117,6 @@ export default function EinstellungenPage() {
   const [preload, setPreload] = useState<VorladeFortschritt | null>(null);
   const logoutForm = useRef<HTMLFormElement>(null);
 
-  const { enabled: soundOn, toggle: toggleSound, test: testSound } = useSignalSound();
   const { activePlan, exerciseById } = useTraining();
 
   /** Die Übungen des aktiven Plans, jede nur einmal. */
@@ -333,30 +327,6 @@ export default function EinstellungenPage() {
             : "Ohne aktiven Plan gibt es nichts vorzuladen."
         }
       >
-        <Row
-          icon={Bell}
-          iconTint="var(--chart-1)"
-          title="Signalton"
-          subtitle="Am Ende der Pause und beim Rundenwechsel. Kommt am Stummschalter vorbei; laufende Musik setzt kurz aus und läuft dann weiter."
-        >
-          <div className="flex items-center gap-1">
-            {/* Zum Ausprobieren, ohne eine Einheit zu starten und eine Pause
-                abzuwarten. Der Ton hängt an Dingen, die sich nur am Gerät
-                zeigen — Klingelschalter, Sitzungsart, laufende Musik —, und
-                das eine Mal Hinhören beantwortet mehr als jede Vermutung. */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={testSound}
-              disabled={!soundOn}
-              aria-label="Signalton anhören"
-            >
-              <Volume2 className="size-4" />
-              Testen
-            </Button>
-            <Switch checked={soundOn} onCheckedChange={toggleSound} />
-          </div>
-        </Row>
         <Row
           icon={ImageDown}
           iconTint="var(--chart-3)"

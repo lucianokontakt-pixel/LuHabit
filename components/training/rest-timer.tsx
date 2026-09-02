@@ -38,6 +38,10 @@ export function RestTimer({
   useEffect(() => {
     if (remaining > 0 || firedRef.current) return;
     firedRef.current = true;
+    // Vibration statt Ton. Ein Signalton stand hier einmal, kam aber am
+    // iPhone nicht verlässlich heraus: mischbare Sitzungsarten schweigen am
+    // Klingelschalter, und die eine, die daran vorbeikommt, unterbricht die
+    // laufende Musik. Die Vibration tut beides nicht.
     if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([120, 60, 120]);
     onFinish?.();
   }, [remaining, onFinish]);
