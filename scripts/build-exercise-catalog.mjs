@@ -46,11 +46,12 @@ const unknown = { equipment: new Set(), muscle: new Set() };
 /**
  * Der Anzeigename: das Original, nur mit großem Anfangsbuchstaben je Wort.
  *
- * Hier stand einmal eine Übersetzung ins Deutsche (scripts/exercise-names.mjs).
- * Sie ist am 30. August zurückgenommen worden — aber nur in der fertigen JSON,
- * nicht hier. Wer das Skript danach laufen ließ, holte die deutschen Namen
- * unbemerkt zurück und überschrieb damit die Rücknahme. Die Regel steht jetzt
- * dort, wo sie hingehört: neben den Daten, die sie erzeugt.
+ * Hier stand einmal eine Übersetzung ins Deutsche. Sie ist am 30. August
+ * zurückgenommen worden — aber nur in der fertigen JSON, nicht hier. Wer das
+ * Skript danach laufen ließ, holte die deutschen Namen unbemerkt zurück und
+ * überschrieb damit die Rücknahme. Die Regel steht jetzt dort, wo sie
+ * hingehört: neben den Daten, die sie erzeugt. Das Wörterbuch selbst ist
+ * gelöscht; es steckt in der Geschichte, falls es je wieder gebraucht wird.
  *
  * Doppelte Namen bleiben doppelt. Sechs Übungen des Datensatzes heißen gleich
  * und unterscheiden sich nur in der Ausführung ("Lever Chest Press" gibt es

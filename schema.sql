@@ -1,5 +1,17 @@
--- LuHabit D1 schema
--- Apply with: npx wrangler d1 execute luhabit --remote --file=./schema.sql
+-- Steps: der Anfangsstand der Datenbank — NICHT der heutige.
+--
+-- Diese Datei endet beim Wochenziel (Migration 0006). Alles danach steht in
+-- migrations/, unter anderem die users-Tabelle: ohne sie scheitert jede
+-- Anfrage. Sie hier nachzuziehen wäre eine zweite Wahrheit neben den
+-- Migrationen, und zwei Wahrheiten driften.
+--
+-- Anwenden also immer in zwei Schritten:
+--   npx wrangler d1 execute luhabit --remote --file=./schema.sql
+--   for f in migrations/*.sql; do npx wrangler d1 execute luhabit --remote --file="$f"; done
+--
+-- Ein paar "duplicate column"-Fehler dabei sind erwartet: die frühen
+-- Migrationen stecken schon hier drin. `node scripts/audit-sql.mjs` baut
+-- dieselbe Reihenfolge lokal auf und prüft, dass am Ende alle Tabellen stehen.
 
 CREATE TABLE IF NOT EXISTS entries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

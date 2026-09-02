@@ -3,8 +3,9 @@
 Trainings-App: Pläne, Progression und Verlauf, dazu Gewicht, Körperfett und eine
 Körperkarte. 1295 Übungen mit Bewegungs-GIF, offline nutzbar.
 
-Drei Bereiche: **Training** (was mache ich), **Statistik** (wie läuft es),
-**Körper** (wo stehe ich).
+Vier Bereiche: **Training** (was heute ansteht), **Pläne** (was überhaupt
+ansteht), **Statistik** (wie es läuft) und **Übungen** (die Bibliothek).
+„Körper" ist kein eigener Bereich mehr, sondern der erste Reiter der Statistik.
 
 **Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Cloudflare D1 (Datenbank) · Cloudflare Workers via OpenNext (Hosting)
 
@@ -25,11 +26,20 @@ npx wrangler login
 npx wrangler d1 create luhabit
 ```
 
-Der Befehl gibt dir eine `database_id` aus. Schema anwenden:
+Der Befehl gibt dir eine `database_id` aus. Schema anwenden — **erst
+`schema.sql`, dann alle Migrationen der Reihe nach**:
 
 ```bash
 npx wrangler d1 execute luhabit --remote --file=./schema.sql
+for f in migrations/*.sql; do npx wrangler d1 execute luhabit --remote --file="$f"; done
 ```
+
+`schema.sql` ist der Stand nach den frühen Migrationen, nicht der heutige — der
+Rest, unter anderem die `users`-Tabelle, kommt aus `migrations/`. Ohne den
+zweiten Schritt scheitert jede Anfrage. Ein paar „duplicate column"-Fehler
+unterwegs sind erwartet: die frühen Migrationen stecken schon in `schema.sql`.
+`node scripts/audit-sql.mjs` baut die Datenbank genauso auf und prüft das
+Ergebnis.
 
 Danach in `.env.local` (und später als GitHub-Actions-Secret bzw. Worker-Variable, siehe Abschnitt 5) eintragen:
 
@@ -157,8 +167,8 @@ Braucht lokal dieselben `CLOUDFLARE_*`-Variablen wie oben (aus `.env.local` oder
 
 `APP_URL`, `OWNER_EMAIL` und `GOOGLE_CLIENT_ID` stehen als `vars` direkt in
 `wrangler.jsonc` (unkritisch, sichtbar im Client). Alles andere — `AUTH_SECRET`,
-`GOOGLE_CLIENT_SECRET`, `CLOUDFLARE_*`, `STEPS_WEBHOOK_SECRET` —
-sind Worker-Secrets, einmalig gesetzt mit:
+`GOOGLE_CLIENT_SECRET` und `CLOUDFLARE_*` — sind Worker-Secrets, einmalig
+gesetzt mit:
 
 ```bash
 npx wrangler secret put AUTH_SECRET
