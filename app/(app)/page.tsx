@@ -22,6 +22,7 @@ import { formatDateLong, formatNumber } from "@/lib/format";
 import { todayISO } from "@/lib/datum";
 import { TINT_SURFACE, tintForMuscles } from "@/lib/tints";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function TrainingOverviewPage() {
   const { activePlan, plans, sessions, exerciseById, loading, error } = useTraining();
@@ -107,7 +108,7 @@ export default function TrainingOverviewPage() {
       )}
 
       {loading ? (
-        <div className="h-44 animate-pulse rounded-card bg-card" />
+        <Skeleton className="h-44" />
       ) : !laufend && nextDay && activePlan && sessions.length === 0 ? (
         // Noch nie trainiert: der Plan kommt aus dem Startpaket, nicht aus
         // eigener Wahl — das sagt die Willkommenskarte und bietet den Wechsel
@@ -206,7 +207,7 @@ export default function TrainingOverviewPage() {
         </div>
 
         {loading ? (
-          <div className="h-24 animate-pulse rounded-card bg-card" />
+          <Skeleton className="h-24" />
         ) : sessions.length === 0 ? (
           <Card className="gap-0">
             <p className="px-(--card-spacing) text-sm text-muted-foreground">

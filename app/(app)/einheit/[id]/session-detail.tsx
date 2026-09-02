@@ -30,6 +30,9 @@ import { summarizeSession } from "@/lib/session-stats";
 import { incrementFor, setLabels, type Exercise, type WorkoutSession } from "@/lib/training";
 import { todayISO } from "@/lib/datum";
 import { formatDateLong } from "@/lib/format";
+import { TITLE_CLASS } from "@/components/ui/page-title";
+import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type EditableExercise = { exerciseId: string; sets: SessionSet[] };
 
@@ -173,7 +176,7 @@ export function SessionDetail({ id }: { id: string }) {
   }
 
   if (loading) {
-    return <div className="h-72 animate-pulse rounded-card bg-card" />;
+    return <Skeleton className="h-72" />;
   }
 
   if (!session || !summary) {
@@ -205,7 +208,7 @@ export function SessionDetail({ id }: { id: string }) {
             <ArrowLeft className="size-4" />
             Zurück
           </button>
-          <h1 className="mt-1 font-display text-4xl leading-tight tracking-tight">
+          <h1 className={cn("mt-1", TITLE_CLASS)}>
             {session.dayName} bearbeiten
           </h1>
         </div>

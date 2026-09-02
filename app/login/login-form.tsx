@@ -12,6 +12,7 @@ import {
   signupWithPasskey,
 } from "@/lib/passkey-client";
 import { Input } from "@/components/ui/input";
+import { TITLE_CLASS } from "@/components/ui/page-title";
 
 const ERRORS: Record<string, string> = {
   nicht_konfiguriert: "Google-Login ist auf dem Server noch nicht eingerichtet.",
@@ -163,7 +164,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   return (
     <Card className="w-full max-w-sm gap-6">
       <div className="px-(--card-spacing)">
-        <h1 className="font-display text-4xl leading-tight tracking-tight">Steps</h1>
+        <h1 className={TITLE_CLASS}>Steps</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Melde dich an, um dein Training zu sehen.
         </p>

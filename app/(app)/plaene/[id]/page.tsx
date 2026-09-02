@@ -13,6 +13,9 @@ import { NumberField } from "@/components/training/number-field";
 import { useTraining } from "@/lib/training-store";
 import { dayToInput, updatePlan } from "@/lib/api-training";
 import type { WorkoutPlan } from "@/lib/training";
+import { TITLE_CLASS } from "@/components/ui/page-title";
+import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function toEditDays(plan: WorkoutPlan): EditDay[] {
   return [...plan.days]
@@ -107,7 +110,7 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
   }
 
   if (loading && !plan) {
-    return <div className="h-64 animate-pulse rounded-card bg-card" />;
+    return <Skeleton className="h-64" />;
   }
 
   if (!plan) {
@@ -135,7 +138,7 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
           value={name}
           onChange={(e) => setName(e.target.value)}
           aria-label="Name des Plans"
-          className="h-auto border-0 bg-transparent px-0 font-display text-4xl leading-tight tracking-tight focus-visible:ring-0 sm:text-heading"
+          className={cn("h-auto border-0 bg-transparent px-0 focus-visible:ring-0 sm:text-heading", TITLE_CLASS)}
         />
         <p className="text-sm text-muted-foreground">
           {days.length} {days.length === 1 ? "Tag" : "Tage"} ·{" "}

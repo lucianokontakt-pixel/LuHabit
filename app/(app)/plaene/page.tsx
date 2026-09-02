@@ -21,6 +21,8 @@ import { useTraining } from "@/lib/training-store";
 import { createPlan, deletePlan, updatePlan } from "@/lib/api-training";
 import { SPLIT_TEMPLATES, type SplitTemplate } from "@/lib/exercise-seed";
 import { WEEKDAY_NAMES } from "@/lib/training";
+import { PageTitle } from "@/components/ui/page-title";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PlansPage() {
   const { plans, setPlans, loading } = useTraining();
@@ -100,14 +102,11 @@ export default function PlansPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <p className="text-sm text-muted-foreground">Deine Trainingspläne</p>
-        <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">Pläne</h1>
-      </div>
+      <PageTitle eyebrow="Deine Trainingspläne">Pläne</PageTitle>
 
 
       {loading ? (
-        <div className="h-32 animate-pulse rounded-card bg-card" />
+        <Skeleton className="h-32" />
       ) : plans.length === 0 ? (
         <Card className="gap-2">
           <div className="px-(--card-spacing)">

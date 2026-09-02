@@ -41,6 +41,7 @@ import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
 import { registerPasskey } from "@/lib/passkey-client";
 import { formatDateLong } from "@/lib/format";
 import { ladeMedienVor, type VorladeFortschritt } from "@/lib/medien-vorladen";
+import { PageTitle } from "@/components/ui/page-title";
 
 type Me = { email: string; name: string | null; picture: string | null };
 type Passkey = { id: string; name: string; created_at: string; last_used_at: string | null };
@@ -236,12 +237,7 @@ export default function EinstellungenPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <p className="text-sm text-muted-foreground">Konto, Darstellung &amp; Daten</p>
-        <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">
-          Einstellungen
-        </h1>
-      </div>
+      <PageTitle eyebrow="Konto, Darstellung & Daten">Einstellungen</PageTitle>
 
       {/* Ganz oben, noch vor dem Konto: das ist das Einzige auf dieser Seite,
           das nicht warten kann. Der Abschnitt zeigt sich nur, wenn es etwas zu

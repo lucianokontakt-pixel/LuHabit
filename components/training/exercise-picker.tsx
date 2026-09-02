@@ -34,7 +34,8 @@ import {
   type Muscle,
   type Region,
 } from "@/lib/training";
-import { WARMUP_OPTIONS } from "@/lib/warmup";
+import { WARMUP_OPTIONS, warmupHinweis } from "@/lib/warmup";
+import { Chip } from "@/components/ui/chip";
 
 const EQUIPMENT_KEYS = EQUIPMENT;
 
@@ -270,19 +271,13 @@ export function ExercisePicker({
               <Label className="text-xs text-muted-foreground">Muskelgruppe</Label>
               <div className="flex flex-wrap gap-1.5">
                 {MUSCLES.map((m) => (
-                  <button
+                  <Chip
                     key={m.key}
-                    type="button"
+                    active={newMuscle === m.key}
                     onClick={() => setNewMuscle(m.key)}
-                    className={cn(
-                      "rounded-pill px-3 py-1.5 text-xs transition-colors",
-                      newMuscle === m.key
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-card text-muted-foreground hover:text-foreground"
-                    )}
                   >
                     {m.label}
-                  </button>
+                  </Chip>
                 ))}
               </div>
             </div>
@@ -291,19 +286,13 @@ export function ExercisePicker({
               <Label className="text-xs text-muted-foreground">Gerät</Label>
               <div className="flex flex-wrap gap-1.5">
                 {EQUIPMENT_KEYS.map((key) => (
-                  <button
+                  <Chip
                     key={key}
-                    type="button"
+                    active={newEquipment === key}
                     onClick={() => setNewEquipment(key)}
-                    className={cn(
-                      "rounded-pill px-3 py-1.5 text-xs transition-colors",
-                      newEquipment === key
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-card text-muted-foreground hover:text-foreground"
-                    )}
                   >
                     {EQUIPMENT_LABELS[key]}
-                  </button>
+                  </Chip>
                 ))}
               </div>
             </div>
@@ -312,25 +301,17 @@ export function ExercisePicker({
               <Label className="text-xs text-muted-foreground">Aufwärmsatz</Label>
               <div className="flex flex-wrap gap-1.5">
                 {WARMUP_OPTIONS.map((opt) => (
-                  <button
+                  <Chip
                     key={opt.value ?? "auto"}
-                    type="button"
+                    active={newWarmup === opt.value}
                     onClick={() => setNewWarmup(opt.value)}
-                    className={cn(
-                      "rounded-pill px-3 py-1.5 text-xs transition-colors",
-                      newWarmup === opt.value
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-card text-muted-foreground hover:text-foreground"
-                    )}
                   >
                     {opt.label}
-                  </button>
+                  </Chip>
                 ))}
               </div>
               <p className="text-[11px] text-muted-foreground">
-                {newEquipment === "bodyweight" && newWarmup === "always"
-                  ? "Wirkt nur mit eingetragenem Zusatzgewicht — bei 0 kg gibt es nichts abzustufen."
-                  : "Automatisch: die erste Übung des Tages immer, sonst ab 40 kg Arbeitsgewicht."}
+                {warmupHinweis(newEquipment !== "bodyweight", newWarmup)}
               </p>
             </div>
 

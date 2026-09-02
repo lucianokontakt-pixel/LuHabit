@@ -17,6 +17,8 @@ import { MUSCLES, workingSets, type Exercise, type Muscle } from "@/lib/training
 import { formatNumber, formatSigned, formatDateLong } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { MUSCLE_TINT, TINT_FILL } from "@/lib/tints";
+import { PageTitle } from "@/components/ui/page-title";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const WINDOWS = [
   { weeks: 4, label: "4 Wochen" },
@@ -188,17 +190,12 @@ export default function ProgressionPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <p className="text-sm text-muted-foreground">Wo du wächst — und wo es klemmt</p>
-        <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">
-          Je Übung
-        </h1>
-      </div>
+      <PageTitle eyebrow="Wo du wächst — und wo es klemmt">Je Übung</PageTitle>
 
       <SectionTabs tabs={STATISTIK_TABS} />
 
       {loading ? (
-        <div className="h-64 animate-pulse rounded-card bg-card" />
+        <Skeleton className="h-64" />
       ) : summaries.length === 0 ? (
         <Card className="gap-0">
           <p className="px-(--card-spacing) text-sm text-muted-foreground">

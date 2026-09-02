@@ -34,6 +34,8 @@ import { weekStartISO } from "@/lib/muscle-stats";
 import { summarizeSession } from "@/lib/session-stats";
 import { formatCompact, formatDateLong, formatNumber } from "@/lib/format";
 import { isoDateDaysAgo } from "@/lib/datum";
+import { PageTitle } from "@/components/ui/page-title";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Range = "week" | "month" | "year" | "all";
 
@@ -152,12 +154,7 @@ export default function TrainingStatsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <p className="text-sm text-muted-foreground">Volumen, Frequenz &amp; Verlauf</p>
-        <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">
-          Statistik
-        </h1>
-      </div>
+      <PageTitle eyebrow="Volumen, Frequenz & Verlauf">Statistik</PageTitle>
 
       <SectionTabs tabs={STATISTIK_TABS} />
 
@@ -178,7 +175,7 @@ export default function TrainingStatsPage() {
       </Tabs>
 
       {loading ? (
-        <div className="h-32 animate-pulse rounded-card bg-card" />
+        <Skeleton className="h-32" />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

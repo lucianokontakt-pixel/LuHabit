@@ -10,6 +10,21 @@ export const WARMUP_REPS = 8;
  */
 export const WARMUP_AUTO_THRESHOLD = 40;
 
+/**
+ * Was die Automatik tut, in einem Satz — für die Stelle unter der Auswahl.
+ *
+ * Steht hier, weil die Zahl darin dieselbe sein muss wie die, nach der
+ * needsWarmup entscheidet. Vorher stand „ab 40 kg Arbeitsgewicht" zweimal als
+ * getippter Text im Code: wer die Schwelle ändert, ändert dann die Regel, aber
+ * nicht das, was die App über sie behauptet.
+ */
+export function warmupHinweis(kannZusatzgewicht: boolean, warmup: Exercise["warmup"]): string {
+  if (!kannZusatzgewicht && warmup === "always") {
+    return "Wirkt nur mit eingetragenem Zusatzgewicht — bei 0 kg gibt es nichts abzustufen.";
+  }
+  return `Automatisch: die erste Übung des Tages immer, sonst ab ${WARMUP_AUTO_THRESHOLD} kg Arbeitsgewicht.`;
+}
+
 /** Die Auswahl im Übungs-Editor und beim Anlegen einer eigenen Übung. */
 export const WARMUP_OPTIONS: { value: Exercise["warmup"]; label: string }[] = [
   { value: null, label: "Automatisch" },

@@ -17,6 +17,7 @@ import {
   type Exercise,
 } from "@/lib/training";
 import { cn } from "@/lib/utils";
+import { Chip } from "@/components/ui/chip";
 
 export type EditExercise = {
   key: string;
@@ -131,34 +132,24 @@ export function DayEditor({
             sah man nicht. Zwei Zeilen zeigen die ganze Woche auf einmal, und
             um mehr geht es bei einer Woche nicht. */}
         <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
+          <Chip
+            ground="elevated"
+            active={day.weekday === null}
             onClick={() => onChange({ ...day, weekday: null })}
-            className={cn(
-              "shrink-0 rounded-pill px-3 py-1.5 text-xs transition-colors",
-              day.weekday === null
-                ? "bg-primary text-primary-foreground"
-                : "bg-elevated text-muted-foreground hover:text-foreground"
-            )}
           >
             Rotation
-          </button>
+          </Chip>
           {WEEKDAY_NAMES.map((name, index) => (
-            <button
+            <Chip
               key={name}
-              type="button"
+              ground="elevated"
+              active={day.weekday === index}
               onClick={() =>
                 onChange({ ...day, weekday: day.weekday === index ? null : index })
               }
-              className={cn(
-                "shrink-0 rounded-pill px-3 py-1.5 text-xs transition-colors",
-                day.weekday === index
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-elevated text-muted-foreground hover:text-foreground"
-              )}
             >
               {name.slice(0, 2)}
-            </button>
+            </Chip>
           ))}
         </div>
       </div>

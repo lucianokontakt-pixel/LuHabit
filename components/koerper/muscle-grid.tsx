@@ -28,6 +28,7 @@ import {
 import { formatCompact, formatNumber, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { MUSCLE_TINT, TINT_FILL, TINT_LINE, type Tint } from "@/lib/tints";
+import { Chip } from "@/components/ui/chip";
 
 /**
  * Höchstens so viele Kurven gleichzeitig — mehr wird zum Knäuel. Die Zahl hing
@@ -227,20 +228,15 @@ export function MuscleGrid({ progress }: { progress: MuscleProgress[] }) {
             außerhalb. */}
         <div className="flex flex-wrap gap-1.5 px-(--card-spacing)">
           {progress.map((entry) => (
-            <button
+            <Chip
               key={entry.muscle}
-              type="button"
-              onClick={() => toggle(entry.muscle)}
+              ground="elevated"
+              active={selected.includes(entry.muscle)}
               aria-pressed={selected.includes(entry.muscle)}
-              className={cn(
-                "shrink-0 rounded-pill px-3 py-1.5 text-xs transition-colors",
-                selected.includes(entry.muscle)
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-elevated text-muted-foreground hover:text-foreground"
-              )}
+              onClick={() => toggle(entry.muscle)}
             >
               {entry.label}
-            </button>
+            </Chip>
           ))}
         </div>
       </Card>

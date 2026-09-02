@@ -77,6 +77,8 @@ import { needsWarmup, warmupWeight, WARMUP_PERCENT, WARMUP_REPS } from "@/lib/wa
 import { cn } from "@/lib/utils";
 import { STATE_DONE, STATE_HINT } from "@/lib/tints";
 import { DRAFT_KEY, uebungenDerEinheit } from "@/lib/session-draft";
+import { TITLE_CLASS } from "@/components/ui/page-title";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 type Draft = {
@@ -929,7 +931,7 @@ export function SessionClient() {
   }
 
   if (loading) {
-    return <div className="h-72 animate-pulse rounded-card bg-card" />;
+    return <Skeleton className="h-72" />;
   }
 
   if (!day || !located) {
@@ -960,7 +962,7 @@ export function SessionClient() {
             <ArrowLeft className="size-4" />
             Abbrechen
           </button>
-          <h1 className="mt-1 font-display text-4xl leading-tight tracking-tight">{day.name}</h1>
+          <h1 className={cn("mt-1", TITLE_CLASS)}>{day.name}</h1>
           <p className="text-sm text-muted-foreground">{located.plan.name}</p>
           <div className="mt-2 flex items-center gap-1">
             <span className="text-xs text-muted-foreground">Einheit vom</span>

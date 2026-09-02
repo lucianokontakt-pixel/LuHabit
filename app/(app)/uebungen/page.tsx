@@ -37,6 +37,8 @@ import {
 import { useShowRare } from "@/lib/use-show-rare";
 import { cn } from "@/lib/utils";
 import { MUSCLE_TINT, TINT_FILL } from "@/lib/tints";
+import { PageTitle } from "@/components/ui/page-title";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const EQUIPMENT_KEYS = EQUIPMENT;
 
@@ -235,14 +237,9 @@ export default function ExercisesPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <p className="text-sm text-muted-foreground">
-          {exercises.length} Übungen nach Muskelgruppe und Gerät
-        </p>
-        <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">
-          Übungen
-        </h1>
-      </div>
+      <PageTitle eyebrow={`${exercises.length} Übungen nach Muskelgruppe und Gerät`}>
+        Übungen
+      </PageTitle>
 
 
       <div className="flex flex-col gap-3">
@@ -345,7 +342,7 @@ export default function ExercisesPage() {
       </div>
 
       {loading ? (
-        <div className="h-64 animate-pulse rounded-card bg-card" />
+        <Skeleton className="h-64" />
       ) : grouped.length === 0 ? (
         <Card className="gap-0">
           <p className="px-(--card-spacing) text-sm text-muted-foreground">

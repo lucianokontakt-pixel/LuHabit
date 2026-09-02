@@ -21,6 +21,7 @@ import {
   isPlausibleHeight,
 } from "@/lib/body-profile";
 import { formatNumber } from "@/lib/format";
+import { PageTitle } from "@/components/ui/page-title";
 
 export default function StatistikKoerperPage() {
   const { entries: weightEntries } = useMetricData("weight");
@@ -52,12 +53,7 @@ export default function StatistikKoerperPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <p className="text-sm text-muted-foreground">Werte &amp; Muskelverteilung</p>
-        <h1 className="font-display text-4xl leading-tight tracking-tight sm:text-heading">
-          Körper
-        </h1>
-      </div>
+      <PageTitle eyebrow="Werte & Muskelverteilung">Körper</PageTitle>
 
       <SectionTabs tabs={STATISTIK_TABS} />
 
