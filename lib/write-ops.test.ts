@@ -112,6 +112,38 @@ describe("collapse", () => {
     expect(übrig[0].op.kind).toBe("plan.delete");
   });
 
+  it("behält 'neu', wenn die Neuanlage vom Ändern überholt wird", () => {
+    // Der Fall, in dem eine Einheit verlorenging: ohne Netz beenden (POST in
+    // der Schlange), ohne Netz eine Wiederholung korrigieren (PUT), wieder
+    // online. Blieb nur der PUT übrig, kannte der Server die ID nicht und
+    // antwortete 404 — und ein 404 gilt der Warteschlange als erledigt.
+    const anlegen: WriteOp = { kind: "session.save", session: einheit("ws-1", "2026-09-02"), isNew: true };
+    const aendern: WriteOp = { kind: "session.save", session: einheit("ws-1", "2026-09-02"), isNew: false };
+    const übrig = collapse(queued([anlegen, aendern]));
+    expect(übrig).toHaveLength(1);
+    expect(übrig[0].op).toMatchObject({ kind: "session.save", isNew: true });
+  });
+
+  it("behält 'neu' auch über mehrere Änderungen hinweg", () => {
+    const anlegen: WriteOp = { kind: "session.save", session: einheit("ws-1", "2026-09-02"), isNew: true };
+    const aendern: WriteOp = { kind: "session.save", session: einheit("ws-1", "2026-09-02"), isNew: false };
+    const übrig = collapse(queued([anlegen, aendern, aendern, aendern]));
+    expect(übrig[0].op).toMatchObject({ isNew: true });
+  });
+
+  it("macht aus einer reinen Änderung keine Neuanlage", () => {
+    // Die Richtung gilt nur einseitig: was der Server kennt, bleibt bekannt.
+    const aendern: WriteOp = { kind: "session.save", session: einheit("ws-1", "2026-09-02"), isNew: false };
+    const übrig = collapse(queued([aendern, aendern]));
+    expect(übrig[0].op).toMatchObject({ isNew: false });
+  });
+
+  it("behält 'neu' auch bei Plänen und eigenen Übungen", () => {
+    const planNeu: WriteOp = { kind: "plan.save", plan: plan("plan-9", "Neu"), isNew: true, daysChanged: true };
+    const planAlt: WriteOp = { kind: "plan.save", plan: plan("plan-9", "Neu, umbenannt"), isNew: false, daysChanged: false };
+    expect(collapse(queued([planNeu, planAlt]))[0].op).toMatchObject({ isNew: true });
+  });
+
   it("lässt eine Änderung gewinnen, die nach einer Löschung kam", () => {
     // Löschen und gleich neu anlegen — die Neuanlage darf nicht verschwinden.
     const speichern: WriteOp = { kind: "plan.save", plan: plan("plan-1", "Neu"), isNew: true, daysChanged: true };

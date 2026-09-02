@@ -1,6 +1,6 @@
 "use client";
 
-import { CloudOff, RefreshCw, Check } from "lucide-react";
+import { CloudOff, RefreshCw, Check, TriangleAlert } from "lucide-react";
 import { useSyncStatus } from "@/lib/use-sync-status";
 import { cn } from "@/lib/utils";
 
@@ -12,24 +12,41 @@ import { cn } from "@/lib/utils";
  *   - gerade eben etwas fertig geworden ist (kurze Bestätigung, blendet aus).
  */
 export function SyncStatus() {
-  const { online, pending, justSynced } = useSyncStatus();
+  const { online, pending, failed, justSynced } = useSyncStatus();
 
-  if (online && pending === 0 && !justSynced) return null;
+  if (online && pending === 0 && failed === 0 && !justSynced) return null;
 
-  const { Icon, label, tone } = !online
-    ? { Icon: CloudOff, label: "Offline", tone: "muted" as const }
-    : pending > 0
+  // Abgelehntes zuerst, auch offline: es geht von allein nicht weg, und
+  // "Offline" daneben zu zeigen hieße, den ernsteren der beiden Zustände zu
+  // verschweigen.
+  const { Icon, label, tone } =
+    failed > 0
       ? {
-          Icon: RefreshCw,
-          label: pending === 1 ? "Wird gesendet" : `${pending} werden gesendet`,
-          tone: "active" as const,
+          Icon: TriangleAlert,
+          label:
+            failed === 1 ? "1 Änderung nicht gespeichert" : `${failed} Änderungen nicht gespeichert`,
+          tone: "alert" as const,
         }
-      : { Icon: Check, label: "Synchronisiert", tone: "done" as const };
+      : !online
+        ? { Icon: CloudOff, label: "Offline", tone: "muted" as const }
+        : pending > 0
+          ? {
+              Icon: RefreshCw,
+              label: pending === 1 ? "Wird gesendet" : `${pending} werden gesendet`,
+              tone: "active" as const,
+            }
+          : { Icon: Check, label: "Synchronisiert", tone: "done" as const };
 
   return (
     <span
       className={cn(
-        "flex animate-in items-center gap-1.5 rounded-pill bg-elevated px-2.5 py-1 text-[11px] font-medium text-muted-foreground fade-in-0"
+        "flex animate-in items-center gap-1.5 rounded-pill px-2.5 py-1 text-[11px] font-medium fade-in-0",
+        // Die drei harmlosen Zustände bleiben grau — sie berichten nur. Der
+        // vierte nicht: er verlangt eine Entscheidung, und grau würde ihn
+        // neben "Synchronisiert" stellen, wo er nicht hingehört.
+        tone === "alert"
+          ? "bg-destructive/10 text-destructive"
+          : "bg-elevated text-muted-foreground"
       )}
     >
       <Icon className={cn("size-3", tone === "active" && "animate-spin")} />

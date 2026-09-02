@@ -20,7 +20,7 @@ import type { LocalEffect, QueuedOp, WriteOp } from "@/lib/write-ops";
 const DB_NAME = "luhabit";
 // 2: "emomResults" als neue Sammlung dazugekommen.
 // 3: Habits, Ziele und EMOM sind weggefallen — ihre Sammlungen ebenfalls.
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 /**
  * Ab welcher Fassung der bestehende Bestand noch lesbar ist.
@@ -68,6 +68,15 @@ export type DataStore = (typeof DATA_STORES)[number];
 const META_STORE = "meta";
 /** Änderungen, die noch zum Server müssen. Überlebt jeden Abgleich. */
 const QUEUE_STORE = "queue";
+/**
+ * Änderungen, die der Server abgelehnt hat.
+ *
+ * Sie sind aus der Warteschlange raus — ein erneuter Versuch heilt eine
+ * Ablehnung nicht und verstopfte nur alles dahinter. Weggeworfen werden dürfen
+ * sie trotzdem nicht: der Zustand steht bereits lokal, die App sähe danach
+ * synchron aus und wäre es nicht. Hier liegen sie, bis jemand entscheidet.
+ */
+const FAILED_STORE = "failed";
 
 const CURSOR_KEY = "cursor";
 const PROFILE_KEY = "bodyProfile";
@@ -146,6 +155,9 @@ export function openDb(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains(QUEUE_STORE)) {
         db.createObjectStore(QUEUE_STORE, { keyPath: "seq", autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains(FAILED_STORE)) {
+        db.createObjectStore(FAILED_STORE, { keyPath: "seq" });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -262,8 +274,8 @@ export async function readBodyProfile<T>(): Promise<T | null> {
 export async function clearLocalDb(): Promise<void> {
   if (!localDbAvailable()) return;
   const db = await openDb();
-  const tx = db.transaction([...DATA_STORES, META_STORE, QUEUE_STORE], "readwrite");
-  for (const store of [...DATA_STORES, META_STORE, QUEUE_STORE]) {
+  const tx = db.transaction([...DATA_STORES, META_STORE, QUEUE_STORE, FAILED_STORE], "readwrite");
+  for (const store of [...DATA_STORES, META_STORE, QUEUE_STORE, FAILED_STORE]) {
     tx.objectStore(store).clear();
   }
   await done(tx);
@@ -309,6 +321,45 @@ export async function queueAll(): Promise<QueuedOp[]> {
   const tx = db.transaction(QUEUE_STORE, "readonly");
   const rows = (await request(tx.objectStore(QUEUE_STORE).getAll())) as QueuedOp[];
   return rows.sort((a, b) => a.seq - b.seq);
+}
+
+/**
+ * Eine abgelehnte Operation aufheben, mit dem Grund.
+ *
+ * Der Schlüssel ist die alte Warteschlangen-Nummer: sie ist eindeutig, und
+ * damit landet dieselbe Ablehnung auch bei einem zweiten Versuch nicht doppelt.
+ */
+export async function failedPush(item: QueuedOp, reason: string): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(FAILED_STORE, "readwrite");
+  tx.objectStore(FAILED_STORE).put({
+    seq: item.seq,
+    op: item.op,
+    createdAt: item.createdAt,
+    failedAt: new Date().toISOString(),
+    reason,
+  });
+  await done(tx);
+}
+
+export type FailedOp = QueuedOp & { failedAt: string; reason: string };
+
+/** Was der Server abgelehnt hat, älteste zuerst. */
+export async function failedAll(): Promise<FailedOp[]> {
+  const db = await openDb();
+  const tx = db.transaction(FAILED_STORE, "readonly");
+  const rows = (await request(tx.objectStore(FAILED_STORE).getAll())) as FailedOp[];
+  return rows.sort((a, b) => a.seq - b.seq);
+}
+
+/** Abgelehntes endgültig verwerfen — oder wegräumen, wenn es doch durchging. */
+export async function failedRemove(seqs: number[]): Promise<void> {
+  if (seqs.length === 0) return;
+  const db = await openDb();
+  const tx = db.transaction(FAILED_STORE, "readwrite");
+  const store = tx.objectStore(FAILED_STORE);
+  for (const seq of seqs) store.delete(seq);
+  await done(tx);
 }
 
 /** Erledigte Operationen aus der Schlange nehmen. */

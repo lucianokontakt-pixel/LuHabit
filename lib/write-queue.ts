@@ -14,11 +14,20 @@
  * ihr alles, was dahinter steht.
  */
 
-import { applyEffects, queueAll, queuePush, queueRemove } from "@/lib/local-db";
+import {
+  applyEffects,
+  failedAll,
+  failedPush,
+  failedRemove,
+  queueAll,
+  queuePush,
+  queueRemove,
+  type FailedOp,
+} from "@/lib/local-db";
 import { collapse, localEffect, targetOf, type WriteOp } from "@/lib/write-ops";
 import { notifyLocalDataChanged, notifyFlushSucceeded } from "@/lib/local-events";
 
-const listeners = new Set<(pendingTargets: Set<string>) => void>();
+const listeners = new Set<(pendingTargets: Set<string>, failedCount: number) => void>();
 
 /**
  * Wer wissen will, ob GENAU EIN Datensatz noch auf das Senden wartet — etwa
@@ -26,15 +35,52 @@ const listeners = new Set<(pendingTargets: Set<string>) => void>();
  * Abschließen —, meldet sich hier an. Eine reine Zahl hätte dafür nicht
  * gereicht; targetOf liefert denselben Schlüssel wie beim Einreihen.
  */
-export function subscribeQueue(listener: (pendingTargets: Set<string>) => void): () => void {
+export function subscribeQueue(
+  listener: (pendingTargets: Set<string>, failedCount: number) => void
+): () => void {
   listeners.add(listener);
+  // Den aktuellen Stand sofort nachreichen, nicht erst bei der nächsten
+  // Änderung. Sonst zeigt die Leiste nach einem Neuladen nichts an, obwohl
+  // etwas offen ist — und gerade Abgelehntes geht von selbst nie weg, es gäbe
+  // also womöglich nie ein Ereignis, das die Anzeige nachträglich weckt.
+  void announce();
   return () => listeners.delete(listener);
 }
 
 async function announce() {
   const pending = await queueAll().catch(() => []);
   const targets = new Set(pending.map((item) => targetOf(item.op)));
-  for (const listener of listeners) listener(targets);
+  const failed = await failedAll().catch(() => []);
+  for (const listener of listeners) listener(targets, failed.length);
+}
+
+/** Was der Server abgelehnt hat — für die Anzeige und die Einstellungen. */
+export async function readFailed(): Promise<FailedOp[]> {
+  return failedAll().catch(() => []);
+}
+
+/**
+ * Eine abgelehnte Operation noch einmal versuchen.
+ *
+ * Sie geht als neue Operation in die Schlange, damit sie die übliche
+ * Reihenfolge und das Eindampfen mitnimmt. Erst wenn das Einstellen geklappt
+ * hat, verschwindet sie aus dem Fehlerspeicher — bricht etwas dazwischen ab,
+ * steht sie lieber doppelt als gar nicht.
+ */
+export async function retryFailed(seq: number): Promise<void> {
+  const alle = await failedAll().catch(() => []);
+  const eintrag = alle.find((f) => f.seq === seq);
+  if (!eintrag) return;
+  await queuePush(eintrag.op);
+  await failedRemove([seq]);
+  await announce();
+  void flushQueue();
+}
+
+/** Endgültig verwerfen. Der lokale Stand bleibt, wie er ist. */
+export async function discardFailed(seq: number): Promise<void> {
+  await failedRemove([seq]);
+  await announce();
 }
 
 /**
@@ -186,6 +232,17 @@ export function flushQueue(): Promise<number> {
   return running;
 }
 
+/** Die Begründung des Servers, falls er eine mitschickt. */
+async function ablehnungsgrund(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { error?: string };
+    if (typeof body.error === "string" && body.error) return body.error;
+  } catch {
+    // Keine oder keine lesbare Antwort — dann reicht der Status.
+  }
+  return `Vom Server abgelehnt (${res.status}).`;
+}
+
 async function runFlush(): Promise<number> {
   const pending = await queueAll().catch(() => []);
   if (pending.length === 0) return 0;
@@ -198,20 +255,42 @@ async function runFlush(): Promise<number> {
     .map((item) => item.seq);
 
   const doneSeqs: number[] = [];
+  /**
+   * Abgelehntes kommt aus der Schlange, aber nicht ins Nichts.
+   *
+   * Ein erneuter Versuch heilt eine Ablehnung nicht und blockierte alles
+   * dahinter — so weit war die alte Regel richtig. Falsch war das Schweigen:
+   * `enqueue` hat den Zustand vorher schon lokal geschrieben, danach meldete
+   * die Anzeige „Synchronisiert", und eine Einheit lag für immer nur auf
+   * diesem einen Gerät. Jetzt liegt sie im Fehlerspeicher, und die Anzeige
+   * sagt es.
+   *
+   * Löschungen sind die Ausnahme: ein 404 auf eine Löschung ist genau der
+   * gewünschte Zustand und keine Meldung wert.
+   */
+  const rejected: { item: (typeof toSend)[number]; reason: string }[] = [];
+  const istLoeschung = (op: WriteOp) => op.kind.endsWith(".delete");
+
   for (const item of toSend) {
     try {
       const res = await send(item.op);
-      if (res.ok || res.status === 404) {
-        // 404 heißt: der Datensatz ist serverseitig schon weg. Für eine
-        // Löschung ist das der gewünschte Zustand, für alles andere ein Fall,
-        // den ein erneuter Versuch nicht heilt.
+      if (res.ok) {
         doneSeqs.push(item.seq);
         continue;
       }
-      if (res.status >= 400 && res.status < 500) {
-        // Abgelehnt und bleibt abgelehnt — verwerfen, sonst blockiert diese
-        // Operation die ganze Schlange dahinter für immer.
+      if (res.status === 404) {
+        // Der Datensatz ist serverseitig nicht da. Für eine Löschung ist das
+        // das Ziel; für alles andere heißt es, dass diese Änderung nirgends
+        // ankommt — und das darf nicht unbemerkt bleiben.
         doneSeqs.push(item.seq);
+        if (!istLoeschung(item.op)) {
+          rejected.push({ item, reason: "Der Server kennt diesen Datensatz nicht (404)." });
+        }
+        continue;
+      }
+      if (res.status >= 400 && res.status < 500) {
+        doneSeqs.push(item.seq);
+        rejected.push({ item, reason: await ablehnungsgrund(res) });
         continue;
       }
       // 5xx: der Server hat gerade ein Problem. Später erneut versuchen.
@@ -221,7 +300,15 @@ async function runFlush(): Promise<number> {
       // Etwas anderes ist schiefgegangen — nicht das Netz. Auch das darf die
       // Schlange nicht dauerhaft verstopfen.
       doneSeqs.push(item.seq);
+      rejected.push({ item, reason: e instanceof Error ? e.message : "Unbekannter Fehler" });
     }
+  }
+
+  for (const { item, reason } of rejected) {
+    await failedPush(item, reason).catch(() => {
+      // Wenn nicht einmal das Aufheben klappt, ist der lokale Speicher hin —
+      // dann ist ein verlorener Hinweis das kleinere Problem.
+    });
   }
 
   if (doneSeqs.length > 0) {

@@ -9,6 +9,12 @@ export type SyncStatus = {
   /** Wie viele Änderungen noch auf das Senden warten. */
   pending: number;
   /**
+   * Wie viele der Server abgelehnt hat. Sie warten nicht mehr — sie liegen
+   * und brauchen eine Entscheidung. Der wichtigste der drei Zustände, weil er
+   * als einziger nicht von selbst weggeht.
+   */
+  failed: number;
+  /**
    * War gerade eben noch etwas offen und ist jetzt fertig. Blendet sich nach
    * ein paar Sekunden von selbst wieder aus — eine Bestätigung, kein
    * Dauerzustand, den man wegklicken müsste.
@@ -27,6 +33,7 @@ const JUST_SYNCED_MS = 3000;
 export function useSyncStatus(): SyncStatus {
   const [online, setOnline] = useState(true);
   const [pending, setPending] = useState(0);
+  const [failed, setFailed] = useState(0);
   const [justSynced, setJustSynced] = useState(false);
   const wasPendingRef = useRef(false);
   const fadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,8 +53,9 @@ export function useSyncStatus(): SyncStatus {
 
   useEffect(
     () =>
-      subscribeQueue((targets) => {
+      subscribeQueue((targets, failedCount) => {
         setPending(targets.size);
+        setFailed(failedCount);
         if (targets.size > 0) {
           wasPendingRef.current = true;
           setJustSynced(false);
@@ -74,5 +82,5 @@ export function useSyncStatus(): SyncStatus {
     };
   }, []);
 
-  return { online, pending, justSynced };
+  return { online, pending, failed, justSynced };
 }

@@ -173,6 +173,26 @@ export function targetOf(op: WriteOp): string {
 }
 
 /**
+ * `isNew` ist kein Zustand, sondern eine Behauptung über die Vergangenheit:
+ * "diesen Datensatz kennt der Server noch nicht". Sie gilt weiter, wenn danach
+ * noch zehnmal geändert wird — und sie entscheidet über POST oder PUT.
+ *
+ * Genau hier ging bisher eine Einheit verloren. Ohne Netz beenden (POST in der
+ * Schlange), ohne Netz eine Wiederholung korrigieren (PUT), wieder online: das
+ * Eindampfen behielt nur den PUT, der Server kannte die ID nicht, antwortete
+ * 404 — und die Warteschlange wertet 404 als erledigt. Die Einheit blieb auf
+ * dem Gerät und kam nie an.
+ *
+ * Der POST ist ohnehin ein Upsert, er kann also auch eine Änderung tragen. Die
+ * Richtung ist damit eindeutig: einmal neu, immer neu, bis es gesendet wurde.
+ */
+function mitNeuheitVon(spaeter: WriteOp, frueher: WriteOp): WriteOp {
+  if (!("isNew" in frueher) || !frueher.isNew) return spaeter;
+  if (!("isNew" in spaeter) || spaeter.isNew) return spaeter;
+  return { ...spaeter, isNew: true };
+}
+
+/**
  * Die Schlange eindampfen: von mehreren Operationen auf denselben Datensatz
  * bleibt nur die letzte.
  *
@@ -181,6 +201,8 @@ export function targetOf(op: WriteOp): string {
  * wäre neunmal umsonst. Weil jede Operation einen Zustand beschreibt und keine
  * Veränderung, ist die letzte ohnehin die einzige, die zählt.
  *
+ * Einzige Ausnahme ist `isNew` — siehe mitNeuheitVon.
+ *
  * Die Reihenfolge der verbleibenden Operationen bleibt die ihres LETZTEN
  * Auftretens — so kommt eine Löschung, die nach einer Änderung kam, auch nach
  * ihr beim Server an.
@@ -188,7 +210,12 @@ export function targetOf(op: WriteOp): string {
 export function collapse(queued: QueuedOp[]): QueuedOp[] {
   const lastByTarget = new Map<string, QueuedOp>();
   for (const item of queued) {
-    lastByTarget.set(targetOf(item.op), item);
+    const target = targetOf(item.op);
+    const bisher = lastByTarget.get(target);
+    lastByTarget.set(
+      target,
+      bisher ? { ...item, op: mitNeuheitVon(item.op, bisher.op) } : item
+    );
   }
   return [...lastByTarget.values()].sort((a, b) => a.seq - b.seq);
 }

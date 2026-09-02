@@ -335,8 +335,9 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  const current = await d1Query<{ id: string }>(
-    `SELECT pe.id FROM plan_exercises pe
+  // wp.id kommt mit, weil gleich der Stempel des Plans nachgezogen werden muss.
+  const current = await d1Query<{ id: string; plan_id: string }>(
+    `SELECT pe.id, wp.id AS plan_id FROM plan_exercises pe
        JOIN plan_days pd ON pd.id = pe.day_id AND pd.user_id = pe.user_id
        JOIN workout_plans wp ON wp.id = pd.plan_id AND wp.user_id = pd.user_id
       WHERE pe.user_id = ? AND pe.id = ? AND pe.day_id = ? AND wp.deleted_at IS NULL`,
@@ -350,6 +351,17 @@ export async function PATCH(req: NextRequest) {
     `UPDATE plan_exercises SET exercise_id = ?, increment = NULL, start_weight = NULL
        WHERE user_id = ? AND id = ? AND day_id = ?`,
     [body.exerciseId, userId, body.planExerciseId, body.dayId]
+  );
+
+  // Und den Stempel des Plans mitziehen. plan_days und plan_exercises haben
+  // absichtlich keine eigenen Zeitstempel — sie hängen am Elternteil —, und der
+  // Abgleich liefert Kinder nur für Pläne, deren Stempel sich bewegt hat (siehe
+  // app/api/sync/route.ts). Ohne diese Zeile bleibt ein hier getauschter Platz
+  // für jedes andere Gerät unsichtbar, bis zufällig etwas anderes am Plan
+  // geändert wird.
+  await d1Query(
+    `UPDATE workout_plans SET updated_at = datetime('now') WHERE user_id = ? AND id = ?`,
+    [userId, current[0].plan_id]
   );
 
   return NextResponse.json({ plans: await loadPlans(userId) });

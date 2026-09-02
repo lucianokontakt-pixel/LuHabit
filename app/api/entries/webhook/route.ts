@@ -31,8 +31,20 @@ export async function POST(req: NextRequest) {
   }
 
   await d1Query(
-    `INSERT INTO entries (user_id, habit, date, value) VALUES (?, ?, ?, ?)
-     ON CONFLICT(user_id, habit, date) DO UPDATE SET value = excluded.value`,
+    // updated_at und deleted_at gehören auf die Konfliktseite, nicht nur ins
+    // INSERT. Der Abgleich fragt nach COALESCE(updated_at, created_at, ...) —
+    // ohne den Stempel synchronisiert der erste Wert eines Tages (der ist neu),
+    // jeder korrigierte Wert desselben Tages aber nie. Genau daraus rechnet die
+    // App das Startgewicht und jedes Volumen.
+    //
+    // deleted_at zurückzusetzen ist dieselbe Regel wie in jedem anderen
+    // Schreibpfad: wer schreibt, holt den Datensatz zurück. Sonst schriebe die
+    // Waage nach einem Zurücksetzen der Körperwerte für immer in eine Zeile,
+    // die als gelöscht gilt — mit 200 OK und ohne sichtbare Wirkung.
+    `INSERT INTO entries (user_id, habit, date, value, updated_at)
+     VALUES (?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(user_id, habit, date) DO UPDATE
+       SET value = excluded.value, updated_at = datetime('now'), deleted_at = NULL`,
     [userId, habit, date, value]
   );
 

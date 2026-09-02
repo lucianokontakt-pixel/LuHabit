@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Section } from "@/components/ui/section";
+import { FailedWrites } from "@/components/failed-writes";
 import { Row } from "@/components/ui/row";
 import { Segmented } from "@/components/ui/segmented";
 import { buttonVariants } from "@/components/ui/button";
@@ -241,6 +242,11 @@ export default function EinstellungenPage() {
           Einstellungen
         </h1>
       </div>
+
+      {/* Ganz oben, noch vor dem Konto: das ist das Einzige auf dieser Seite,
+          das nicht warten kann. Der Abschnitt zeigt sich nur, wenn es etwas zu
+          entscheiden gibt. */}
+      <FailedWrites />
 
       <Section title="Konto">
         <Row
