@@ -142,16 +142,9 @@ export default function StatistikKoerperPage() {
         caption="Letzte 30 Tage"
       />
 
-      <div className="flex flex-col gap-2">
-        <div>
-          <h2 className="text-subheading font-display">Sätze pro Woche</h2>
-          <p className="text-sm text-muted-foreground">
-            Letzte 12 Wochen gegen den Korridor, in dem Muskelaufbau zuverlässig
-            stattfindet.
-          </p>
-        </div>
-        <MuscleGrid progress={progress} />
-      </div>
+      {/* Ohne eigene Überschrift: MuscleGrid bringt seine eigene mit, und
+          zweimal „Sätze pro Woche" übereinander stand hier eine Weile. */}
+      <MuscleGrid progress={progress} />
 
       <BodyProfileForm />
     </div>

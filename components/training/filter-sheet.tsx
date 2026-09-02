@@ -52,7 +52,7 @@ export function FilterSelect<T extends string>({
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "flex min-w-0 shrink items-center gap-1 rounded-pill py-1.5 pr-2.5 pl-3 text-xs transition-colors",
+          "touch-target flex min-w-0 shrink items-center gap-1 rounded-pill py-1.5 pr-2.5 pl-3 text-xs transition-colors",
           gewaehlt
             ? "bg-primary text-primary-foreground"
             : "bg-card text-muted-foreground hover:text-foreground",

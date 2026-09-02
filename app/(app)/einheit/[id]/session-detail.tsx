@@ -100,17 +100,21 @@ export function SessionDetail({ id }: { id: string }) {
   async function handleSave() {
     if (!session) return;
 
+    // Durchzählen über die ganze Einheit, nicht je Übung von vorn — sonst
+    // schriebe das Nachbearbeiten die Reihenfolge wieder kaputt, die beim
+    // Beenden richtig gesetzt wurde.
+    let setIndex = 0;
     const sets = draft.flatMap((group) =>
       group.sets
-        .map((set, index) => ({
+        .map((set) => ({
           exerciseId: group.exerciseId,
-          setIndex: index,
           weight: set.weight,
           reps: set.reps,
           done: set.done,
           warmup: set.warmup,
         }))
         .filter((s) => s.done && s.reps > 0)
+        .map((s) => ({ ...s, setIndex: setIndex++ }))
     );
 
     if (sets.length === 0) {

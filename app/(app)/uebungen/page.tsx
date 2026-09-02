@@ -423,7 +423,7 @@ export default function ExercisesPage() {
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         aria-label={`Weitere Aktionen für ${exercise.name}`}
-                        className="flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+                        className="touch-target flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
                       >
                         <Ellipsis className="size-4" />
                       </DropdownMenuTrigger>

@@ -415,6 +415,42 @@
   }
 }
 
+/* Kleine Knöpfe reagieren am Touchscreen auf mehr Fläche, als sie einnehmen.
+ *
+ * Gemessen auf der Übungsseite: 489 Ziele unter 44 Pixeln. Stern und Punktmenü
+ * in jeder Zeile sind 32 × 32 und stehen acht Pixel auseinander — das ist die
+ * halbe Fingerkuppe für zwei verschiedene Handlungen. Die Filterknöpfe sind
+ * 28 Pixel hoch.
+ *
+ * Größer machen ginge nicht, ohne das Layout umzuwerfen: die Zeile hat den
+ * Platz nicht, und der Name der Übung hat ihn nötiger. Also wächst nur, was auf
+ * einen Tipp reagiert — ein unsichtbares Feld, mittig über dem Knopf, das ihn
+ * auf 44 × 44 aufpolstert. Sichtbar ändert sich nichts; mit der Maus greift die
+ * Regel gar nicht.
+ *
+ * Absichtlich als Klasse und nicht für jedes `button`: die Felder benachbarter
+ * Knöpfe überlappen sich, und in der Überlappung gewinnt einer von beiden. Das
+ * ist dort richtig, wo heute gar nichts getroffen wird — aber nichts, was man
+ * ungefragt über die ganze App legen sollte.
+ */
+@media (pointer: coarse) {
+  .touch-target {
+    position: relative;
+  }
+
+  .touch-target::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    min-width: 44px;
+    min-height: 44px;
+    width: 100%;
+    height: 100%;
+  }
+}
+
 /* Ein Tippen ist ein Tippen. Ohne das wartet der Browser auf ein mögliches
    zweites Antippen (Doppeltipp-Zoom), bevor er den Knopf auslöst — das ist die
    Verzögerung, die eine Web-App im Vergleich zu einer nativen träge wirken

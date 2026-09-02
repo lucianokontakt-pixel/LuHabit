@@ -162,7 +162,8 @@ export function MuscleGrid({ progress }: { progress: MuscleProgress[] }) {
           <div>
             <h2 className="text-subheading font-display">Sätze pro Woche</h2>
             <p className="text-sm text-muted-foreground">
-              Letzte {progress[0]?.weeks.length ?? 12} Wochen im Vergleich
+              Letzte {progress[0]?.weeks.length ?? 12} Wochen gegen den Korridor, in dem
+              Muskelaufbau zuverlässig stattfindet.
             </p>
           </div>
           <p className="text-xs text-muted-foreground">

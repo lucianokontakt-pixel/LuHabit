@@ -820,17 +820,24 @@ export function SessionClient() {
 
     setSaving(true);
     try {
+      // setIndex zählt über die ganze Einheit durch, nicht je Übung von vorn.
+      // Vorher trugen bei fünf Übungen fünf Zeilen die 0, fünf die 1 — und weil
+      // der Server nach set_index sortiert, war die Reihenfolge der Übungen
+      // beim Wiederlesen die, die SQLite zufällig zurückgab, nicht die
+      // trainierte. Innerhalb einer Übung bleibt die Folge ebenso richtig, weil
+      // die Zahl monoton weiterläuft.
+      let setIndex = 0;
       const payloadSets = exercises.flatMap((pe) =>
         (setsByExercise[pe.id] ?? [])
-          .map((s, i) => ({
+          .map((s) => ({
             exerciseId: pe.exerciseId,
-            setIndex: i,
             weight: s.weight,
             reps: s.reps,
             done: s.done,
             warmup: s.warmup,
           }))
           .filter((s) => s.done && s.reps > 0)
+          .map((s) => ({ ...s, setIndex: setIndex++ }))
       );
 
       // elapsed wird im Sekundentakt fortgeschrieben — kein Date.now() im Render-Pfad.
@@ -1251,6 +1258,13 @@ export function SessionClient() {
                       Zeile zu füllen. */}
                   <div className="flex items-center gap-2 px-(--card-spacing)">
                     <div className="flex items-center overflow-hidden rounded-pill bg-elevated ring-1 ring-foreground/8">
+                      {/* Der Minus-Knopf rührt nur an, was noch offen ist.
+                          Vorher prüfte er allein die Anzahl — ein Tipp daneben
+                          löschte einen fertig protokollierten Satz, ohne
+                          Nachfrage und ohne Rückweg, und der Entwurf schrieb
+                          das sofort fest. Wer einen abgehakten Satz wirklich
+                          loswerden will, hakt ihn erst wieder ab; diese Geste
+                          ist gewollt und umkehrbar. */}
                       <button
                         type="button"
                         onClick={() =>
@@ -1259,8 +1273,12 @@ export function SessionClient() {
                             [pe.id]: (prev[pe.id] ?? []).slice(0, -1),
                           }))
                         }
-                        disabled={sets.length <= 1}
-                        aria-label="Letzten Satz entfernen"
+                        disabled={sets.length <= 1 || Boolean(sets[sets.length - 1]?.done)}
+                        aria-label={
+                          sets[sets.length - 1]?.done
+                            ? "Letzten Satz entfernen — erst abhaken rückgängig machen"
+                            : "Letzten Satz entfernen"
+                        }
                         className="flex h-8 w-9 items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:opacity-25"
                       >
                         <Minus className="size-3.5" />
@@ -1302,7 +1320,7 @@ export function SessionClient() {
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           aria-label="Weitere Aktionen für diese Übung"
-                          className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+                          className="touch-target ml-auto flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
                         >
                           <Ellipsis className="size-4" />
                         </DropdownMenuTrigger>
