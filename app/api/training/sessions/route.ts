@@ -3,6 +3,7 @@ import { d1Query, d1InsertMany } from "@/lib/d1";
 import { newId, resolveNewId } from "@/lib/ids";
 import { currentUserId } from "@/lib/server-user";
 import type { WorkoutSession } from "@/lib/training";
+import { UNAUTHORIZED } from "@/lib/api-antworten";
 
 type SessionRow = {
   id: string;
@@ -25,7 +26,6 @@ type SetRow = {
   warmup: number;
 };
 
-const UNAUTHORIZED = { error: "Nicht angemeldet" };
 
 export async function GET(req: NextRequest) {
   const userId = await currentUserId(req);

@@ -73,8 +73,15 @@ export type LocalEffect =
   | { collection: Collection; key: string; action: "delete" };
 
 
-/** Zahlen als Text sortieren nur richtig, wenn sie gleich lang sind. */
-function pad(value: number): string {
+/**
+ * Zahlen als Text sortieren nur richtig, wenn sie gleich lang sind.
+ *
+ * Öffentlich, weil lib/sync-payload.ts denselben Sortierschlüssel bauen muss:
+ * die Reihenfolge, die der Server liefert, und die, die eine noch nicht
+ * gesendete Änderung lokal erzeugt, müssen dieselbe sein. Zwei Kopien, die
+ * auseinanderlaufen, hieße hier: die Liste springt nach dem Abgleich um.
+ */
+export function pad(value: number): string {
   return String(Math.max(0, Math.round(value))).padStart(6, "0");
 }
 

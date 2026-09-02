@@ -7,6 +7,7 @@ import {
   type PlanExercise,
   type WorkoutSession,
 } from "@/lib/training";
+import { toISO } from "@/lib/datum";
 
 /** Ein Datenpunkt je Einheit, in der die Übung vorkam. */
 export type ProgressPoint = {
@@ -66,7 +67,7 @@ export function exerciseHistory(
 function isoWeeksAgo(weeks: number): string {
   const d = new Date();
   d.setDate(d.getDate() - weeks * 7);
-  return d.toLocaleDateString("sv-SE");
+  return toISO(d);
 }
 
 /** Einheiten seit der letzten Steigerung — bei 0 kg zählen Wiederholungen. */

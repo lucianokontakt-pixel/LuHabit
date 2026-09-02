@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE, authConfigured, isPublicPath, readSessionCookie } from "@/lib/auth";
+import { UNAUTHORIZED } from "@/lib/api-antworten";
 
 /**
  * NICHT in proxy.ts umbenennen, auch wenn der Build es bei jedem Lauf anmahnt.
@@ -40,7 +41,7 @@ export async function middleware(req: NextRequest) {
   // API-Anfragen bekommen 401 statt einer Weiterleitung auf HTML — sonst
   // versucht der Client, eine Login-Seite als JSON zu lesen.
   if (req.nextUrl.pathname.startsWith("/api/")) {
-    return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+    return NextResponse.json(UNAUTHORIZED, { status: 401 });
   }
 
   const loginUrl = new URL("/login", req.url);

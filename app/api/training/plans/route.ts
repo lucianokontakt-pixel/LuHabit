@@ -3,6 +3,8 @@ import { d1Query, d1InsertMany } from "@/lib/d1";
 import { newId, resolveNewId } from "@/lib/ids";
 import { currentUserId } from "@/lib/server-user";
 import type { PlanDay, WorkoutPlan } from "@/lib/training";
+import { UNAUTHORIZED } from "@/lib/api-antworten";
+import { type DayInput } from "@/lib/training";
 
 type PlanRow = {
   id: string;
@@ -31,21 +33,6 @@ type PlanExerciseRow = {
   start_weight: number | null;
 };
 
-type DayInput = {
-  name: string;
-  weekday?: number | null;
-  exercises: {
-    exerciseId: string;
-    sets?: number;
-    repMin?: number;
-    repMax?: number;
-    restSeconds?: number;
-    increment?: number | null;
-    startWeight?: number | null;
-  }[];
-};
-
-const UNAUTHORIZED = { error: "Nicht angemeldet" };
 
 async function loadPlans(userId: string): Promise<WorkoutPlan[]> {
   const plans = await d1Query<PlanRow>(

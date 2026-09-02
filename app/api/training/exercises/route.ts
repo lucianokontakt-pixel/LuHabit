@@ -5,6 +5,7 @@ import { slugifyExercise } from "@/lib/slugify";
 import { currentUserId } from "@/lib/server-user";
 import { catalogEntry, fromCatalog, mergeExercises, mergeOne, type ExerciseRecord } from "@/lib/exercise-catalog";
 import { DEFAULT_BODYWEIGHT_LOAD, type Equipment, type Exercise, type Muscle } from "@/lib/training";
+import { UNAUTHORIZED } from "@/lib/api-antworten";
 
 type ExerciseRow = {
   id: string;
@@ -48,7 +49,6 @@ function toExercise(row: ExerciseRow): Exercise {
   return mergeOne(toRecord(row));
 }
 
-const UNAUTHORIZED = { error: "Nicht angemeldet" };
 
 /** Faustwert für eigene Eigengewichtsübungen — grob ein Liegestütz. */
 export async function GET(req: NextRequest) {

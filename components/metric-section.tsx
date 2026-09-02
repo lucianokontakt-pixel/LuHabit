@@ -11,13 +11,14 @@ import { TrendChart } from "@/components/trend-chart";
 import { useMetricData } from "@/lib/use-metric-data";
 import { formatNumber } from "@/lib/format";
 import type { Metric, MetricEntry } from "@/lib/api-messwerte";
+import { toISO } from "@/lib/datum";
 
 /** Vergleichswert von vor ~n Tagen. Ohne zweiten Messpunkt gibt es kein Delta. */
 function valueDaysAgo(entries: MetricEntry[], days: number): number | null {
   if (entries.length < 2) return null;
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-  const iso = cutoff.toLocaleDateString("sv-SE");
+  const iso = toISO(cutoff);
   const older = entries.filter((e) => e.date <= iso);
   if (older.length > 0) return older[older.length - 1].value;
   return entries[0].value;

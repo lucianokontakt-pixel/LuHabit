@@ -503,5 +503,3 @@ export function ExercisePicker({
     </Dialog>
   );
 }
-
-export { MUSCLE_LABELS };

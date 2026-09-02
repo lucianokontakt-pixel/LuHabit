@@ -20,6 +20,8 @@ import type {
   WorkoutSession,
   WorkoutSet,
 } from "@/lib/training";
+import { pad } from "@/lib/write-ops";
+import type { DataStore } from "@/lib/local-db";
 
 type Row = Record<string, unknown>;
 
@@ -47,10 +49,13 @@ export type StoredBodyProfile = {
 };
 
 /**
- * Die Sammlungen, in denen ein Datensatz liegen kann. Muss zu DATA_STORES in
- * lib/local-db.ts passen.
+ * Die Sammlungen, in denen ein Datensatz liegen kann.
+ *
+ * Abgeleitet statt abgeschrieben: hier stand dieselbe Liste noch einmal, mit
+ * dem Kommentar „muss zu DATA_STORES in lib/local-db.ts passen" — eine
+ * Verabredung, die niemand durchsetzt. Jetzt setzt sie der Compiler durch.
  */
-export type Collection = "entries" | "exercises" | "plans" | "sessions";
+export type Collection = DataStore;
 
 /**
  * Was der Abgleich geliefert hat, sortiert nach "einsortieren" und "entfernen".
@@ -74,11 +79,6 @@ export type SyncSnapshot = {
   removed: Record<Collection, string[]>;
   sortKeys: Record<Collection, Record<string, string>>;
 };
-
-/** Zahlen als Text sortieren nur richtig, wenn sie gleich lang sind. */
-function pad(value: number): string {
-  return String(Math.max(0, Math.round(value))).padStart(6, "0");
-}
 
 /** Der Schlüssel, unter dem ein Eintrag liegt: ein Habit an einem Tag. */
 export function entryKey(habit: string, date: string): string {

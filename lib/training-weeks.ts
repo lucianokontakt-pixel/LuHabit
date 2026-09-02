@@ -6,6 +6,7 @@ import {
   type WorkoutSession,
 } from "@/lib/training";
 import { recentWeeks, weekStartISO } from "@/lib/muscle-stats";
+import { tagKurz, toISO } from "@/lib/datum";
 
 export type TrainingWeek = {
   start: string;
@@ -37,17 +38,6 @@ export type TrainingWeekSummary = {
   /** Veränderung zur Vorwoche in Prozent, null ohne Vergleichswert. */
   volumeDeltaPercent: number | null;
 };
-
-function toISO(date: Date): string {
-  return date.toLocaleDateString("sv-SE");
-}
-
-function weekLabel(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-  });
-}
 
 /**
  * Der übergeordnete Trainings-Habit: Frequenz, Volumen und Serie über die
@@ -91,7 +81,7 @@ export function trainingWeekSummary(
     const bucket = buckets.get(start)!;
     return {
       start,
-      label: weekLabel(start),
+      label: tagKurz(start),
       sessions: bucket.dates.size,
       volume: bucket.volume,
       sets: bucket.sets,

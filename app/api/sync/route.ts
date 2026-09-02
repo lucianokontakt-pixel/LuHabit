@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
 import { currentUserId } from "@/lib/server-user";
+import { UNAUTHORIZED } from "@/lib/api-antworten";
 
 /**
  * Der ziehende Teil des Abgleichs: "gib mir alles, was sich seit X geändert hat".
@@ -35,7 +36,6 @@ import { currentUserId } from "@/lib/server-user";
  *     verschwunden, das über die Live-App angelegt worden war.
  */
 
-const UNAUTHORIZED = { error: "Nicht angemeldet" };
 
 /** Vor Christi Geburt gab es keine Einträge — das holt alles. */
 const BEGINNING = "0000-01-01 00:00:00";

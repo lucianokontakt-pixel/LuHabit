@@ -1,11 +1,12 @@
 import {
   CUSTOM_RANK,
   DEFAULT_BODYWEIGHT_LOAD,
+  type DayInput,
   type Equipment,
   type Exercise,
   type Muscle,
-  type WorkoutPlan,
   type PlanDay,
+  type WorkoutPlan,
   type WorkoutSession,
   type WorkoutSet,
 } from "@/lib/training";
@@ -20,20 +21,6 @@ import { ensureLocalData } from "@/lib/sync";
 import { enqueue, flushQueue } from "@/lib/write-queue";
 import { dedupeSlug, slugifyExercise } from "@/lib/slugify";
 import { newId } from "@/lib/ids";
-
-export type DayInput = {
-  name: string;
-  weekday?: number | null;
-  exercises: {
-    exerciseId: string;
-    sets?: number;
-    repMin?: number;
-    repMax?: number;
-    restSeconds?: number;
-    increment?: number | null;
-    startWeight?: number | null;
-  }[];
-};
 
 /**
  * Einen Tag in die Form bringen, die updatePlan erwartet.
@@ -77,10 +64,6 @@ export function dayToInput(day: DayLike): DayInput {
   };
 }
 
-/** Alle Tage eines Plans, in ihrer Reihenfolge. */
-export function planToDayInputs(plan: WorkoutPlan): DayInput[] {
-  return [...plan.days].sort((a, b) => a.position - b.position).map(dayToInput);
-}
 
 /**
  * Der lokale Bestand hält nur noch, was von der Bibliothek abweicht — die

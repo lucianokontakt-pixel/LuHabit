@@ -1,4 +1,5 @@
 import { workingSets, type WorkoutSession } from "@/lib/training";
+import { mondayOf, toISO } from "@/lib/datum";
 
 export type HeatmapDay = {
   date: string;
@@ -39,11 +40,6 @@ export function levelOf(sets: number, marks: number[]): 0 | 1 | 2 | 3 | 4 {
   return 4;
 }
 
-/** Ein Tag als ISO-Datum in Ortszeit. */
-function isoOf(date: Date): string {
-  return date.toLocaleDateString("sv-SE");
-}
-
 /**
  * Die Tage der Heatmap, ältester zuerst. Der Zeitraum endet heute und beginnt
  * am Montag der Woche, die `days` Tage zurückliegt — so sind alle Spalten voll
@@ -68,11 +64,11 @@ export function heatmapDays(
   const start = new Date(today);
   start.setDate(start.getDate() - (days - 1));
   // Auf den Montag davor zurück, damit jede Spalte eine ganze Woche ist.
-  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  start.setTime(mondayOf(start).getTime());
 
   const out: HeatmapDay[] = [];
   for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const date = isoOf(d);
+    const date = toISO(d);
     out.push({ date, sets: setsByDate.get(date) ?? 0, level: 0, sessionIds: idsByDate.get(date) ?? [] });
   }
 

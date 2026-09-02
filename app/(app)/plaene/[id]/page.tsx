@@ -79,8 +79,8 @@ export default function PlanEditorPage({ params }: { params: Promise<{ id: strin
         id: plan.id,
         name: name.trim(),
         weeklyTarget,
-        // Nicht planToDayInputs: hier zählt die Reihenfolge im Editor, die
-        // gerade per Ziehen geändert worden sein kann, nicht die gespeicherte.
+        // dayToInput über die Reihenfolge im Editor: die kann gerade per
+        // Ziehen geändert worden sein, die gespeicherte wäre die alte.
         days: days.map(dayToInput),
       });
       setPlans(next);

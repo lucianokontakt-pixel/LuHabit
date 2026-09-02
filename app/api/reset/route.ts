@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
 import { currentUserId, seedStarterPlan } from "@/lib/server-user";
+import { UNAUTHORIZED } from "@/lib/api-antworten";
 
-const UNAUTHORIZED = { error: "Nicht angemeldet" };
 
 /**
  * Was zurückgesetzt werden kann. Bewusst getrennt: die Einrichtung (Ziele,

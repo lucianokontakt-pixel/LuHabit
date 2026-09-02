@@ -90,22 +90,10 @@ export const REGIONS: { key: Region; muscle: Muscle; label: string; short: strin
   { key: "obliques", muscle: "core", label: "Seitlicher Bauch", short: "seitlich" },
 ];
 
-export const REGION_LABELS: Record<Region, string> = Object.fromEntries(
-  REGIONS.map((r) => [r.key, r.label])
-) as Record<Region, string>;
-
 /** Die Kurzform — nur dort, wo die Muskelgruppe schon danebensteht. */
 export const REGION_SHORT: Record<Region, string> = Object.fromEntries(
   REGIONS.map((r) => [r.key, r.short])
 ) as Record<Region, string>;
-
-/** Die Untergruppen einer Muskelgruppe — leer, wo es keine gibt. */
-export function regionsFor(muscle: Muscle): { key: Region; label: string }[] {
-  return REGIONS.filter((r) => r.muscle === muscle).map((r) => ({
-    key: r.key,
-    label: r.label,
-  }));
-}
 
 /**
  * Die Beliebtheitsstufe, die eine eigene Übung bekommt.
@@ -212,6 +200,29 @@ export type Exercise = {
 export function stufeVon(exercise: Pick<Exercise, "rank" | "rating">): number {
   return exercise.rating ?? exercise.rank;
 }
+
+/**
+ * Ein Trainingstag, wie er über die Leitung geht.
+ *
+ * Steht hier und nicht in der Route oder im Client: die Form stand zweimal
+ * Wort für Wort da — einmal in lib/api-training.ts, einmal in
+ * app/api/training/plans/route.ts —, und nichts hielt die beiden zusammen.
+ * Fügt jemand ein Feld auf einer Seite hinzu, schluckt die andere es
+ * stillschweigend.
+ */
+export type DayInput = {
+  name: string;
+  weekday?: number | null;
+  exercises: {
+    exerciseId: string;
+    sets?: number;
+    repMin?: number;
+    repMax?: number;
+    restSeconds?: number;
+    increment?: number | null;
+    startWeight?: number | null;
+  }[];
+};
 
 export type PlanExercise = {
   id: string;

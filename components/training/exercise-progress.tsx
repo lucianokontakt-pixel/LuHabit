@@ -19,6 +19,7 @@ import {
   type WorkoutSession,
 } from "@/lib/training";
 import { formatNumber } from "@/lib/format";
+import { tagKurz } from "@/lib/datum";
 
 const chartConfig = {
   weight: { label: "Arbeitsgewicht", color: "var(--chart-1)" },
@@ -65,10 +66,7 @@ export function ExerciseProgress({
         }, null);
         return {
           date: session.date,
-          label: new Date(`${session.date}T00:00:00`).toLocaleDateString("de-DE", {
-            day: "2-digit",
-            month: "2-digit",
-          }),
+          label: tagKurz(session.date),
           weight: topWeight,
           oneRm: best,
           volume: sets.reduce((sum, s) => sum + s.weight * s.reps, 0),

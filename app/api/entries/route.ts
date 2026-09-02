@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
 import { currentUserId } from "@/lib/server-user";
+import { UNAUTHORIZED } from "@/lib/api-antworten";
 
 type EntryRow = { habit: string; date: string; value: number };
 
-const UNAUTHORIZED = { error: "Nicht angemeldet" };
 
 export async function GET(req: NextRequest) {
   const userId = await currentUserId(req);

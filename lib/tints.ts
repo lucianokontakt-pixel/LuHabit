@@ -119,5 +119,4 @@ export const TINT_FAMILY_LABEL: Record<Tint, string> = {
  * der aktive Reiter in der unteren Leiste.
  */
 export const STATE_DONE = TINT_SURFACE.mint;
-export const STATE_NOW = TINT_SURFACE.orange;
 export const STATE_HINT = TINT_SURFACE.violet;

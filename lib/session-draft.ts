@@ -13,17 +13,6 @@
 export const DRAFT_KEY = "luhabit-active-session";
 
 /**
- * Der Trainingstag, an dem gerade gearbeitet wird — oder null.
- *
- * Bewusst nur die ID und nicht der ganze Entwurf: der Aufrufer will wissen, ob
- * etwas offen ist, nicht was darin steht. Fehlender oder kaputter Speicher
- * heißt „nichts offen"; das ist der harmlose Ausgang.
- */
-export function offenerEntwurfTag(): string | null {
-  return entwurfStand(entwurfRoh())?.dayId ?? null;
-}
-
-/**
  * Der rohe Text aus dem Speicher.
  *
  * Für useSyncExternalStore muss der Schnappschuss zwischen zwei Renderdurchläufen
@@ -41,7 +30,8 @@ export function entwurfRoh(): string | null {
   }
 }
 
-/** Auf dem Server gibt es keinen Speicher — siehe keinEntwurf. */
+/** Auf dem Server gibt es keinen Speicher — und beim ersten Rendern im
+ *  Browser muss dasselbe herauskommen, sonst weicht die Hydration ab. */
 export function keinEntwurfRoh(): null {
   return null;
 }
@@ -120,10 +110,4 @@ export function abonniereEntwurf(melde: () => void): () => void {
   if (typeof window === "undefined") return () => {};
   window.addEventListener("storage", melde);
   return () => window.removeEventListener("storage", melde);
-}
-
-/** Auf dem Server gibt es keinen Entwurf — und beim ersten Rendern im Browser
- *  muss dasselbe herauskommen, sonst weicht die Hydration ab. */
-export function keinEntwurf(): null {
-  return null;
 }

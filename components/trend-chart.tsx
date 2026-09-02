@@ -9,6 +9,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import type { MetricEntry } from "@/lib/api-messwerte";
+import { tagKurz } from "@/lib/datum";
 
 /** Die Kalendertage eines Fensters, ältester zuerst. */
 function dateRange(fromDaysAgo: number, toDaysAgo = 0): string[] {
@@ -28,13 +29,6 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-function dayLabel(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-  });
-}
-
 /**
  * Verlauf einer Messreihe. Zeichnet Achsen und Raster auch dann, wenn noch
  * nichts oder erst ein Wert eingetragen ist — ein leerer Kasten mit Hinweistext
@@ -53,14 +47,14 @@ export function TrendChart({
 }) {
   const data = useMemo(() => {
     if (entries.length >= 2) {
-      return entries.map((e) => ({ date: e.date, label: dayLabel(e.date), value: e.value }));
+      return entries.map((e) => ({ date: e.date, label: tagKurz(e.date), value: e.value }));
     }
     // Ohne Verlauf spannt ein fester Zeitraum die Achse auf. Fehlende Tage
     // bleiben null: recharts zeichnet dort nichts, das Raster steht trotzdem.
     const byDate = new Map(entries.map((e) => [e.date, e.value]));
     return dateRange(emptyDays - 1, 0).map((date) => ({
       date,
-      label: dayLabel(date),
+      label: tagKurz(date),
       value: byDate.get(date) ?? null,
     }));
   }, [entries, emptyDays]);

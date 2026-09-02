@@ -8,6 +8,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import type { ProgressPoint } from "@/lib/progression";
+import { tagKurz } from "@/lib/datum";
 
 const chartConfig = {
   value: { label: "Arbeitsgewicht", color: "var(--chart-1)" },
@@ -24,10 +25,7 @@ export function ExerciseTrendChart({
 }) {
   const unit = repsBased ? "Wdh" : "kg";
   const data = points.map((p) => ({
-    label: new Date(`${p.date}T00:00:00`).toLocaleDateString("de-DE", {
-      day: "2-digit",
-      month: "2-digit",
-    }),
+    label: tagKurz(p.date),
     value: repsBased ? p.topReps : p.topWeight,
     oneRm: repsBased ? null : p.oneRm,
   }));

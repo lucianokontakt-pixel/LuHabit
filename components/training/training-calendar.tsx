@@ -4,16 +4,17 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { Exercise, WorkoutSession } from "@/lib/training";
 import { TINT_FAMILY_LABEL, TINT_FILL, TINTS, tintForMuscles, type Tint } from "@/lib/tints";
+import { toISO, weekdayIndex } from "@/lib/datum";
 
 const WEEKDAY_INITIALS = ["M", "D", "M", "D", "F", "S", "S"];
 
 function monthMatrix(year: number, month: number): (string | null)[] {
   const first = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const leading = (first.getDay() + 6) % 7; // Montag = 0
+  const leading = weekdayIndex(first); // Montag = 0
   const cells: (string | null)[] = Array(leading).fill(null);
   for (let day = 1; day <= daysInMonth; day++) {
-    cells.push(new Date(year, month, day).toLocaleDateString("sv-SE"));
+    cells.push(toISO(new Date(year, month, day)));
   }
   return cells;
 }
@@ -44,7 +45,7 @@ export function TrainingCalendar({
   }
 
   const today = new Date();
-  const todayISO = today.toLocaleDateString("sv-SE");
+  const heute = toISO(today);
   const trainedDays = new Set([...byDate.keys()]);
 
   /** Die Tönung je Tag, gezählt über die Sätze — wie überall sonst auch. */
@@ -72,12 +73,12 @@ export function TrainingCalendar({
   }).filter((block) => {
     const laufend = block.month === today.getMonth() && block.year === today.getFullYear();
     if (laufend || !ersterTag) return laufend;
-    const monatsende = new Date(block.year, block.month + 1, 0).toLocaleDateString("sv-SE");
+    const monatsende = toISO(new Date(block.year, block.month + 1, 0));
     return monatsende >= ersterTag;
   });
   const restDaysThisMonth = (() => {
     const cells = monthMatrix(today.getFullYear(), today.getMonth()).filter(
-      (c): c is string => c !== null && c <= todayISO
+      (c): c is string => c !== null && c <= heute
     );
     return cells.filter((c) => !trainedDays.has(c)).length;
   })();
@@ -140,8 +141,8 @@ export function TrainingCalendar({
                     <span key={`pad-${i}`} className={einzeln ? "aspect-square" : "size-6"} />
                   );
                 const daySessions = byDate.get(date);
-                const isFuture = date > todayISO;
-                const isToday = date === todayISO;
+                const isFuture = date > heute;
+                const isToday = date === heute;
                 return (
                   <span
                     key={date}

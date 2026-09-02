@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { d1Query, d1InsertMany } from "@/lib/d1";
 import { AUTH_COOKIE, OWNER_USER_ID, authConfigured, readSessionCookie } from "@/lib/auth";
 import { STARTER_PLAN } from "@/lib/exercise-seed";
+import { newId } from "@/lib/ids";
 
 export type DbUser = {
   id: string;
@@ -102,10 +103,6 @@ export async function upsertGoogleUser(profile: {
   await provisionNewUser(id);
 
   return { id, email, name: profile.name ?? null, picture: profile.picture ?? null };
-}
-
-function newId(prefix: string): string {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 /**

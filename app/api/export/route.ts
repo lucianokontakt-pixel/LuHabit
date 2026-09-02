@@ -3,6 +3,7 @@ import { d1Query } from "@/lib/d1";
 import { currentUserId } from "@/lib/server-user";
 import { toCsv } from "@/lib/csv";
 import { todayISO } from "@/lib/datum";
+import { UNAUTHORIZED } from "@/lib/api-antworten";
 
 /**
  * Datenexport — alles, was einem Konto gehört, zum Mitnehmen.
@@ -16,7 +17,6 @@ import { todayISO } from "@/lib/datum";
  * Cloud ablegt.
  */
 
-const UNAUTHORIZED = { error: "Nicht angemeldet" };
 
 type Row = Record<string, unknown>;
 

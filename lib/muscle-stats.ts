@@ -8,6 +8,7 @@ import {
   type Muscle,
   type WorkoutSession,
 } from "@/lib/training";
+import { mondayOf, tagKurz, toISO } from "@/lib/datum";
 
 /**
  * Der Korridor, in dem Muskelaufbau zuverlässig stattfindet: rund 10 bis 20
@@ -60,21 +61,14 @@ export type MuscleProgress = {
   status: MuscleStatus;
 };
 
-function toISO(date: Date): string {
-  return date.toLocaleDateString("sv-SE");
-}
-
 /** Montag der Woche, in der das Datum liegt. */
 export function weekStartISO(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return toISO(d);
+  return toISO(mondayOf(new Date(`${iso}T00:00:00`)));
 }
 
 /** Die letzten n Wochenanfänge, aufsteigend, die laufende Woche zuletzt. */
 export function recentWeeks(count: number, today = new Date()): string[] {
-  const monday = new Date(today);
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const monday = mondayOf(today);
   const weeks: string[] = [];
   for (let i = count - 1; i >= 0; i--) {
     const d = new Date(monday);
@@ -82,13 +76,6 @@ export function recentWeeks(count: number, today = new Date()): string[] {
     weeks.push(toISO(d));
   }
   return weeks;
-}
-
-function weekLabel(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-  });
 }
 
 function statusFor(average: number): MuscleStatus {
@@ -123,7 +110,7 @@ export function muscleProgress(
   for (const m of MUSCLES) {
     const perWeek = new Map<string, MuscleWeek>();
     for (const start of weeks) {
-      perWeek.set(start, { start, label: weekLabel(start), sets: 0, volume: 0, oneRm: 0 });
+      perWeek.set(start, { start, label: tagKurz(start), sets: 0, volume: 0, oneRm: 0 });
     }
     buckets.set(m.key, perWeek);
   }

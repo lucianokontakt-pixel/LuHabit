@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { d1Query } from "@/lib/d1";
 import { currentUserId } from "@/lib/server-user";
 import type { Gender } from "@/lib/body-profile";
+import { UNAUTHORIZED } from "@/lib/api-antworten";
 
 type ProfileRow = {
   age: number | null;
@@ -10,7 +11,6 @@ type ProfileRow = {
   activity: string;
 };
 
-const UNAUTHORIZED = { error: "Nicht angemeldet" };
 
 export async function GET(req: NextRequest) {
   const userId = await currentUserId(req);
