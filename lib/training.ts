@@ -145,6 +145,49 @@ export const EQUIPMENT: Equipment[] = [
  */
 export type Ladeart = "steck" | "scheiben" | "frei" | "ohne";
 
+/**
+ * Was für eine Art Übung das ist. Die App ist fürs Krafttraining gebaut —
+ * Dehnen und Ausdauer stehen deshalb in der Bibliothek, aber nicht im Weg
+ * (siehe die Beliebtheitsstufe in scripts/repdb-zuordnung.mjs).
+ */
+export type Kategorie = "strength" | "stretching" | "cardio" | "olympic" | "plyometrics";
+
+/** Mehrgelenkig oder eingelenkig. */
+export type Mechanik = "compound" | "isolation";
+
+/** Drücken, Ziehen, Halten — oder bewegt, wie beim Seilspringen. */
+export type ZugArt = "push" | "pull" | "static" | "dynamic";
+
+export const ZUGART_LABELS: Record<ZugArt, string> = {
+  push: "Drücken",
+  pull: "Ziehen",
+  static: "Halten",
+  dynamic: "Bewegung",
+};
+
+export type Schwierigkeit = "beginner" | "intermediate" | "advanced";
+
+export const KATEGORIE_LABELS: Record<Kategorie, string> = {
+  strength: "Kraft",
+  stretching: "Dehnen",
+  cardio: "Ausdauer",
+  olympic: "Olympisch",
+  plyometrics: "Sprungkraft",
+};
+
+export const MECHANIK_LABELS: Record<Mechanik, string> = {
+  compound: "Mehrgelenkig",
+  isolation: "Eingelenkig",
+};
+
+export const SCHWIERIGKEIT_LABELS: Record<Schwierigkeit, string> = {
+  beginner: "Einsteiger",
+  intermediate: "Fortgeschritten",
+  advanced: "Sehr schwer",
+};
+
+export const SCHWIERIGKEITEN: Schwierigkeit[] = ["beginner", "intermediate", "advanced"];
+
 export const LADEART_LABELS: Record<Ladeart, string> = {
   steck: "Steckgewicht",
   scheiben: "Scheiben",
@@ -214,18 +257,20 @@ export type Exercise = {
    */
   warmup: "always" | "never" | null;
   /**
-   * Kürzel der Mediendateien im Katalog — daraus werden GIF und Standbild
-   * zusammengesetzt (siehe lib/exercise-catalog.ts). null bei selbst
-   * angelegten Übungen, die keine Bilder haben.
+   * Dateiname der Bilder im Katalog, ohne Endung und ohne `-start`/`-peak`
+   * (siehe lib/exercise-catalog.ts). null bei selbst angelegten Übungen, die
+   * keine Bilder haben.
    */
   media: string | null;
+  /** Welche Bildpositionen es gibt — leer bei eigenen Übungen. */
+  bilder: ("start" | "peak" | "main")[];
   /** Muskeln, die mitarbeiten. Nur zur Anzeige, nicht in der Statistik. */
   secondary: Muscle[];
-  /** Der englische Originalname — die Suche findet Übungen auch darüber. */
+  /** Der englische Name — die Suche findet Übungen auch darüber. */
   en: string | null;
   /** Untergruppe innerhalb der Muskelgruppe, oder null. Kommt aus dem Katalog. */
   region: Region | null;
-  /** Beliebtheitsstufe 1–5 aus dem Katalog. Siehe scripts/exercise-beliebtheit.mjs. */
+  /** Beliebtheitsstufe 1–5 aus dem Katalog. Siehe scripts/repdb-zuordnung.mjs. */
   rank: number;
   /**
    * Die selbst vergebene Stufe. Schlägt `rank`, wenn gesetzt — die Schätzung
@@ -233,10 +278,32 @@ export type Exercise = {
    */
   rating: number | null;
   /**
-   * Die selbst festgelegte Ladeart. null heißt: es gilt die Ableitung aus
-   * Gerät und Name (siehe ladeartVon).
+   * Die selbst festgelegte Ladeart. null heißt: es gilt die aus dem Katalog
+   * oder die Ableitung aus dem Gerät (siehe ladeartVon).
    */
   ladeart: Ladeart | null;
+
+  /**
+   * Was der Datensatz über die Bewegung selbst weiß. Alles davon ist bei einer
+   * eigenen Übung leer beziehungsweise null — dort weiß es niemand.
+   *
+   * Beschreibung, Anleitung und Tipps stehen nicht hier, sondern werden bei
+   * Bedarf nachgeladen (ladeUebungstext in lib/exercise-catalog.ts): sie sind
+   * schwerer als der ganze übrige Katalog und werden nur gebraucht, wenn
+   * jemand eine einzelne Übung aufschlägt.
+   */
+  kategorie: Kategorie | null;
+  mechanik: Mechanik | null;
+  zugArt: ZugArt | null;
+  schwierigkeit: Schwierigkeit | null;
+  primaerMuskeln: string[];
+  sekundaerMuskeln: string[];
+  /** Die Bewegungsfamilie — trägt die Wechsel-Vorschläge im Training. */
+  variationsgruppe: string | null;
+  einseitig: boolean;
+  met: number | null;
+  ziele: string[];
+  tags: string[];
 };
 
 /** Die Stufe, die zählt: das eigene Urteil, sonst die Schätzung. */

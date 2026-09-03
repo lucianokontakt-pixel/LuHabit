@@ -91,7 +91,7 @@ const RUNDUNG = 0.01;
  * Klimmzügen und Liegestützen ist das Gewicht der Körper, und den kennt die
  * App aus den Messwerten.
  */
-export function startFaktor({ name, muscle, equipment }) {
+export function startFaktor({ name, muscle, equipment, isolation, einseitig }) {
   if (equipment === "bodyweight") return null;
   const sonder = SONDERFAELLE.find((f) => f.wenn({ name, muscle, equipment }));
   const zelle = BASIS[sonder?.zelle ?? muscle];
@@ -99,9 +99,13 @@ export function startFaktor({ name, muscle, equipment }) {
   const basis = zelle[equipment];
   if (!basis) return null;
 
+  // Die zwei Regexe waren ein Ersatz für Angaben, die der Datensatz nicht
+  // hatte. Wo sie jetzt als Feld kommen (mechanic, is_unilateral), zählt das
+  // Feld: "Zottman-Curl" steht in keiner Namensliste und ist trotzdem eine
+  // Isolationsübung.
   let faktor = basis * (sonder?.anteil ?? 1);
-  if (ISOLATION.test(name)) faktor *= ISOLATION_ANTEIL;
-  if (equipment !== "dumbbell" && EINSEITIG.test(name)) faktor *= EINSEITIG_ANTEIL;
+  if (isolation ?? ISOLATION.test(name)) faktor *= ISOLATION_ANTEIL;
+  if (equipment !== "dumbbell" && (einseitig ?? EINSEITIG.test(name))) faktor *= EINSEITIG_ANTEIL;
 
   return Math.max(RUNDUNG, Math.round(faktor / RUNDUNG) * RUNDUNG);
 }

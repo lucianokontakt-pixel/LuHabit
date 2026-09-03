@@ -121,15 +121,20 @@ self.addEventListener("message", (event) => {
 /**
  * Dateien, die sich unter derselben Adresse nie ändern.
  *
- * Die Übungs-GIFs gehören dazu: sie liegen unter /uebungen/gif/<id>.gif und
- * werden nie überschrieben. Ohne .gif in dieser Liste liefen sie über
- * networkFirst — jede Anzeige hätte einen Netzweg gekostet (95 KB im
- * Gym-WLAN), und sie hätten den Seiten-Cache gefüllt statt den für Bilder.
+ * Die Übungsbilder gehören dazu: sie liegen unter /uebungen/repdb/ und werden
+ * nie überschrieben. Ohne .webp in dieser Liste liefen sie über networkFirst —
+ * jede Anzeige hätte einen Netzweg gekostet, und sie hätten den Seiten-Cache
+ * gefüllt statt den für Bilder.
+ *
+ * .gif und .jpg stehen weiter drin, obwohl die Bibliothek seit dem Wechsel auf
+ * RepDB nur noch WebP ausliefert: auf Geräten, die die alte Fassung im Cache
+ * haben, würde ein Entfernen nichts verbessern, und das Symbol- und
+ * Vorschaumaterial der App ist ohnehin PNG.
  */
 function isImmutable(url) {
   return (
     url.pathname.startsWith("/_next/static/") ||
-    /\.(?:woff2?|png|jpe?g|gif|svg|ico)$/.test(url.pathname)
+    /\.(?:woff2?|png|jpe?g|gif|svg|ico|webp)$/.test(url.pathname)
   );
 }
 

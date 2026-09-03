@@ -42,7 +42,8 @@ import { ExercisePicker } from "@/components/training/exercise-picker";
 import { summarizeSession } from "@/lib/session-stats";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
-import { saveSession, swapPlanExercise, updateExercise } from "@/lib/api-training";
+import { saveSession, swapPlanExercise } from "@/lib/api-training";
+import { kernRang } from "@/lib/kern-uebungen";
 import { addDaysISO, isoDateDaysAgo, todayISO } from "@/lib/datum";
 import { newId } from "@/lib/ids";
 import { formatClock, formatDayLabel, formatNumber } from "@/lib/format";
@@ -59,10 +60,8 @@ import {
   suggestAdjustment,
   ladeartVon,
   LADEART_LABELS,
-  LADEARTEN,
   RANK_SICHTBAR_AB,
   stufeVon,
-  type Ladeart,
   type PlanDay,
   type Exercise,
   type PlanExercise,
@@ -195,27 +194,42 @@ function buildRows({
 const ABSOLUT_ZU_LEICHT = 15;
 
 /**
- * Andere Übungen für denselben Muskel — für den Moment, in dem das eigene
- * Gerät besetzt ist, egal ob Maschine, Langhantel oder sonst was. Dieselbe
- * Region ist Pflicht, nicht nur wo bekannt: sonst stünde bei "Kurzhantel
- * Seitheben" das Bankdrücken daneben, nur weil beide auf die Brust zielen —
- * und bei einer Übung ohne eigene Region-Angabe (z. B. ein Teil der
- * Schulterübungen) sonst gleich die ganze Muskelgruppe, vordere und hintere
- * Schulter durcheinander.
+ * Andere Übungen für dieselbe Bewegung — für den Moment, in dem das eigene
+ * Gerät besetzt ist.
+ *
+ * Maßgeblich ist die Variationsgruppe aus dem Datensatz: alle Kniebeugen
+ * tragen "squat", alle Ruderzüge "row". Das ist der Unterschied zu vorher, wo
+ * dieselbe Frage aus Muskel, Region und Namensähnlichkeit geraten wurde — und
+ * daran gescheitert ist, weil "Lever Incline Chest Press" und "Smith Incline
+ * Bench Press" sich zwei Wörter teilen und trotzdem verschiedene Geräte sind.
+ * 410 der 601 Übungen haben eine Gruppe.
+ *
+ * Ohne Gruppe bleibt der alte Weg: derselbe Muskel und dieselbe Region. Er ist
+ * gröber, aber besser als ein leerer Knopf.
  */
 function wechselUebungen(exercise: Exercise, alle: Exercise[]): Exercise[] {
+  const passt = exercise.variationsgruppe
+    ? (e: Exercise) => e.variationsgruppe === exercise.variationsgruppe
+    : (e: Exercise) => e.muscle === exercise.muscle && e.region === exercise.region;
+
   return alle
     .filter(
       (e) =>
         e.id !== exercise.id &&
         !e.hidden &&
-        e.muscle === exercise.muscle &&
-        e.region === exercise.region &&
+        passt(e) &&
         // Dieselbe Grenze wie in der Übungsliste: eine Ganzkörper-Wippe als
         // Wechsel-Vorschlag hilft nicht, wenn das eigentliche Gerät besetzt ist.
         stufeVon(e) >= RANK_SICHTBAR_AB
     )
-    .sort((a, b) => b.rank - a.rank);
+    // Das naheliegendste zuerst: dieselbe Ladeart heißt, dass das Gewicht
+    // ähnlich schnell verstellt ist, und der Klassiker vor der Variante.
+    .sort(
+      (a, b) =>
+        kernRang(b.id) - kernRang(a.id) ||
+        b.rank - a.rank ||
+        a.name.localeCompare(b.name, "de")
+    );
 }
 
 /**
@@ -275,51 +289,6 @@ function WechselUebungen({
   );
 }
 
-/**
- * Für einen Rest der "Lever …"-Maschinen weiß der Datensatz die Ladeart noch
- * nicht (siehe ladeartVon) — im Bild oder GIF sieht man sie aber sofort: ein
- * Gewichtsblock mit Stift oder Hörner für Scheiben. Also fragen, statt zu
- * raten, und die Antwort gleich für die Übung merken.
- */
-function LadeartFrage({
-  exercise,
-  onGesetzt,
-}: {
-  exercise: Exercise;
-  onGesetzt: (exercise: Exercise) => void;
-}) {
-  const [saving, setSaving] = useState<Ladeart | null>(null);
-  if (exercise.equipment !== "machine" || ladeartVon(exercise) !== null) return null;
-
-  async function setzen(art: Ladeart) {
-    setSaving(art);
-    try {
-      onGesetzt(await updateExercise({ id: exercise.id, ladeart: art }));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Konnte die Ladeart nicht speichern");
-    } finally {
-      setSaving(null);
-    }
-  }
-
-  return (
-    <div className="mx-(--card-spacing) flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-      <span>Ladeart im Bild?</span>
-      {LADEARTEN.filter((art) => art === "steck" || art === "scheiben").map((art) => (
-        <button
-          key={art}
-          type="button"
-          disabled={saving !== null}
-          onClick={() => void setzen(art)}
-          className="rounded-field bg-card px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
-        >
-          {saving === art ? "Speichert…" : LADEART_LABELS[art]}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function clearDraft() {
   try {
     localStorage.removeItem(DRAFT_KEY);
@@ -365,7 +334,6 @@ export function SessionClient() {
     lastLoggedFor,
     addSession,
     loading,
-    upsertExercise,
   } = useTraining();
   const { entries: weightEntries, loading: weightLoading } = useMetricData("weight");
   const bodyweight = weightEntries[weightEntries.length - 1]?.value ?? null;
@@ -1358,10 +1326,6 @@ export function SessionClient() {
                         </p>
                       )}
                     </div>
-                  )}
-
-                  {exercise && (
-                    <LadeartFrage exercise={exercise} onGesetzt={upsertExercise} />
                   )}
 
                   {/* Nur solange nichts abgehakt ist — ein Tausch mittendrin

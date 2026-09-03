@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CATALOG, fromCatalog } from "@/lib/exercise-catalog";
-import { SUCHBEGRIFFE } from "@/lib/exercise-suchbegriffe";
 import { guete, normalisieren, suchwoerter, verlaufVon, woerter } from "@/lib/exercise-suche";
+import { kernRang } from "@/lib/kern-uebungen";
 import { RANK_SICHTBAR_AB, stufeVon, type Exercise } from "@/lib/training";
 
 /** Die Bibliothek so, wie der Wähler sie standardmäßig zeigt. */
@@ -15,6 +15,7 @@ function treffer(eingabe: string, anzahl = 5): string[] {
     .sort(
       (a, b) =>
         b.g - a.g ||
+        kernRang(b.e.id) - kernRang(a.e.id) ||
         stufeVon(b.e) - stufeVon(a.e) ||
         a.e.name.localeCompare(b.e.name, "de")
     )
@@ -41,30 +42,32 @@ describe("guete", () => {
   const uebung = (teil: Partial<Exercise>): Exercise => ({
     ...fromCatalog(CATALOG[0]),
     id: "x",
-    name: "Barbell Bench Press",
+    name: "Langhantel-Bankdrücken",
     muscle: "chest",
     equipment: "barbell",
-    en: "barbell bench press",
+    en: "Barbell Bench Press",
     region: "chest-mid",
+    primaerMuskeln: ["pectoralis_major"],
+    tags: [],
     ...teil,
   });
 
   it("stuft vom Namensanfang bis zum bloßen Umfeld ab", () => {
     const e = uebung({});
-    expect(guete(e, suchwoerter("barbell bench"), "barbell bench")).toBe(4);
-    expect(guete(e, suchwoerter("bench press"), "bench press")).toBe(3);
-    expect(guete(e, suchwoerter("press barbell"), "press barbell")).toBe(2);
-    // „Brust“ steht nur im Muskel-Etikett, nicht im Namen.
+    expect(guete(e, suchwoerter("langhantel bank"), "langhantel bank")).toBe(4);
+    // „Bankdrücken" steht als eigenes Wort im Namen, aber nicht am Anfang.
+    expect(guete(e, suchwoerter("bankdrücken"), "bankdrücken")).toBe(3);
+    // „Brust" steht nur im Muskel-Etikett, nicht im Namen.
     expect(guete(e, suchwoerter("brust"), "brust")).toBe(1);
     expect(guete(e, suchwoerter("kniebeuge"), "kniebeuge")).toBe(0);
   });
 
   it("nimmt eine Endung mit, aber kein halbes Kompositum", () => {
-    // „Curls“ meint „Curl“ …
-    const curl = uebung({ name: "Barbell Curl", en: "barbell curl" });
+    // „Curls" meint „Curl" …
+    const curl = uebung({ name: "SZ-Stangen-Curl", en: "EZ-Bar Curl" });
     expect(guete(curl, suchwoerter("curls"), "curls")).toBeGreaterThan(0);
-    // … „Frontheben“ meint aber nicht jede „Front Squat“.
-    const squat = uebung({ name: "Barbell Front Squat", en: "barbell front squat" });
+    // … „Frontheben" meint aber nicht jede „Front Squat".
+    const squat = uebung({ name: "Front Squat", en: "Front Squat" });
     expect(guete(squat, suchwoerter("frontheben"), "frontheben")).toBe(0);
   });
 
@@ -74,42 +77,50 @@ describe("guete", () => {
 });
 
 describe("die Suche auf der echten Bibliothek", () => {
-  // lib/exercise-suchbegriffe.ts ging beim RepDB-Umbau versehentlich verloren
-  // (unversioniert, nur teilweise aus dem Gedächtnis wiederhergestellt — siehe
-  // die Datei selbst) und deckt seither nur noch 14 statt der ursprünglich
-  // gut 90 Suchbegriffe ab. Diese Prüfung testet darum nur noch, was das
-  // wiederhergestellte Teilstück wirklich hergibt, nicht mehr "beinpresse",
-  // "latzug", "seitheben" & Co. — die fehlen jetzt und finden nichts, bis
-  // jemand sie neu einträgt.
-  it("findet deutsch, was englisch heißt", () => {
-    expect(treffer("bankdrücken")).toContain("Barbell Bench Press");
-    expect(treffer("bankdruecken")).toContain("Barbell Bench Press");
+  // Bis zum Wechsel auf RepDB hing hier ein Wörterbuch dazwischen, das die
+  // Eingabe übersetzte — die Übungen hießen englisch. Seit die Bibliothek
+  // selbst deutsch heißt, ist die Übersetzung ersatzlos entfallen; diese
+  // Prüfungen zeigen, dass die deutschen Wörter trotzdem (und direkter)
+  // treffen.
+  it("findet die Grundübungen unter ihrem deutschen Namen", () => {
+    expect(treffer("bankdrücken")).toContain("Langhantel-Bankdrücken");
+    expect(treffer("bankdruecken")).toContain("Langhantel-Bankdrücken");
+    expect(treffer("kniebeuge")).toContain("Langhantel-Kniebeuge");
+    expect(treffer("kreuzheben")).toContain("Langhantel-Kreuzheben");
+    expect(treffer("latzug")).toContain("Latzug");
+    expect(treffer("beinpresse")).toContain("Beinpresse");
+    expect(treffer("klimmzug")).toContain("Klimmzug");
+    expect(treffer("seitheben")).toContain("Kurzhantel Seitheben");
+  });
+
+  it("findet dieselbe Übung auch über den englischen Namen", () => {
+    expect(treffer("bench press")).toContain("Langhantel-Bankdrücken");
+    expect(treffer("deadlift")).toContain("Langhantel-Kreuzheben");
   });
 
   it("kennt die Wortreihenfolge nicht als Bedingung", () => {
-    expect(treffer("press incline")).toContain("Barbell Incline Bench Press");
+    expect(treffer("schrägbank langhantel")).toContain("Schrägbankdrücken mit Langhantel");
   });
 
   it("sucht auch über Muskel und Gerät", () => {
-    expect(treffer("brust maschine")).toContain("Lever Chest Press");
+    expect(treffer("brust maschine")).toContain("Maschinen-Brustdrücken");
   });
 
-  it("hat kein Wörterbuchwort, das ins Leere zeigt", () => {
-    for (const schluessel of Object.keys(SUCHBEGRIFFE)) {
-      expect(treffer(schluessel, 1), schluessel).not.toEqual([]);
-    }
+  it("findet über den genauen Muskel aus dem Datensatz", () => {
+    // „lats" steht in keinem Namen — nur in primaerMuskeln.
+    expect(treffer("latissimus", 999)).toContain("Latzug");
   });
 });
 
 describe("die Ladeart als Suchwort", () => {
-  it("trägt nur bei, was feststeht", () => {
-    // Die Multipresse steht im Namen und ergibt damit "Scheiben".
-    expect(treffer("scheiben", 999)).toContain("Smith Bench Press");
-    // Der Kabelzug hat einen Block, das folgt aus dem Gerät.
-    expect(treffer("steckgewicht", 999)).toContain("Cable Lat Pulldown Full Range Of Motion");
-    // Eine Maschine ohne Angabe darf über keine der beiden zu finden sein.
-    expect(treffer("steckgewicht", 999)).not.toContain("Ski Ergometer");
-    expect(treffer("scheiben", 999)).not.toContain("Ski Ergometer");
+  it("trägt, was aus dem Gerät folgt", () => {
+    // Die Multipresse nimmt Scheiben.
+    expect(treffer("scheiben", 999)).toContain("Smith Machine Bankdrücken");
+    // Der Kabelzug hat einen Block.
+    expect(treffer("steckgewicht", 999)).toContain("Latzug");
+    // Eine Übung ohne Gewicht darf über keine der beiden zu finden sein.
+    expect(treffer("steckgewicht", 999)).not.toContain("Klimmzug");
+    expect(treffer("scheiben", 999)).not.toContain("Klimmzug");
   });
 });
 

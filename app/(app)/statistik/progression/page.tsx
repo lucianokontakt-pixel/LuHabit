@@ -13,7 +13,7 @@ import { ExerciseThumb } from "@/components/training/exercise-media";
 import { FilterSelect } from "@/components/training/filter-sheet";
 import { useTraining } from "@/lib/training-store";
 import { summarizeProgress, type ProgressSummary } from "@/lib/progression";
-import { MUSCLES, workingSets, type Exercise, type Muscle } from "@/lib/training";
+import { MUSCLES, workingSets, type Muscle } from "@/lib/training";
 import { formatNumber, formatSigned, formatDateLong } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { MUSCLE_TINT, TINT_FILL } from "@/lib/tints";

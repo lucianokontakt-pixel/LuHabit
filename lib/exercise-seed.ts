@@ -1,4 +1,3 @@
-import { LEGACY_EXERCISE_MAP } from "@/lib/exercise-legacy-map";
 
 export type SplitDay = {
   name: string;
@@ -15,10 +14,13 @@ export type SplitTemplate = {
 };
 
 /**
- * Die älteren Vorlagen nennen ihre Übungen weiterhin unter den Namen der alten
- * Bibliothek — lesbar und unverändert seit sie zusammengestellt wurden. Erst
- * hier werden sie auf die IDs des openGym-Katalogs aufgelöst. Neuere Vorlagen
- * geben die Katalog-ID direkt an; die geht unverändert durch.
+ * Kurzform für eine Zeile im Plan.
+ *
+ * Die Vorlagen nannten ihre Übungen lange unter den Namen der ersten,
+ * selbst gepflegten Bibliothek („bankdruecken-lh") und lösten sie über eine
+ * Tabelle auf. Seit die Katalog-IDs mit RepDB selbst lesbar sind
+ * („bench-press"), steht die Übung direkt da — eine Auflösungsschicht weniger,
+ * und man sieht beim Lesen der Vorlage, was drinsteht.
  */
 const e = (
   exerciseId: string,
@@ -26,13 +28,7 @@ const e = (
   repMin: number,
   repMax: number,
   rest: number
-) => ({
-  exerciseId: LEGACY_EXERCISE_MAP[exerciseId] ?? exerciseId,
-  sets,
-  repMin,
-  repMax,
-  rest,
-});
+) => ({ exerciseId, sets, repMin, repMax, rest });
 
 /**
  * Fertige Splits zur Auswahl beim Anlegen eines Plans.
@@ -57,34 +53,34 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
       {
         name: "Push",
         exercises: [
-          e("bankdruecken-lh", 3, 8, 12, 150),
-          e("schraegbank-kh", 3, 8, 12, 120),
-          e("schulterdruecken-kh", 3, 8, 12, 120),
-          e("seitheben-kh", 3, 10, 15, 75),
-          e("trizepsdruecken-seil", 3, 10, 15, 75),
-          e("dips-trizeps", 3, 8, 12, 90),
+          e("bench-press", 3, 8, 12, 150),
+          e("incline-db-press", 3, 8, 12, 120),
+          e("seated-db-press", 3, 8, 12, 120),
+          e("lateral-raise", 3, 10, 15, 75),
+          e("tricep-pushdown", 3, 10, 15, 75),
+          e("bench-dips", 3, 8, 12, 90),
         ],
       },
       {
         name: "Pull",
         exercises: [
-          e("klimmzuege", 3, 6, 12, 150),
-          e("langhantelrudern", 3, 8, 12, 150),
-          e("latzug-breit", 3, 8, 12, 120),
-          e("rudern-kabel", 3, 8, 12, 120),
-          e("face-pulls", 3, 12, 15, 75),
-          e("sz-curls", 3, 8, 12, 90),
+          e("pull-up", 3, 6, 12, 150),
+          e("barbell-row", 3, 8, 12, 150),
+          e("lat-pulldown", 3, 8, 12, 120),
+          e("seated-cable-row", 3, 8, 12, 120),
+          e("face-pull", 3, 12, 15, 75),
+          e("ez-bar-curl", 3, 8, 12, 90),
         ],
       },
       {
         name: "Legs",
         exercises: [
-          e("kniebeugen", 3, 8, 12, 180),
-          e("rumaenisches-kreuzheben", 3, 8, 12, 150),
-          e("beinpresse", 3, 10, 15, 120),
-          e("beinbeuger-liegend", 3, 10, 15, 90),
-          e("wadenheben-stehend", 3, 12, 20, 60),
-          e("beinheben-haengend", 3, 10, 15, 60),
+          e("squat", 3, 8, 12, 180),
+          e("romanian-deadlift", 3, 8, 12, 150),
+          e("leg-press", 3, 10, 15, 120),
+          e("leg-curl", 3, 10, 15, 90),
+          e("standing-calf-raise", 3, 12, 20, 60),
+          e("hanging-leg-raise", 3, 10, 15, 60),
         ],
       },
     ],
@@ -98,24 +94,24 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
       {
         name: "Upper",
         exercises: [
-          e("bankdruecken-lh", 3, 6, 10, 150),
-          e("langhantelrudern", 3, 6, 10, 150),
-          e("schulterdruecken-kh", 3, 8, 12, 120),
-          e("latzug-breit", 3, 8, 12, 120),
-          e("sz-curls", 3, 8, 12, 90),
-          e("trizepsdruecken-seil", 3, 10, 15, 75),
-          e("seitheben-kh", 3, 12, 15, 60),
+          e("bench-press", 3, 6, 10, 150),
+          e("barbell-row", 3, 6, 10, 150),
+          e("seated-db-press", 3, 8, 12, 120),
+          e("lat-pulldown", 3, 8, 12, 120),
+          e("ez-bar-curl", 3, 8, 12, 90),
+          e("tricep-pushdown", 3, 10, 15, 75),
+          e("lateral-raise", 3, 12, 15, 60),
         ],
       },
       {
         name: "Lower",
         exercises: [
-          e("kniebeugen", 3, 6, 10, 180),
-          e("rumaenisches-kreuzheben", 3, 8, 12, 150),
-          e("beinpresse", 3, 10, 15, 120),
-          e("beinbeuger-sitzend", 3, 10, 15, 90),
-          e("wadenheben-stehend", 3, 12, 20, 60),
-          e("bauchmaschine", 3, 12, 15, 60),
+          e("squat", 3, 6, 10, 180),
+          e("romanian-deadlift", 3, 8, 12, 150),
+          e("leg-press", 3, 10, 15, 120),
+          e("seated-leg-curl", 3, 10, 15, 90),
+          e("standing-calf-raise", 3, 12, 20, 60),
+          e("machine-seated-crunch", 3, 12, 15, 60),
         ],
       },
     ],
@@ -130,35 +126,35 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
       {
         name: "Brust & Rücken",
         exercises: [
-          e("bankdruecken-lh", 3, 8, 12, 150),
-          e("schraegbank-kh", 3, 8, 12, 120),
-          e("fliegende-kh", 3, 10, 15, 75),
-          e("klimmzuege", 3, 6, 12, 150),
-          e("langhantelrudern", 3, 8, 12, 150),
-          e("ueberzuege-kabel", 3, 10, 15, 75),
+          e("bench-press", 3, 8, 12, 150),
+          e("incline-db-press", 3, 8, 12, 120),
+          e("db-fly", 3, 10, 15, 75),
+          e("pull-up", 3, 6, 12, 150),
+          e("barbell-row", 3, 8, 12, 150),
+          e("straight-arm-pulldown", 3, 10, 15, 75),
         ],
       },
       {
         name: "Schultern & Arme",
         exercises: [
-          e("schulterdruecken-lh", 3, 8, 12, 150),
-          e("seitheben-kh", 3, 12, 15, 60),
-          e("vorgebeugtes-seitheben", 3, 12, 15, 60),
-          e("sz-curls", 3, 8, 12, 90),
-          e("hammercurls", 3, 10, 15, 75),
-          e("french-press", 3, 8, 12, 90),
-          e("trizepsdruecken-seil", 3, 10, 15, 75),
+          e("ohp", 3, 8, 12, 150),
+          e("lateral-raise", 3, 12, 15, 60),
+          e("rear-delt-fly", 3, 12, 15, 60),
+          e("ez-bar-curl", 3, 8, 12, 90),
+          e("hammer-curl", 3, 10, 15, 75),
+          e("ez-bar-overhead-extension", 3, 8, 12, 90),
+          e("tricep-pushdown", 3, 10, 15, 75),
         ],
       },
       {
         name: "Beine",
         exercises: [
-          e("kniebeugen", 3, 8, 12, 180),
-          e("rumaenisches-kreuzheben", 3, 8, 12, 150),
-          e("beinpresse", 3, 10, 15, 120),
-          e("beinbeuger-liegend", 3, 10, 15, 90),
-          e("wadenheben-stehend", 3, 12, 20, 60),
-          e("wadenheben-sitzend", 3, 15, 20, 45),
+          e("squat", 3, 8, 12, 180),
+          e("romanian-deadlift", 3, 8, 12, 150),
+          e("leg-press", 3, 10, 15, 120),
+          e("leg-curl", 3, 10, 15, 90),
+          e("standing-calf-raise", 3, 12, 20, 60),
+          e("seated-calf-raise", 3, 15, 20, 45),
         ],
       },
     ],
@@ -172,13 +168,13 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
       {
         name: "Ganzkörper",
         exercises: [
-          e("kniebeugen", 3, 8, 12, 180),
-          e("bankdruecken-lh", 3, 8, 12, 150),
-          e("langhantelrudern", 3, 8, 12, 150),
-          e("schulterdruecken-kh", 3, 8, 12, 120),
-          e("rumaenisches-kreuzheben", 3, 8, 12, 120),
-          e("sz-curls", 3, 10, 15, 75),
-          e("beinheben-haengend", 3, 10, 15, 60),
+          e("squat", 3, 8, 12, 180),
+          e("bench-press", 3, 8, 12, 150),
+          e("barbell-row", 3, 8, 12, 150),
+          e("seated-db-press", 3, 8, 12, 120),
+          e("romanian-deadlift", 3, 8, 12, 120),
+          e("ez-bar-curl", 3, 10, 15, 75),
+          e("hanging-leg-raise", 3, 10, 15, 60),
         ],
       },
     ],
@@ -196,41 +192,41 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
         // des Tages.
         name: "Push",
         exercises: [
-          e("og-1299", 3, 6, 10, 150), // Lever Incline Chest Press — obere Brust
-          e("og-0576", 3, 6, 10, 150), // Lever Chest Press — steht doppelt im Katalog
-          e("og-0596", 3, 12, 15, 75), // Lever Seated Fly
-          e("og-0869", 3, 8, 12, 120), // Lever Shoulder Press V. 2
-          e("og-0192", 3, 12, 15, 60), // Cable One Arm Lateral Raise
-          e("og-0194", 3, 10, 15, 75), // Cable Overhead Triceps Extension (Rope Attachment)
-          e("og-0200", 3, 12, 15, 60), // Cable Pushdown (With Rope Attachment)
-          e("og-0739", 3, 8, 12, 150), // Sled 45° Leg Press
-          e("og-0585", 3, 12, 15, 75), // Lever Leg Extension
-          e("og-0605", 3, 12, 20, 60), // Lever Standing Calf Raise
+          e("incline-bench-press", 3, 6, 10, 150), // Lever Incline Chest Press — obere Brust
+          e("chest-press-machine", 3, 6, 10, 150), // Lever Chest Press — steht doppelt im Katalog
+          e("machine-chest-fly", 3, 12, 15, 75), // Lever Seated Fly
+          e("machine-shoulder-press", 3, 8, 12, 120), // Lever Shoulder Press V. 2
+          e("cable-lateral-raise", 3, 12, 15, 60), // Cable One Arm Lateral Raise
+          e("overhead-tricep-extension", 3, 10, 15, 75), // Cable Overhead Triceps Extension (Rope Attachment)
+          e("tricep-pushdown", 3, 12, 15, 60), // Cable Pushdown (With Rope Attachment)
+          e("leg-press", 3, 8, 12, 150), // Sled 45° Leg Press
+          e("leg-extension", 3, 12, 15, 75), // Lever Leg Extension
+          e("standing-calf-raise", 3, 12, 20, 60), // Lever Standing Calf Raise
           // Rotation aus dem Rumpf, leichtes Gewicht — der hohe Bereich hält die
           // Doppelprogression bei den Wiederholungen statt beim Gewicht.
-          e("og-0243", 3, 12, 15, 45), // Cable Twist
+          e("russian-twist", 3, 12, 15, 45), // Cable Twist
         ],
       },
       {
         name: "Pull",
         exercises: [
-          e("og-0150", 3, 6, 10, 150), // Cable Bar Lateral Pulldown
+          e("lat-pulldown", 3, 6, 10, 150), // Cable Bar Lateral Pulldown
           // Zweimal dieselbe Maschine, zwei Griffbreiten: breit für die
           // Rückentiefe, eng für den Zug an den Rumpf.
-          e("og-1350", 3, 6, 10, 150), // Lever Seated Row — breit fahren
-          e("og-0588", 3, 8, 12, 120), // Lever Narrow Grip Seated Row — eng fahren
+          e("seated-cable-row", 3, 6, 10, 150), // Lever Seated Row — breit fahren
+          e("wide-grip-seated-cable-row", 3, 8, 12, 120), // Lever Narrow Grip Seated Row — eng fahren
           // Überzüge am Kabel. Heißt im Katalog "Pushdown", ist aber die
           // Lat-Bewegung mit gestreckten Armen — nicht mit dem Trizeps-
           // Pushdown im Push-Tag verwechseln.
-          e("og-0199", 3, 12, 15, 60), // Cable Pushdown (Straight Arm) V. 2
-          e("og-0604", 3, 10, 15, 75), // Lever Shrug
-          e("og-0602", 3, 12, 15, 60), // Lever Seated Reverse Fly
-          e("og-0202", 3, 15, 20, 60), // Cable Rear Delt Row (Stirrups) — Face Pull
-          e("og-0868", 3, 10, 15, 60), // Cable Curl
-          e("og-0165", 3, 10, 15, 60), // Cable Hammer Curl (With Rope)
-          e("og-0599", 3, 10, 15, 90), // Lever Seated Leg Curl
-          e("og-0175", 3, 12, 15, 60), // Cable Kneeling Crunch
-          e("og-0594", 3, 12, 20, 60), // Lever Seated Calf Raise
+          e("straight-arm-pulldown", 3, 12, 15, 60), // Cable Pushdown (Straight Arm) V. 2
+          e("plate-loaded-shrug", 3, 10, 15, 75), // Lever Shrug
+          e("dumbbell-reverse-fly", 3, 12, 15, 60), // Lever Seated Reverse Fly
+          e("face-pull", 3, 15, 20, 60), // Cable Rear Delt Row (Stirrups) — Face Pull
+          e("cable-curl", 3, 10, 15, 60), // Cable Curl
+          e("cable-hammer-curl", 3, 10, 15, 60), // Cable Hammer Curl (With Rope)
+          e("seated-leg-curl", 3, 10, 15, 90), // Lever Seated Leg Curl
+          e("cable-crunch", 3, 12, 15, 60), // Cable Kneeling Crunch
+          e("seated-calf-raise", 3, 12, 20, 60), // Lever Seated Calf Raise
         ],
       },
     ],

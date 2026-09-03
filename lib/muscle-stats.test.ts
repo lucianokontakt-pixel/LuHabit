@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { muscleProgress, recentWeeks, weekStartISO } from "@/lib/muscle-stats";
+import { ohneKatalog } from "@/lib/exercise-catalog";
 import type { Exercise, WorkoutSession, WorkoutSet } from "@/lib/training";
 
 const bench: Exercise = {
@@ -14,11 +15,9 @@ const bench: Exercise = {
   bodyweightFactor: null,
   loadFactor: null,
   warmup: null,
-  media: null,
-  secondary: [],
+  ...ohneKatalog(),
   en: null,
   region: null,
-  rank: 5,
   rating: null,
   ladeart: null,
 };

@@ -16,6 +16,7 @@ import {
   catalogEntry,
   fromCatalog,
   mergeExercises,
+  ohneKatalog,
   type ExerciseRecord,
 } from "@/lib/exercise-catalog";
 import { ensureLocalData } from "@/lib/sync";
@@ -104,10 +105,7 @@ export async function createExercise(params: {
     bodyweightFactor: params.bodyweightFactor ?? null,
     loadFactor,
     warmup: params.warmup ?? null,
-    media: null,
-    secondary: [],
-    en: null,
-    region: null,
+    ...ohneKatalog(),
     // Selbst angelegt heißt: gewollt. Volle Stufe, damit die Übung nicht im
     // ausgeblendeten Teil der Bibliothek landet.
     rank: CUSTOM_RANK,
@@ -152,9 +150,29 @@ export async function updateExercise(params: {
       params.bodyweightFactor === undefined ? before?.bodyweightFactor ?? null : params.bodyweightFactor,
     loadFactor: params.loadFactor === undefined ? before?.loadFactor ?? null : params.loadFactor,
     warmup: params.warmup === undefined ? before?.warmup ?? null : params.warmup,
-    media: before?.media ?? null,
-    secondary: before?.secondary ?? [],
-    en: before?.en ?? null,
+    // Alles Beschreibende kommt aus dem Katalog und lässt sich nicht
+    // verstellen — was hier ankommt, ist entweder schon zusammengelegt
+    // (`before`) oder gehört zu einer eigenen Übung, die nichts davon hat.
+    ...ohneKatalog(),
+    ...(before
+      ? {
+          media: before.media,
+          bilder: before.bilder,
+          secondary: before.secondary,
+          en: before.en,
+          kategorie: before.kategorie,
+          mechanik: before.mechanik,
+          zugArt: before.zugArt,
+          schwierigkeit: before.schwierigkeit,
+          primaerMuskeln: before.primaerMuskeln,
+          sekundaerMuskeln: before.sekundaerMuskeln,
+          variationsgruppe: before.variationsgruppe,
+          einseitig: before.einseitig,
+          met: before.met,
+          ziele: before.ziele,
+          tags: before.tags,
+        }
+      : {}),
     region: before?.region ?? entry?.region ?? null,
     rank: before?.rank ?? entry?.rank ?? CUSTOM_RANK,
     rating: params.rating === undefined ? before?.rating ?? null : params.rating,

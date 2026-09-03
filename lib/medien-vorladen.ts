@@ -1,9 +1,4 @@
-import {
-  gifUrl,
-  imageUrl,
-  INSTRUCTIONS_DE_URL,
-  INSTRUCTIONS_URL,
-} from "@/lib/exercise-catalog";
+import { bildUrl, TEXTE_URL } from "@/lib/exercise-catalog";
 import type { Exercise } from "@/lib/training";
 
 export type VorladeFortschritt = { fertig: number; gesamt: number };
@@ -12,8 +7,9 @@ export type VorladeFortschritt = { fertig: number; gesamt: number };
  * Die Bilder der Übungen aufs Gerät holen, damit sie ohne Netz da sind.
  *
  * Bewusst nur die Übungen, die man wirklich braucht. Die ganze Bibliothek sind
- * 1295 GIFs und rund 120 MB — das scheitert auf iOS an der Speicherquote, und
- * niemand trainiert 1295 Übungen. Ein Plan sind typisch 30 bis 50.
+ * 19 MB — seit dem Wechsel auf RepDB deutlich weniger als die 120 MB der alten
+ * GIFs, aber noch immer mehr, als jemand braucht, der 30 bis 50 Übungen
+ * trainiert.
  *
  * Geholt wird über ein normales fetch: der Service Worker fängt es ab und legt
  * die Antwort in seinen Cache. Anschließend liefert er sie auch offline aus.
@@ -25,12 +21,12 @@ export async function ladeMedienVor(
   exercises: Exercise[],
   onProgress?: (fortschritt: VorladeFortschritt) => void
 ): Promise<{ geladen: number; fehler: number }> {
-  const urls: string[] = [INSTRUCTIONS_DE_URL, INSTRUCTIONS_URL];
+  const urls: string[] = [TEXTE_URL];
   for (const exercise of exercises) {
-    const gif = gifUrl(exercise);
-    const still = imageUrl(exercise);
-    if (still) urls.push(still);
-    if (gif) urls.push(gif);
+    for (const art of exercise.bilder) {
+      const url = bildUrl(exercise, art);
+      if (url) urls.push(url);
+    }
   }
 
   let geladen = 0;

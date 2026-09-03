@@ -204,11 +204,17 @@ im localStorage und überlebt sogar einen Neustart mitten im Training.
 angemeldet wird er von `components/service-worker.tsx` — nur im fertigen Build,
 im `npm run dev` also bewusst nicht.
 
-**Die Übungsbilder sind die Ausnahme.** Alle 1295 GIFs liegen zwar lokal unter
-`public/uebungen/` (rund 120 MB), aber auf dem *Server*. Auf dem Gerät landen
+**Die Übungsbilder sind die Ausnahme.** Alle Bilder liegen zwar lokal unter
+`public/uebungen/repdb/` (19 MB), aber auf dem *Server*. Auf dem Gerät landen
 nur die, die man angesehen hat — oder die, die der Knopf „Übungsbilder aufs
-Gerät laden" in den Einstellungen für den aktiven Plan vorlädt. Alles
-vorzuladen würde auf iOS an der Speicherquote scheitern.
+Gerät laden" in den Einstellungen für den aktiven Plan vorlädt.
 
 Ändert sich die Cache-Strategie, muss `VERSION` in `public/sw.js` hochgezählt
 werden — sonst behalten installierte Geräte die alten Regeln.
+
+## Übungsdaten
+
+Exercise data by [RepDB](https://repdb.co) — 601 Übungen mit Bildern,
+Anleitungen und Tipps, deutsch und englisch. Quelle und Lizenz liegen unter
+`data/repdb/`, Einzelheiten in `public/uebungen/HERKUNFT.md`. Der Katalog wird
+mit `node scripts/build-repdb-katalog.mjs` daraus gebaut.

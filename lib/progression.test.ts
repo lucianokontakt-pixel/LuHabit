@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { exerciseHistory, summarizeProgress, deloadWeight, STAGNATION_THRESHOLD } from "@/lib/progression";
+import { ohneKatalog } from "@/lib/exercise-catalog";
 import type { Exercise, WorkoutSession, WorkoutSet } from "@/lib/training";
 
 const exercise: Exercise = {
@@ -14,11 +15,9 @@ const exercise: Exercise = {
   bodyweightFactor: null,
   loadFactor: null,
   warmup: null,
-  media: null,
-  secondary: [],
+  ...ohneKatalog(),
   en: null,
   region: null,
-  rank: 5,
   rating: null,
   ladeart: null,
 };

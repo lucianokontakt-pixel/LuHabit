@@ -2,261 +2,261 @@ import { describe, expect, it } from "vitest";
 import {
   CATALOG,
   catalogEntry,
+  bildUrl,
   fromCatalog,
   mergeExercises,
-  mergeOne,
+  type ExerciseRecord,
 } from "@/lib/exercise-catalog";
-import { CATALOG_DEFAULTS, LEGACY_EXERCISE_MAP } from "@/lib/exercise-legacy-map";
+import { REPDB_MIGRATION } from "@/lib/repdb-migration";
+import { KERN_UEBUNGEN_IDS } from "@/lib/kern-uebungen";
 import { SPLIT_TEMPLATES } from "@/lib/exercise-seed";
 import {
-  CUSTOM_RANK,
   EQUIPMENT,
   MUSCLES,
   RANK_SICHTBAR_AB,
   REGIONS,
   stufeVon,
+  ladeartVon,
+  type Muscle,
 } from "@/lib/training";
 
-const MUSCLE_KEYS = new Set(MUSCLES.map((m) => m.key));
-const EQUIPMENT_KEYS = new Set(EQUIPMENT);
+const zeile = (teil: Partial<ExerciseRecord> & { id: string }): ExerciseRecord => ({
+  name: "Zeile",
+  muscle: "chest",
+  equipment: "barbell",
+  isCustom: false,
+  hidden: false,
+  favorite: false,
+  increment: null,
+  bodyweightFactor: null,
+  loadFactor: null,
+  warmup: null,
+  rating: null,
+  ladeart: null,
+  ...teil,
+});
 
 describe("Katalog", () => {
-  it("vergibt jede ID nur einmal", () => {
-    const ids = CATALOG.map((e) => e.id);
-    expect(new Set(ids).size).toBe(ids.length);
+  it("hat eindeutige IDs", () => {
+    expect(new Set(CATALOG.map((e) => e.id)).size).toBe(CATALOG.length);
   });
 
-  // Namen dürfen sich wiederholen: sie stehen 1:1 wie im openGym-Datensatz,
-  // und der enthält selbst ein halbes Dutzend echter Dubletten (z. B. zwei
-  // "Lever Chest Press" mit verschiedener ID). Eindeutig gemacht wurde hier
-  // bewusst nichts — das wäre keine Wiederherstellung des Originals mehr.
-  it("lässt IDs auch bei doppeltem Namen unterscheidbar", () => {
-    const byName = new Map<string, string[]>();
+  it("kennt nur Muskeln und Geräte, die die App kennt", () => {
+    const muskeln = new Set(MUSCLES.map((m) => m.key));
+    const geraete = new Set(EQUIPMENT);
     for (const e of CATALOG) {
-      byName.set(e.name, [...(byName.get(e.name) ?? []), e.id]);
+      expect(muskeln, e.name).toContain(e.muscle);
+      expect(geraete, e.name).toContain(e.equipment);
+      for (const s of e.secondary) expect(muskeln, e.name).toContain(s);
+      // Der Nebenmuskel ist der *andere*: "Bankdrücken trifft auch die Brust"
+      // wäre keine Auskunft.
+      expect(e.secondary, e.name).not.toContain(e.muscle);
     }
-    for (const ids of byName.values()) {
-      expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("heißt deutsch und kennt den englischen Zweitnamen", () => {
+    for (const e of CATALOG) {
+      expect(e.name.length, e.id).toBeGreaterThan(0);
+      expect(e.nameEn.length, e.id).toBeGreaterThan(0);
+    }
+    // Stichprobe: die Bibliothek hieß bis zum Wechsel auf RepDB englisch.
+    expect(catalogEntry("bench-press")?.name).toBe("Langhantel-Bankdrücken");
+    expect(catalogEntry("squat")?.name).toBe("Langhantel-Kniebeuge");
+  });
+
+  it("hat zu jeder Übung ein Bild", () => {
+    for (const e of CATALOG) {
+      expect(e.bilder.length, e.name).toBeGreaterThan(0);
+      expect(bildUrl(e, "start"), e.name).toMatch(/^\/uebungen\/repdb\/flat\/.+\.webp$/);
     }
   });
 
-  it("kennt nur Muskelgruppen und Geräte, die die App anzeigen kann", () => {
-    const fremd = CATALOG.filter(
-      (e) => !MUSCLE_KEYS.has(e.muscle) || !EQUIPMENT_KEYS.has(e.equipment)
-    );
-    expect(fremd.map((e) => e.id)).toEqual([]);
-  });
-
-  it("hat zu jeder Übung ein Medienkürzel", () => {
-    expect(CATALOG.filter((e) => !e.media).map((e) => e.id)).toEqual([]);
-  });
-
-  it("gibt jeder Eigengewichtsübung einen Lastanteil", () => {
-    // Ohne ihn zählten Klimmzüge und Dips im Volumen mit 0 kg.
-    const ohne = CATALOG.map(fromCatalog).filter(
-      (e) => e.equipment === "bodyweight" && e.loadFactor === null
-    );
-    expect(ohne.map((e) => e.id)).toEqual([]);
-  });
-
-  it("hält die übernommenen Lastanteile in einem plausiblen Rahmen", () => {
-    for (const [id, d] of Object.entries(CATALOG_DEFAULTS)) {
-      if (d.load === undefined || d.load === null) continue;
-      expect(d.load, id).toBeGreaterThanOrEqual(0);
-      expect(d.load, id).toBeLessThanOrEqual(1);
-    }
+  it("zeigt beide Positionen, wo der Datensatz sie hat", () => {
+    const paare = CATALOG.filter((e) => e.bilder.length === 2);
+    // Zwei Drittel der Bibliothek haben Start und Umkehrpunkt — daran hängt
+    // die Überblendung in der laufenden Einheit.
+    expect(paare.length).toBeGreaterThan(CATALOG.length / 2);
+    const eins = CATALOG.find((e) => e.bilder.length === 1)!;
+    expect(eins.bilder).toEqual(["main"]);
   });
 });
 
 describe("Beliebtheit", () => {
-  it("gibt jeder Übung eine ganze Stufe zwischen 1 und 5", () => {
-    const daneben = CATALOG.filter(
-      (e) => !Number.isInteger(e.rank) || e.rank < 1 || e.rank > 5
-    );
-    expect(daneben.map((e) => `${e.id} ${e.rank}`)).toEqual([]);
-  });
-
-  it("blendet nicht mehr als ein Fünftel der Bibliothek aus", () => {
-    // Der Sinn der Stufe ist, den Rand wegzuräumen, nicht die Mitte. Wächst
-    // die Liste in scripts/exercise-beliebtheit.mjs über dieses Maß hinaus,
-    // filtert sie nicht mehr — dann versteckt sie.
-    const versteckt = CATALOG.filter((e) => e.rank < RANK_SICHTBAR_AB);
-    expect(versteckt.length).toBeLessThan(CATALOG.length / 5);
-  });
-
-  it("lässt kein echtes Gerät vollständig verschwinden", () => {
-    // Ein Gerätefilter, der nie einen Treffer hat, ist kaputt und nicht
-    // streng. Zwei Ausnahmen sind gewollt: der Ball ist der Anlass für die
-    // ganze Stufe, und "Sonstiges" ist der Restehaufen — dort stehen nur
-    // Dehnübungen, Seile, Reifen und Faszienrollen, keine einzige Übung, die
-    // in einem Krafttagebuch von selbst auftauchen sollte. Wer sie sucht,
-    // legt den Schalter um.
-    for (const eq of EQUIPMENT) {
-      if (eq === "ball" || eq === "other") continue;
-      const alle = CATALOG.filter((e) => e.equipment === eq);
-      if (alle.length === 0) continue;
-      const sichtbar = alle.filter((e) => e.rank >= RANK_SICHTBAR_AB);
-      expect(sichtbar.length, eq).toBeGreaterThan(0);
+  it("ist eine ganze Zahl von 1 bis 5", () => {
+    for (const e of CATALOG) {
+      expect(Number.isInteger(e.rank), e.name).toBe(true);
+      expect(e.rank, e.name).toBeGreaterThanOrEqual(1);
+      expect(e.rank, e.name).toBeLessThanOrEqual(5);
     }
   });
 
-  it("stuft Ball und Sonstiges unter die Sichtbarkeitsgrenze", () => {
-    // Der Anlass für die ganze Stufe: Gymnastikbälle sollen nicht zwischen
-    // Bank und Maschine stehen.
-    const rand = CATALOG.filter(
-      (e) => e.equipment === "ball" || e.equipment === "other"
-    );
-    expect(rand.filter((e) => e.rank >= RANK_SICHTBAR_AB).map((e) => e.name)).toEqual([]);
+  it("hält Dehnen und Ausdauer aus der Trefferliste heraus", () => {
+    for (const e of CATALOG) {
+      if (e.kategorie === "stretching" || e.kategorie === "cardio") {
+        expect(e.rank, e.name).toBeLessThan(RANK_SICHTBAR_AB);
+      }
+    }
   });
 
-  it("lässt das eigene Urteil die Schätzung schlagen", () => {
-    const uebung = fromCatalog(CATALOG[0]);
-    expect(stufeVon(uebung)).toBe(uebung.rank);
-    expect(stufeVon({ ...uebung, rating: 1 })).toBe(1);
+  it("lässt den weitaus größeren Teil sichtbar", () => {
+    const versteckt = CATALOG.filter((e) => e.rank < RANK_SICHTBAR_AB);
+    expect(versteckt.length).toBeLessThan(CATALOG.length / 4);
+  });
+
+  it("lässt in jeder Muskelgruppe etwas übrig", () => {
+    for (const m of MUSCLES) {
+      const sichtbar = CATALOG.filter((e) => e.muscle === m.key && e.rank >= RANK_SICHTBAR_AB);
+      expect(sichtbar.length, m.label).toBeGreaterThan(0);
+    }
+  });
+
+  it("achtet die selbst vergebene Stufe", () => {
+    const e = fromCatalog(CATALOG[0]);
+    expect(stufeVon({ ...e, rating: 1 })).toBe(1);
+    expect(stufeVon(e)).toBe(e.rank);
   });
 });
 
 describe("Startgewicht", () => {
-  it("schätzt für jede Übung mit Gerät, für keine ohne", () => {
-    const falsch = CATALOG.filter((e) =>
-      e.equipment === "bodyweight" ? e.startFactor !== null : e.startFactor === null
-    );
-    expect(falsch.map((e) => `${e.name} (${e.equipment})`)).toEqual([]);
-  });
-
-  it("bleibt in einem Rahmen, den ein Mensch heben kann", () => {
-    // Über dem Eineinhalbfachen des Körpergewichts anzufangen ist kein
-    // Vorschlag mehr, sondern ein Vorwurf.
-    const daneben = CATALOG.filter(
-      (e) => e.startFactor !== null && (e.startFactor <= 0 || e.startFactor > 1.5)
-    );
-    expect(daneben.map((e) => `${e.name} ${e.startFactor}`)).toEqual([]);
-  });
-
-  it("lässt die von Hand gesetzten Werte gewinnen", () => {
-    for (const [id, d] of Object.entries(CATALOG_DEFAULTS)) {
-      const entry = catalogEntry(id);
-      if (!entry) continue;
-      expect(fromCatalog(entry).bodyweightFactor, entry.name).toBe(d.factor);
+  it("ist null genau bei Eigengewicht", () => {
+    for (const e of CATALOG) {
+      if (e.equipment === "bodyweight") expect(e.startFactor, e.name).toBeNull();
+      else expect(e.startFactor, e.name).not.toBeNull();
     }
   });
 
-  it("gibt Drücken mehr als Fliegenden am selben Gerät", () => {
-    // Die halbe Begründung der ganzen Tabelle: der Unterschied zwischen zwei
-    // Bewegungen ist größer als der zwischen zwei Muskelgruppen.
-    const druecken = CATALOG.find((e) => e.name === "Dumbbell Bench Press");
-    const fliegende = CATALOG.find((e) => e.name === "Dumbbell Fly");
-    expect(druecken?.startFactor).toBeGreaterThan(fliegende?.startFactor ?? 0);
+  it("bleibt in einem plausiblen Bereich", () => {
+    for (const e of CATALOG) {
+      if (e.startFactor === null) continue;
+      expect(e.startFactor, e.name).toBeGreaterThan(0);
+      expect(e.startFactor, e.name).toBeLessThanOrEqual(1.5);
+    }
+  });
+
+  it("gibt der Isolationsübung weniger als der Grundübung", () => {
+    const druecken = catalogEntry("db-bench-press")!;
+    const fliegend = catalogEntry("db-fly")!;
+    expect(druecken.startFactor!).toBeGreaterThan(fliegend.startFactor!);
   });
 });
 
 describe("Regionen", () => {
-  it("vergibt nur Regionen, die zur Muskelgruppe der Übung gehören", () => {
-    const erlaubt = new Map(REGIONS.map((r) => [r.key, r.muscle]));
-    const falsch = CATALOG.filter(
-      (e) => e.region !== null && erlaubt.get(e.region) !== e.muscle
-    );
-    expect(falsch.map((e) => `${e.id} ${e.muscle}/${e.region}`)).toEqual([]);
-  });
-
-  it("teilt Brust, Schultern, Rücken und Rumpf auf", () => {
-    for (const muscle of ["chest", "shoulders", "back", "core"] as const) {
-      const alle = CATALOG.filter((e) => e.muscle === muscle);
-      const mitRegion = alle.filter((e) => e.region !== null);
-      // Nicht jede Übung bekommt eine — aber die Mehrheit muss, sonst ist der
-      // Filter für diese Gruppe eine leere Zusage.
-      expect(mitRegion.length, muscle).toBeGreaterThan(alle.length / 2);
+  it("gehört immer zur Muskelgruppe der Übung", () => {
+    for (const e of CATALOG) {
+      if (!e.region) continue;
+      const region = REGIONS.find((r) => r.key === e.region);
+      expect(region, `${e.name}: ${e.region}`).toBeDefined();
+      expect(region!.muscle, e.name).toBe(e.muscle);
     }
   });
 
-  it("lässt die sechs Muskelgruppen ohne Untergruppen in Ruhe", () => {
-    // Bizeps weiter zu unterteilen hilft niemandem, der vor einem Gerät steht.
-    const ohne = ["biceps", "triceps", "quads", "hamstrings", "glutes", "calves"];
-    const mit = CATALOG.filter((e) => ohne.includes(e.muscle) && e.region !== null);
-    expect(mit.map((e) => e.id)).toEqual([]);
+  it("steht bei jeder Brustübung — die kommt aus dem Namen", () => {
+    for (const e of CATALOG.filter((e) => e.muscle === "chest")) {
+      expect(e.region, e.name).not.toBeNull();
+    }
+  });
+
+  it("bleibt bei den Gruppen leer, die keine Unterteilung haben", () => {
+    const ohne: Muscle[] = ["biceps", "triceps", "quads", "hamstrings", "glutes", "calves"];
+    for (const e of CATALOG) {
+      if (ohne.includes(e.muscle)) expect(e.region, e.name).toBeNull();
+    }
   });
 });
 
-describe("Zuordnung der alten Bibliothek", () => {
-  it("zeigt nur auf Übungen, die es im Katalog gibt", () => {
-    const kaputt = Object.entries(LEGACY_EXERCISE_MAP)
-      .filter(([, neu]) => neu !== null && !catalogEntry(neu))
-      .map(([alt]) => alt);
-    expect(kaputt).toEqual([]);
+describe("Ladeart", () => {
+  it("steht bei jeder Übung fest — niemand muss mehr klassifizieren", () => {
+    for (const e of CATALOG) expect(e.ladeart, e.name).not.toBeNull();
   });
 
-  it("bildet keine zwei alten Übungen auf dieselbe neue ab", () => {
-    const ziele = Object.values(LEGACY_EXERCISE_MAP).filter((v) => v !== null);
+  it("folgt dem Gerät", () => {
+    for (const e of CATALOG) {
+      if (e.equipment === "barbell") expect(e.ladeart, e.name).toBe("scheiben");
+      if (e.equipment === "dumbbell") expect(e.ladeart, e.name).toBe("frei");
+      if (e.equipment === "bodyweight") expect(e.ladeart, e.name).toBe("ohne");
+    }
+  });
+
+  it("lässt sich persönlich überschreiben", () => {
+    const [merged] = mergeExercises([zeile({ id: "bench-press", ladeart: "steck" })]).filter(
+      (e) => e.id === "bench-press"
+    );
+    expect(ladeartVon(merged)).toBe("steck");
+  });
+});
+
+describe("Umzug von der alten Bibliothek", () => {
+  it("deckt jede benutzte Übung ab und zeigt auf Vorhandenes", () => {
+    for (const [alt, neu] of Object.entries(REPDB_MIGRATION)) {
+      expect(alt).toMatch(/^og-\d+$/);
+      if (neu !== null) expect(catalogEntry(neu), `${alt} → ${neu}`).toBeDefined();
+    }
+  });
+
+  it("paart keine zwei alten Übungen auf dieselbe neue", () => {
+    // Der Fehler des ersten Anlaufs: zwei alte IDs auf eine neue, und die
+    // Migration stolperte über den Primärschlüssel (user_id, id) — oder
+    // vermischte den Verlauf zweier Übungen.
+    const ziele = Object.values(REPDB_MIGRATION).filter((v): v is string => v !== null);
     expect(new Set(ziele).size).toBe(ziele.length);
   });
-
-  it("kennt jede ID, für die es Faktoren übernommen hat", () => {
-    const fremd = Object.keys(CATALOG_DEFAULTS).filter((id) => !catalogEntry(id));
-    expect(fremd).toEqual([]);
-  });
 });
 
-describe("SPLIT_TEMPLATES", () => {
-  it("verweist nur auf Übungen, die es im Katalog gibt", () => {
+describe("Vorlagen und Klassiker", () => {
+  it("nennen nur Übungen, die es gibt", () => {
     const fehlend = SPLIT_TEMPLATES.flatMap((t) =>
-      t.days.flatMap((d) => d.exercises.map((e) => e.exerciseId))
-    ).filter((id) => !catalogEntry(id));
-    expect([...new Set(fehlend)]).toEqual([]);
+      t.days.flatMap((d) =>
+        d.exercises.map((e) => e.exerciseId).filter((id) => !catalogEntry(id))
+      )
+    );
+    expect(fehlend).toEqual([]);
+  });
+
+  it("führen keine Übung zweimal am selben Tag", () => {
+    for (const t of SPLIT_TEMPLATES) {
+      for (const d of t.days) {
+        const ids = d.exercises.map((e) => e.exerciseId);
+        expect(new Set(ids).size, `${t.name} / ${d.name}`).toBe(ids.length);
+      }
+    }
+  });
+
+  it("kennt jede Kern-Übung", () => {
+    const fehlend = KERN_UEBUNGEN_IDS.filter((id) => !catalogEntry(id));
+    expect(fehlend).toEqual([]);
   });
 });
 
 describe("mergeExercises", () => {
-  const record = {
-    id: "og-0025",
-    name: "Mein Bankdrücken",
-    muscle: "chest" as const,
-    equipment: "barbell" as const,
-    isCustom: false,
-    hidden: true,
-    favorite: false,
-    increment: 1.25,
-    bodyweightFactor: null,
-    loadFactor: null,
-    warmup: "always" as const,
-    rating: null,
-    ladeart: null,
-  };
-
-  it("liefert ohne eigene Zeilen genau den Katalog", () => {
-    expect(mergeExercises([])).toHaveLength(CATALOG.length);
+  it("liefert ohne Zeilen den ganzen Katalog", () => {
+    expect(mergeExercises([]).length).toBe(CATALOG.length);
   });
 
-  it("legt eigene Werte über die Katalogübung, behält aber die Medien", () => {
-    const merged = mergeOne(record);
-    expect(merged.name).toBe("Mein Bankdrücken");
-    expect(merged.hidden).toBe(true);
-    expect(merged.increment).toBe(1.25);
-    expect(merged.media).toBe(catalogEntry("og-0025")?.media);
+  it("lässt eine Abweichung die Katalogwerte überschreiben, Bilder aber stehen", () => {
+    const merged = mergeExercises([zeile({ id: "bench-press", name: "Meins", favorite: true })]);
+    const bank = merged.find((e) => e.id === "bench-press")!;
+    expect(bank.name).toBe("Meins");
+    expect(bank.favorite).toBe(true);
+    expect(bank.media).toBe(catalogEntry("bench-press")!.media);
+    expect(bank.variationsgruppe).toBe("bench-press");
   });
 
-  it("nimmt Zeilen mit, die der Katalog nicht kennt", () => {
-    const eigen = { ...record, id: "eigene-uebung", isCustom: true };
-    const merged = mergeExercises([eigen]);
-    expect(merged).toHaveLength(CATALOG.length + 1);
-    const gefunden = merged.find((e) => e.id === "eigene-uebung");
-    expect(gefunden?.media).toBeNull();
-    // Wer sie selbst angelegt hat, will sie sehen — nie im ausgeblendeten Teil.
-    expect(gefunden?.rank).toBe(CUSTOM_RANK);
-    expect(gefunden?.region).toBeNull();
+  it("behält eine Zeile, die der Katalog nicht kennt", () => {
+    // Genau der Fall der acht Übungen ohne Gegenstück: ohne diese Regel
+    // verschwänden sie mitsamt Verlauf aus Plan und Statistik.
+    const merged = mergeExercises([zeile({ id: "og-1299", name: "Lever Incline Chest Press" })]);
+    const eigen = merged.find((e) => e.id === "og-1299")!;
+    expect(eigen).toBeDefined();
+    expect(eigen.media).toBeNull();
+    expect(eigen.bilder).toEqual([]);
+    expect(eigen.rank).toBe(5);
+    expect(eigen.variationsgruppe).toBeNull();
   });
 
-  it("gibt jeder eigenen Übung ein eigenes secondary-Array", () => {
-    const [a, b] = mergeExercises([
-      { ...record, id: "eigen-a", isCustom: true },
-      { ...record, id: "eigen-b", isCustom: true },
-    ]).filter((e) => e.id.startsWith("eigen-"));
+  it("gibt jeder eigenen Übung ihr eigenes Nebenmuskel-Feld", () => {
+    const merged = mergeExercises([zeile({ id: "eigen-a" }), zeile({ id: "eigen-b" })]);
+    const a = merged.find((e) => e.id === "eigen-a")!;
+    const b = merged.find((e) => e.id === "eigen-b")!;
     expect(a.secondary).not.toBe(b.secondary);
-  });
-
-  it("übernimmt Region und Stufe aus dem Katalog, das Urteil aus der Zeile", () => {
-    const merged = mergeOne({ ...record, rating: 2 });
-    expect(merged.rank).toBe(catalogEntry("og-0025")?.rank);
-    expect(merged.region).toBe(catalogEntry("og-0025")?.region);
-    expect(stufeVon(merged)).toBe(2);
   });
 });

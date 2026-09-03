@@ -1,33 +1,57 @@
 import catalogData from "@/lib/exercise-catalog.json";
-import { CATALOG_DEFAULTS } from "@/lib/exercise-legacy-map";
 import {
   CUSTOM_RANK,
   DEFAULT_BODYWEIGHT_LOAD,
   type Equipment,
   type Exercise,
+  type Kategorie,
   type Ladeart,
+  type Mechanik,
   type Muscle,
   type Region,
+  type Schwierigkeit,
+  type ZugArt,
 } from "@/lib/training";
 
 /**
  * Die Übungsbibliothek. Sie steht bewusst nicht in der Datenbank: sie ist für
  * alle Nutzer gleich, ändert sich nur mit einer neuen Version der App und wäre
- * als 1295 Zeilen pro Nutzer bei jedem Abgleich unnötiger Ballast. Erzeugt von
- * scripts/build-exercise-catalog.mjs aus dem openGym-Datensatz.
+ * als 601 Zeilen pro Nutzer bei jedem Abgleich unnötiger Ballast. Erzeugt von
+ * scripts/build-repdb-katalog.mjs aus dem RepDB-Datensatz (data/repdb/).
  *
  * In der Tabelle `exercises` steht darum nur noch, was jemand selbst angelegt
  * oder an einer Katalogübung verstellt hat. `mergeExercises` legt beides
  * übereinander — davor sieht der Rest der App wie bisher eine flache Liste.
+ *
+ * Vieles hier stand bis zum Wechsel auf RepDB als Vermutung im Katalog: die
+ * Region kam aus einem Namensregex, die Beliebtheitsstufe aus dem Gerät, die
+ * Ladeart aus Handarbeit an 145 Maschinen, die deutschen Namen aus einem
+ * Wörterbuch, das nur die Suche kannte. Jetzt steht alles davon im Datensatz.
  */
 export type CatalogExercise = {
   id: string;
+  /** Der deutsche Name — die Bibliothek heißt, wie man sie im Studio nennt. */
   name: string;
+  /** Der englische Name. Zweitname für die Suche und für Nutzer, die so suchen. */
+  nameEn: string;
   muscle: Muscle;
   equipment: Equipment;
   secondary: Muscle[];
+  /**
+   * Der Dateiname der Bilder, ohne Endung und ohne `-start`/`-peak`. Meist
+   * gleich der ID, aber nicht immer: ein Dutzend Übungen teilt sich die
+   * Illustration mit einer Schwesterübung.
+   */
   media: string;
-  en: string;
+  /** Welche Bilder es gibt: zwei Positionen oder nur eine. */
+  bilder: ("start" | "peak" | "main")[];
+  /**
+   * Das genaue Gerät aus dem Datensatz ("leg_press", "smith_machine") — 55
+   * Werte, die `equipment` auf neun zusammenfasst. Hier, weil zu jedem ein
+   * Bild gehört (geraetBildUrl) und weil die Ladeart daran hängt. null bei
+   * Übungen ohne Gerät.
+   */
+  geraetKuerzel: string | null;
   /** Untergruppe innerhalb der Muskelgruppe — null, wo es keine gibt. */
   region: Region | null;
   /** Wie üblich die Übung ist, 1–5. Sortiert die Suche und blendet unten aus. */
@@ -39,15 +63,39 @@ export type CatalogExercise = {
    */
   startFactor: number | null;
   /**
-   * Die Ladeart als geprüfte Tatsache über die Übung selbst, nicht über ein
-   * einzelnes Studio — fehlt bei den meisten "Lever …"-Einträgen (siehe
-   * ladeartVon in lib/training.ts), lässt sich aber am Bild ablesen und dann
-   * hier eintragen, sobald jemand hingesehen hat. Gilt für jeden Account.
-   * Die persönliche Ladeart in der Datenbank (exercises.ladeart) schlägt
-   * diesen Wert trotzdem, wenn sie gesetzt ist — das eigene Studio kann
-   * abweichen. Fehlt in älteren Katalog-Ständen, deshalb optional.
+   * Wie das Gewicht an das Gerät kommt. Aus dem Gerät abgeleitet (siehe
+   * scripts/repdb-zuordnung.mjs) — RepDB benennt Scheiben- und
+   * Steckmaschinen einzeln, das musste vorher jemand von Hand nachtragen.
+   * Die persönliche Ladeart in der Datenbank schlägt diesen Wert weiterhin:
+   * dieselbe Maschine steht im einen Studio mit Block, im anderen mit
+   * Scheiben.
    */
-  ladeart?: Ladeart | null;
+  ladeart: Ladeart | null;
+
+  kategorie: Kategorie;
+  /** Mehrgelenkig oder eingelenkig — entscheidet über Aufwärmsätze. */
+  mechanik: Mechanik;
+  /** Drücken oder Ziehen. Trägt die Push/Pull-Einteilung eines Splits. */
+  zugArt: ZugArt;
+  schwierigkeit: Schwierigkeit;
+
+  /** Die genauen Muskeln, nicht nur die Gruppe. */
+  primaerMuskeln: string[];
+  sekundaerMuskeln: string[];
+
+  /**
+   * Die Bewegungsfamilie: alle Kniebeugen tragen "squat", alle Ruderzüge
+   * "row". Das ist die Auskunft, an der die Wechsel-Vorschläge in der
+   * laufenden Einheit hängen — vorher wurde sie aus Muskel, Region und
+   * Namensähnlichkeit geraten und traf zu oft daneben.
+   */
+  variationsgruppe: string | null;
+  einseitig: boolean;
+  eigengewicht: boolean;
+  /** Metabolisches Äquivalent — Grundlage für eine Kalorienschätzung. */
+  met: number;
+  ziele: string[];
+  tags: string[];
 };
 
 export const CATALOG = catalogData as CatalogExercise[];
@@ -79,7 +127,6 @@ export type ExerciseRecord = {
 
 /** Eine Katalogübung so, wie sie ohne jede Anpassung aussieht. */
 export function fromCatalog(entry: CatalogExercise): Exercise {
-  const defaults = CATALOG_DEFAULTS[entry.id];
   return {
     id: entry.id,
     name: entry.name,
@@ -89,20 +136,33 @@ export function fromCatalog(entry: CatalogExercise): Exercise {
     hidden: false,
     favorite: false,
     increment: null,
-    // Von Hand gesetzt schlägt geschätzt — auch eine ausdrückliche Null, die
-    // heißt „für diese Übung gibt es keinen Startwert" und keine Lücke.
-    bodyweightFactor: defaults && "factor" in defaults ? defaults.factor : entry.startFactor,
-    loadFactor:
-      defaults?.load ??
-      (entry.equipment === "bodyweight" ? DEFAULT_BODYWEIGHT_LOAD : null),
+    // Hier stand bis zum Wechsel auf RepDB eine Tabelle von Hand gepflegter
+    // Werte für 90 Übungen (CATALOG_DEFAULTS), die die Schätzung schlug. Sie
+    // war auf die alten IDs geschlüsselt und mit ihnen hinfällig; der
+    // Startfaktor kommt jetzt für alle 601 aus derselben Rechnung
+    // (scripts/exercise-startgewicht.mjs), die damals an ihr geeicht wurde.
+    bodyweightFactor: entry.startFactor,
+    loadFactor: entry.equipment === "bodyweight" ? DEFAULT_BODYWEIGHT_LOAD : null,
     warmup: null,
     media: entry.media,
+    bilder: entry.bilder,
     secondary: entry.secondary,
-    en: entry.en,
+    en: entry.nameEn,
     region: entry.region,
     rank: entry.rank,
     rating: null,
     ladeart: entry.ladeart ?? null,
+    kategorie: entry.kategorie,
+    mechanik: entry.mechanik,
+    zugArt: entry.zugArt,
+    schwierigkeit: entry.schwierigkeit,
+    primaerMuskeln: entry.primaerMuskeln,
+    sekundaerMuskeln: entry.sekundaerMuskeln,
+    variationsgruppe: entry.variationsgruppe,
+    einseitig: entry.einseitig,
+    met: entry.met,
+    ziele: entry.ziele,
+    tags: entry.tags,
   };
 }
 
@@ -111,11 +171,36 @@ export function fromCatalog(entry: CatalogExercise): Exercise {
  * Übungen und Reste aus der alten Bibliothek. Kein Bild, keine Nebenmuskeln,
  * kein englischer Name, keine Region — und die volle Beliebtheitsstufe, damit
  * eine selbst angelegte Übung nie im ausgeblendeten Teil landet.
+ *
+ * Die beschreibenden Felder bleiben leer statt geraten: eine selbst angelegte
+ * Übung hat keine Anleitung, und eine erfundene wäre schlimmer als keine.
  */
-function ohneKatalog(): Pick<Exercise, "media" | "secondary" | "en" | "region" | "rank"> {
+export function ohneKatalog(): Omit<
+  Exercise,
+  | "id" | "name" | "muscle" | "equipment" | "isCustom" | "hidden" | "favorite"
+  | "increment" | "bodyweightFactor" | "loadFactor" | "warmup" | "rating" | "ladeart"
+> {
   // Jedes Mal ein frisches Objekt: ein geteiltes `secondary`-Array wäre eines,
   // das sich eine Übung mit allen anderen teilt.
-  return { media: null, secondary: [], en: null, region: null, rank: CUSTOM_RANK };
+  return {
+    media: null,
+    bilder: [],
+    secondary: [],
+    en: null,
+    region: null,
+    rank: CUSTOM_RANK,
+    kategorie: null,
+    mechanik: null,
+    zugArt: null,
+    schwierigkeit: null,
+    primaerMuskeln: [],
+    sekundaerMuskeln: [],
+    variationsgruppe: null,
+    einseitig: false,
+    met: null,
+    ziele: [],
+    tags: [],
+  };
 }
 
 /**
@@ -188,54 +273,74 @@ export function mergeOne(record: ExerciseRecord): Exercise {
 
 const MEDIA_BASE = "/uebungen";
 
-/** Das animierte GIF einer Übung, oder null bei einer eigenen Übung. */
-export function gifUrl(exercise: { id: string; media: string | null }): string | null {
-  if (!exercise.media) return null;
-  return `${MEDIA_BASE}/gif/${exercise.id.slice(3)}-${exercise.media}.gif`;
-}
+/** Welche Position eines Bewegungsablaufs gemeint ist. */
+export type Bildart = "start" | "peak" | "main";
 
-/** Das Standbild — leichter als das GIF, für Listen und Vorschauen. */
-export function imageUrl(exercise: { id: string; media: string | null }): string | null {
-  if (!exercise.media) return null;
-  return `${MEDIA_BASE}/img/${exercise.id.slice(3)}-${exercise.media}.jpg`;
+/**
+ * Ein Bild der Übung, oder null bei einer eigenen Übung.
+ *
+ * Zwei Positionen statt eines GIFs: der Datensatz zeigt Anfang und Umkehrpunkt
+ * jeder Bewegung einzeln, in 512 statt 180 px. Zusammen sind das 19 MB für die
+ * ganze Bibliothek — die animierte Fassung wog 122 MB und passte damit nie
+ * aufs Handy. Wo es nur ein Bild gibt, heißt es "main".
+ */
+export function bildUrl(
+  exercise: { media: string | null; bilder: Bildart[] },
+  art: Bildart = "start"
+): string | null {
+  if (!exercise.media || exercise.bilder.length === 0) return null;
+  const gewaehlt = exercise.bilder.includes(art) ? art : exercise.bilder[0];
+  return `${MEDIA_BASE}/repdb/flat/${exercise.media}-${gewaehlt}.webp`;
 }
 
 /**
- * Die Anleitungen liegen getrennt vom Katalog, weil sie mit 600 KB deutlich
- * schwerer sind als die Liste selbst und nur gebraucht werden, wenn jemand eine
- * einzelne Übung aufschlägt.
+ * Beschreibung, Anleitung und Tipps.
  *
- * Der Datensatz liefert sie auf Englisch; die deutsche Fassung entsteht aus
- * scripts/anleitungen-bauen.mjs. Gelesen wird zuerst Deutsch — nur was dort
- * fehlt, kommt aus dem Original. So kann die Übersetzung wachsen, ohne dass
- * zwischendurch Übungen ohne Anleitung dastehen.
+ * Sie liegen getrennt vom Katalog, weil sie mit 450 KB schwerer sind als er
+ * selbst und nur gebraucht werden, wenn jemand eine einzelne Übung aufschlägt.
+ * Ein Abruf holt sie für die ganze Bibliothek; der Service Worker legt die
+ * Datei danach ab, damit sie auch ohne Netz da ist.
  */
-type Anleitungen = Record<string, string[]>;
+export type Uebungstext = {
+  beschreibung: string;
+  anleitung: string[];
+  tipps: string[];
+};
 
-let deutschCache: Anleitungen | null = null;
-let englischCache: Anleitungen | null = null;
+/** Derselbe Text in beiden Sprachen, die die App führt. */
+export type Uebungstexte = { de: Uebungstext; en: Uebungstext };
 
-/** Alle Anleitungen in je einer Datei — ein Abruf reicht für die Bibliothek. */
-export const INSTRUCTIONS_URL = `${MEDIA_BASE}/anleitungen.json`;
-export const INSTRUCTIONS_DE_URL = `${MEDIA_BASE}/anleitungen-de.json`;
+export const TEXTE_URL = `${MEDIA_BASE}/texte.json`;
 
-async function holeAnleitungen(url: string): Promise<Anleitungen> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return {};
-    return (await response.json()) as Anleitungen;
-  } catch {
-    // Ohne Netz und ohne Zwischenspeicher gibt es keine Anleitung — die Übung
-    // bleibt trotzdem benutzbar, also still bleiben statt werfen.
-    return {};
+let texteCache: Record<string, Uebungstexte> | null = null;
+
+export async function ladeUebungstext(
+  id: string,
+  sprache: "de" | "en" = "de"
+): Promise<Uebungstext | null> {
+  if (!texteCache) {
+    try {
+      const response = await fetch(TEXTE_URL);
+      texteCache = response.ok ? ((await response.json()) as Record<string, Uebungstexte>) : {};
+    } catch {
+      // Ohne Netz und ohne Zwischenspeicher gibt es keine Anleitung — die
+      // Übung bleibt trotzdem benutzbar, also still bleiben statt werfen.
+      texteCache = {};
+    }
   }
+  return texteCache[id]?.[sprache] ?? null;
 }
 
-export async function loadInstructions(id: string): Promise<string[]> {
-  if (!deutschCache) deutschCache = await holeAnleitungen(INSTRUCTIONS_DE_URL);
-  const deutsch = deutschCache[id];
-  if (deutsch && deutsch.length > 0) return deutsch;
+/**
+ * Das Bild eines Geräts — 55 Illustrationen, eine je RepDB-Gerät.
+ * null, wo die Übung kein Gerät braucht.
+ */
+export function geraetBildUrl(exercise: { geraetKuerzel?: string | null }): string | null {
+  if (!exercise.geraetKuerzel) return null;
+  return `${MEDIA_BASE}/repdb/geraete/${exercise.geraetKuerzel.replace(/_/g, "-")}.webp`;
+}
 
-  if (!englischCache) englischCache = await holeAnleitungen(INSTRUCTIONS_URL);
-  return englischCache[id] ?? [];
+/** Das Bild eines Muskels — 27 Illustrationen, eine je RepDB-Muskel. */
+export function muskelBildUrl(muskel: string): string {
+  return `${MEDIA_BASE}/repdb/muskeln/${muskel.replace(/_/g, "-")}.webp`;
 }

@@ -30,6 +30,7 @@ import { ExerciseEditor } from "@/components/training/exercise-editor";
 import { ExerciseThumb } from "@/components/training/exercise-media";
 import { FilterSelect } from "@/components/training/filter-sheet";
 import { BewaehrtAbzeichen, RankBars } from "@/components/training/rank-bars";
+import { kernRang } from "@/lib/kern-uebungen";
 import { useTraining } from "@/lib/training-store";
 import { deleteExercise, updateExercise } from "@/lib/api-training";
 import {
@@ -236,6 +237,8 @@ export default function ExercisesPage() {
       beliebtheit: (a, b) =>
         treffer[b.id] - treffer[a.id] ||
         Number(b.favorite) - Number(a.favorite) ||
+        // Der Klassiker vor seinen Varianten — dieselbe Regel wie im Wähler.
+        kernRang(b.id) - kernRang(a.id) ||
         stufeVon(b) - stufeVon(a) ||
         nachName(a, b),
       name: nachName,

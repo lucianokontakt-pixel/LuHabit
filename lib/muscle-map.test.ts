@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ohneKatalog } from "@/lib/exercise-catalog";
 import {
   MAP_AREAS,
   SILHOUETTE,
@@ -22,11 +23,9 @@ function exercise(id: string, muscle: Exercise["muscle"]): Exercise {
     bodyweightFactor: null,
     loadFactor: null,
     warmup: null,
-    media: null,
-    secondary: [],
+    ...ohneKatalog(),
     en: null,
   region: null,
-  rank: 5,
   rating: null,
   ladeart: null,
   };
