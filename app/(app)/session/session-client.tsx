@@ -43,7 +43,8 @@ import { ExercisePicker } from "@/components/training/exercise-picker";
 import { summarizeSession } from "@/lib/session-stats";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
-import { saveSession, swapPlanExercise } from "@/lib/api-training";
+import { saveSession, swapPlanExercise, updateExercise } from "@/lib/api-training";
+import { woerter } from "@/lib/exercise-suche";
 import { addDaysISO, isoDateDaysAgo, todayISO } from "@/lib/datum";
 import { newId } from "@/lib/ids";
 import { formatClock, formatDayLabel, formatNumber } from "@/lib/format";
@@ -60,8 +61,10 @@ import {
   suggestAdjustment,
   ladeartVon,
   LADEART_LABELS,
+  LADEARTEN,
   RANK_SICHTBAR_AB,
   stufeVon,
+  type Ladeart,
   type PlanDay,
   type Exercise,
   type PlanExercise,
@@ -193,31 +196,51 @@ function buildRows({
  */
 const ABSOLUT_ZU_LEICHT = 15;
 
+/** Wortüberlappung zweier Namen — 1 heißt identisch, 0 heißt kein gemeinsames Wort. */
+function namensAehnlichkeit(a: Exercise, b: Exercise): number {
+  const woerterA = new Set(woerter(a.en ?? a.name));
+  const woerterB = new Set(woerter(b.en ?? b.name));
+  const schnitt = [...woerterA].filter((w) => woerterB.has(w)).length;
+  const vereinigung = new Set([...woerterA, ...woerterB]).size;
+  return vereinigung === 0 ? 0 : schnitt / vereinigung;
+}
+
 /**
- * Dasselbe Gerät, nur die andere Ladeart — die Steckmaschine ist besetzt, an
- * der Scheiben-Version derselben Bewegung steht niemand. Nur zwischen Steck-
- * und Scheibengewicht: das sind die zwei Ladearten, bei denen ein
- * Gewichtswechsel tatsächlich zwei Minuten statt zehn Sekunden kostet, und
- * damit der eigentliche Grund für den schnellen Wechsel. Bei einer Übung ohne
- * feste Ladeart (Langhantel, Kurzhantel, Kabelzug …) gibt es kein Gegenstück
- * dieser Art — die Liste bleibt dann leer.
+ * Dieselbe Maschine, nur die andere Ladeart — die Steckmaschine ist besetzt,
+ * an der Scheiben-Version steht niemand. Genau eine, nicht mehrere: das ist
+ * der Punkt gegenüber "Übung wechseln?" — kein Vorschlag zum Aussuchen,
+ * sondern das eine Gegenstück, das man sucht. Beide Seiten müssen "Maschine"
+ * sein — eine Langhantel ist nie die Scheiben-Version eines Lever-Geräts, nur
+ * weil beide zufällig Scheiben nehmen, das ist ein eigenes Gerät. Unter den
+ * verbleibenden Kandidaten gewinnt der ähnlichste Name (Wortüberlappung), bei
+ * Gleichstand die höhere Beliebtheit. Bei einer Übung ohne feste Ladeart
+ * (Langhantel, Kurzhantel, Kabelzug …) gibt es kein Gegenstück dieser Art.
  */
 function ladeartGegenstuecke(exercise: Exercise, alle: Exercise[]): Exercise[] {
   const eigeneLadeart = ladeartVon(exercise);
-  if (eigeneLadeart !== "steck" && eigeneLadeart !== "scheiben") return [];
+  if (
+    exercise.equipment !== "machine" ||
+    (eigeneLadeart !== "steck" && eigeneLadeart !== "scheiben")
+  ) {
+    return [];
+  }
   const gesucht = eigeneLadeart === "steck" ? "scheiben" : "steck";
 
-  return alle
-    .filter(
-      (e) =>
-        e.id !== exercise.id &&
-        !e.hidden &&
-        e.muscle === exercise.muscle &&
-        e.region === exercise.region &&
-        ladeartVon(e) === gesucht &&
-        stufeVon(e) >= RANK_SICHTBAR_AB
-    )
-    .sort((a, b) => b.rank - a.rank);
+  const kandidaten = alle.filter(
+    (e) =>
+      e.id !== exercise.id &&
+      !e.hidden &&
+      e.equipment === "machine" &&
+      e.muscle === exercise.muscle &&
+      e.region === exercise.region &&
+      ladeartVon(e) === gesucht &&
+      stufeVon(e) >= RANK_SICHTBAR_AB
+  );
+
+  const beste = kandidaten.sort(
+    (a, b) => namensAehnlichkeit(b, exercise) - namensAehnlichkeit(a, exercise) || b.rank - a.rank
+  )[0];
+  return beste ? [beste] : [];
 }
 
 /**
@@ -281,7 +304,7 @@ function UebungsGrid({
       </button>
 
       {offen && (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="flex flex-wrap gap-2">
           {liste.map((alt) => {
             const art = ladeartVon(alt);
             return (
@@ -289,7 +312,7 @@ function UebungsGrid({
                 key={alt.id}
                 type="button"
                 onClick={() => onWahl(alt)}
-                className="flex flex-col items-center gap-1 rounded-field bg-card p-2 text-center transition-colors hover:bg-foreground/5"
+                className="flex w-24 flex-col items-center gap-1 rounded-field bg-card p-2 text-center transition-colors hover:bg-foreground/5"
               >
                 <ExerciseThumb exercise={alt} className="size-16" />
                 <span className="line-clamp-2 text-xs font-medium">{alt.name}</span>
@@ -328,6 +351,52 @@ function WechselUebungen({
     <div className="mx-(--card-spacing) flex flex-wrap gap-2">
       <UebungsGrid label="Andere Ladeart?" icon={Repeat} liste={gegenstuecke} onWahl={onWahl} />
       <UebungsGrid label="Übung wechseln?" icon={ArrowLeftRight} liste={alternativen} onWahl={onWahl} />
+    </div>
+  );
+}
+
+/**
+ * Für rund siebzig "Lever …"-Maschinen weiß der Datensatz die Ladeart nicht
+ * (siehe ladeartVon) — im Bild oder GIF sieht man sie aber sofort: ein
+ * Gewichtsblock mit Stift oder Hörner für Scheiben. Also fragen, statt zu
+ * raten, und die Antwort gleich für die Übung merken — einmal beantwortet,
+ * bleibt sie beantwortet, und "Andere Ladeart?" bekommt etwas zu vergleichen.
+ */
+function LadeartFrage({
+  exercise,
+  onGesetzt,
+}: {
+  exercise: Exercise;
+  onGesetzt: (exercise: Exercise) => void;
+}) {
+  const [saving, setSaving] = useState<Ladeart | null>(null);
+  if (exercise.equipment !== "machine" || ladeartVon(exercise) !== null) return null;
+
+  async function setzen(art: Ladeart) {
+    setSaving(art);
+    try {
+      onGesetzt(await updateExercise({ id: exercise.id, ladeart: art }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Konnte die Ladeart nicht speichern");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  return (
+    <div className="mx-(--card-spacing) flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <span>Ladeart im Bild?</span>
+      {LADEARTEN.filter((art) => art === "steck" || art === "scheiben").map((art) => (
+        <button
+          key={art}
+          type="button"
+          disabled={saving !== null}
+          onClick={() => void setzen(art)}
+          className="rounded-field bg-card px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
+        >
+          {saving === art ? "Speichert…" : LADEART_LABELS[art]}
+        </button>
+      ))}
     </div>
   );
 }
@@ -377,6 +446,7 @@ export function SessionClient() {
     lastLoggedFor,
     addSession,
     loading,
+    upsertExercise,
   } = useTraining();
   const { entries: weightEntries, loading: weightLoading } = useMetricData("weight");
   const bodyweight = weightEntries[weightEntries.length - 1]?.value ?? null;
@@ -1369,6 +1439,10 @@ export function SessionClient() {
                         </p>
                       )}
                     </div>
+                  )}
+
+                  {exercise && (
+                    <LadeartFrage exercise={exercise} onGesetzt={upsertExercise} />
                   )}
 
                   {/* Nur solange nichts abgehakt ist — ein Tausch mittendrin

@@ -108,8 +108,8 @@ describe("die Ladeart als Suchwort", () => {
     // Der Kabelzug hat einen Block, das folgt aus dem Gerät.
     expect(treffer("steckgewicht", 999)).toContain("Cable Lat Pulldown Full Range Of Motion");
     // Eine Maschine ohne Angabe darf über keine der beiden zu finden sein.
-    expect(treffer("steckgewicht", 999)).not.toContain("Lever Chest Press");
-    expect(treffer("scheiben", 999)).not.toContain("Lever Chest Press");
+    expect(treffer("steckgewicht", 999)).not.toContain("Ski Ergometer");
+    expect(treffer("scheiben", 999)).not.toContain("Ski Ergometer");
   });
 });
 

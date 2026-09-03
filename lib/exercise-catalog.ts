@@ -38,6 +38,16 @@ export type CatalogExercise = {
    * Gewicht der Körper und es gibt nichts zu schätzen.
    */
   startFactor: number | null;
+  /**
+   * Die Ladeart als geprüfte Tatsache über die Übung selbst, nicht über ein
+   * einzelnes Studio — fehlt bei den meisten "Lever …"-Einträgen (siehe
+   * ladeartVon in lib/training.ts), lässt sich aber am Bild ablesen und dann
+   * hier eintragen, sobald jemand hingesehen hat. Gilt für jeden Account.
+   * Die persönliche Ladeart in der Datenbank (exercises.ladeart) schlägt
+   * diesen Wert trotzdem, wenn sie gesetzt ist — das eigene Studio kann
+   * abweichen. Fehlt in älteren Katalog-Ständen, deshalb optional.
+   */
+  ladeart?: Ladeart | null;
 };
 
 export const CATALOG = catalogData as CatalogExercise[];
@@ -92,7 +102,7 @@ export function fromCatalog(entry: CatalogExercise): Exercise {
     region: entry.region,
     rank: entry.rank,
     rating: null,
-    ladeart: null,
+    ladeart: entry.ladeart ?? null,
   };
 }
 
@@ -142,7 +152,9 @@ export function mergeExercises(records: ExerciseRecord[]): Exercise[] {
       loadFactor: row.loadFactor ?? base.loadFactor,
       warmup: row.warmup,
       rating: row.rating,
-      ladeart: row.ladeart,
+      // Die persönliche Ladeart schlägt die aus dem Katalog — nicht
+      // umgekehrt: row.ladeart ist null, solange niemand widerspricht.
+      ladeart: row.ladeart ?? base.ladeart,
     });
   }
 
@@ -170,7 +182,7 @@ export function mergeOne(record: ExerciseRecord): Exercise {
     loadFactor: record.loadFactor ?? base.loadFactor,
     warmup: record.warmup,
     rating: record.rating,
-    ladeart: record.ladeart,
+    ladeart: record.ladeart ?? base.ladeart,
   };
 }
 
