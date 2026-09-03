@@ -16,6 +16,7 @@ import {
   TrendingUp,
   TrendingDown,
   Plus,
+  Repeat,
   SkipForward,
   Trash2,
   X,
@@ -193,6 +194,33 @@ function buildRows({
 const ABSOLUT_ZU_LEICHT = 15;
 
 /**
+ * Dasselbe Gerät, nur die andere Ladeart — die Steckmaschine ist besetzt, an
+ * der Scheiben-Version derselben Bewegung steht niemand. Nur zwischen Steck-
+ * und Scheibengewicht: das sind die zwei Ladearten, bei denen ein
+ * Gewichtswechsel tatsächlich zwei Minuten statt zehn Sekunden kostet, und
+ * damit der eigentliche Grund für den schnellen Wechsel. Bei einer Übung ohne
+ * feste Ladeart (Langhantel, Kurzhantel, Kabelzug …) gibt es kein Gegenstück
+ * dieser Art — die Liste bleibt dann leer.
+ */
+function ladeartGegenstuecke(exercise: Exercise, alle: Exercise[]): Exercise[] {
+  const eigeneLadeart = ladeartVon(exercise);
+  if (eigeneLadeart !== "steck" && eigeneLadeart !== "scheiben") return [];
+  const gesucht = eigeneLadeart === "steck" ? "scheiben" : "steck";
+
+  return alle
+    .filter(
+      (e) =>
+        e.id !== exercise.id &&
+        !e.hidden &&
+        e.muscle === exercise.muscle &&
+        e.region === exercise.region &&
+        ladeartVon(e) === gesucht &&
+        stufeVon(e) >= RANK_SICHTBAR_AB
+    )
+    .sort((a, b) => b.rank - a.rank);
+}
+
+/**
  * Andere Übungen für denselben Muskel — für den Moment, in dem das eigene
  * Gerät besetzt ist, egal ob Maschine, Langhantel oder sonst was. Dieselbe
  * Region ist Pflicht, nicht nur wo bekannt: sonst stünde bei "Kurzhantel
@@ -201,71 +229,60 @@ const ABSOLUT_ZU_LEICHT = 15;
  * Schulterübungen) sonst gleich die ganze Muskelgruppe, vordere und hintere
  * Schulter durcheinander.
  *
- * Sortiert nach Ladeart zuerst: bei zwei Maschinen ist die mit der jeweils
- * *anderen* Ladeart der eigentliche Ersatz — steht die eigene fest mit
- * Steckgewicht, ist die Scheiben-Version die Antwort auf "meine ist besetzt".
- * Außerhalb von Maschinen trägt das selten Gewicht (Langhantel bleibt
- * Langhantel, "frei" gegen "frei"), fällt dann einfach auf die Beliebtheit
- * zurück.
+ * Ohne die Steck-↔-Scheiben-Gegenstücke: die haben ihren eigenen, direkteren
+ * Knopf (ladeartGegenstuecke) und sollen hier nicht doppelt auftauchen.
  */
 function wechselUebungen(exercise: Exercise, alle: Exercise[]): Exercise[] {
-  const eigeneLadeart = ladeartVon(exercise);
+  const gegenstuecke = new Set(ladeartGegenstuecke(exercise, alle).map((e) => e.id));
   return alle
     .filter(
       (e) =>
         e.id !== exercise.id &&
         !e.hidden &&
+        !gegenstuecke.has(e.id) &&
         e.muscle === exercise.muscle &&
         e.region === exercise.region &&
         // Dieselbe Grenze wie in der Übungsliste: eine Ganzkörper-Wippe als
         // Wechsel-Vorschlag hilft nicht, wenn das eigentliche Gerät besetzt ist.
         stufeVon(e) >= RANK_SICHTBAR_AB
     )
-    .sort((a, b) => {
-      const wertigkeit = (e: Exercise) => {
-        const art = ladeartVon(e);
-        if (art === null) return 1;
-        return art === eigeneLadeart ? 2 : 0;
-      };
-      return wertigkeit(a) - wertigkeit(b) || b.rank - a.rank;
-    });
+    .sort((a, b) => b.rank - a.rank);
 }
 
 /**
- * Der Knopf „Übung wechseln?": erscheint nur, wenn es welche gibt, und
- * bleibt zu, bis jemand ihn braucht — die Bilder sind der Punkt (ein Gerät
- * erkennt man an seiner Vorlage-Illustration eher als an seinem Namen), aber
- * ein Dutzend Vorschaubilder soll nicht jede offene Übung aufblähen, die sie
- * nie anschaut.
+ * Ein aufklappbarer Knopf mit einem Bildergitter darunter — dasselbe Muster
+ * für „Übung wechseln?" und „Andere Ladeart?", nur mit anderer Liste und
+ * anderem Text.
  */
-function WechselUebungen({
-  exercise,
-  alle,
+function UebungsGrid({
+  label,
+  icon: Icon,
+  liste,
   onWahl,
 }: {
-  exercise: Exercise;
-  alle: Exercise[];
+  label: string;
+  icon: typeof ArrowLeftRight;
+  liste: Exercise[];
   onWahl: (alternative: Exercise) => void;
 }) {
   const [offen, setOffen] = useState(false);
-  const alternativen = wechselUebungen(exercise, alle);
-  if (alternativen.length === 0) return null;
+  if (liste.length === 0) return null;
 
   return (
-    <div className="mx-(--card-spacing) flex flex-col gap-2">
+    <div className="flex flex-col gap-2">
       <button
         type="button"
         onClick={() => setOffen((v) => !v)}
         className="flex w-fit items-center gap-1.5 rounded-field bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-foreground/5"
       >
-        <ArrowLeftRight className="size-3.5 shrink-0" />
-        Übung wechseln?
+        <Icon className="size-3.5 shrink-0" />
+        {label}
         <ChevronRight className={cn("size-3.5 shrink-0 transition-transform", offen && "rotate-90")} />
       </button>
 
       {offen && (
         <div className="grid grid-cols-3 gap-2">
-          {alternativen.map((alt) => {
+          {liste.map((alt) => {
             const art = ladeartVon(alt);
             return (
               <button
@@ -284,6 +301,33 @@ function WechselUebungen({
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Zwei Knöpfe nebeneinander: der direkte Gegenstück-Tausch (gleiche Übung,
+ * andere Ladeart) und der breitere Wechsel (andere Übung, gleicher Muskel).
+ * Beide erscheinen nur, wenn es dafür etwas gibt — bleibt einer leer, steht
+ * eben nur der andere da.
+ */
+function WechselUebungen({
+  exercise,
+  alle,
+  onWahl,
+}: {
+  exercise: Exercise;
+  alle: Exercise[];
+  onWahl: (alternative: Exercise) => void;
+}) {
+  const gegenstuecke = ladeartGegenstuecke(exercise, alle);
+  const alternativen = wechselUebungen(exercise, alle);
+  if (gegenstuecke.length === 0 && alternativen.length === 0) return null;
+
+  return (
+    <div className="mx-(--card-spacing) flex flex-wrap gap-2">
+      <UebungsGrid label="Andere Ladeart?" icon={Repeat} liste={gegenstuecke} onWahl={onWahl} />
+      <UebungsGrid label="Übung wechseln?" icon={ArrowLeftRight} liste={alternativen} onWahl={onWahl} />
     </div>
   );
 }
