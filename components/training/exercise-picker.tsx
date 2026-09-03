@@ -18,7 +18,7 @@ import { useTraining } from "@/lib/training-store";
 import { createExercise, updateExercise } from "@/lib/api-training";
 import { ExerciseThumb } from "@/components/training/exercise-media";
 import { FilterSelect } from "@/components/training/filter-sheet";
-import { RankBars } from "@/components/training/rank-bars";
+import { BewaehrtAbzeichen, RankBars } from "@/components/training/rank-bars";
 import {
   EQUIPMENT,
   EQUIPMENT_LABELS,
@@ -655,7 +655,10 @@ function Treffer({
       >
         <ExerciseThumb exercise={exercise} className="size-16" />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm">{exercise.name}</span>
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-sm">{exercise.name}</span>
+            <BewaehrtAbzeichen exercise={exercise} />
+          </span>
           <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
             <RankBars exercise={exercise} />
             <span className="truncate">{zusatz.join(" · ")}</span>

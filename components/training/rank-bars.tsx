@@ -1,6 +1,7 @@
 "use client";
 
 import { stufeVon, type Exercise } from "@/lib/training";
+import { KERN_UEBUNGEN } from "@/lib/kern-uebungen";
 import { cn } from "@/lib/utils";
 
 /**
@@ -15,6 +16,32 @@ import { cn } from "@/lib/utils";
  * Ist ein eigenes Urteil im Spiel, tragen die Striche die Akzentfarbe. So sieht
  * man ohne ein Wort, wo die Automatik steht und wo die eigene Meinung.
  */
+/**
+ * Die handverlesenen Klassiker, hervorgehoben — die Übungen, mit denen man
+ * nichts falsch macht (siehe lib/kern-uebungen.ts). Nicht aus der
+ * Beliebtheitsstufe abgeleitet: die steht bei über 40 % des Katalogs auf der
+ * höchsten Stufe und wäre als Signal zu laut.
+ */
+export function BewaehrtAbzeichen({
+  exercise,
+  className,
+}: {
+  exercise: Pick<Exercise, "id">;
+  className?: string;
+}) {
+  if (!KERN_UEBUNGEN.has(exercise.id)) return null;
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-0.5 rounded-pill bg-tint-mint px-1.5 py-0.5 text-[10px] font-medium text-tint-mint-ink",
+        className
+      )}
+    >
+      Bewährt
+    </span>
+  );
+}
+
 export function RankBars({
   exercise,
   className,

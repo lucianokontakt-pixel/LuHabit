@@ -29,7 +29,7 @@ import { ExercisePicker } from "@/components/training/exercise-picker";
 import { ExerciseEditor } from "@/components/training/exercise-editor";
 import { ExerciseThumb } from "@/components/training/exercise-media";
 import { FilterSelect } from "@/components/training/filter-sheet";
-import { RankBars } from "@/components/training/rank-bars";
+import { BewaehrtAbzeichen, RankBars } from "@/components/training/rank-bars";
 import { useTraining } from "@/lib/training-store";
 import { deleteExercise, updateExercise } from "@/lib/api-training";
 import {
@@ -510,10 +510,13 @@ export default function ExercisesPage() {
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       <ExerciseThumb exercise={exercise} />
                       <div className="min-w-0 flex-1">
-                        {/* Umbrechen statt abschneiden: das Gerät steht am Ende
-                            des Namens und ist genau das, was die sechs
-                            Bankdrück-Varianten voneinander unterscheidet. */}
-                        <p className="line-clamp-2 text-sm">{exercise.name}</p>
+                        <p className="flex min-w-0 items-center gap-1.5">
+                          {/* Umbrechen statt abschneiden: das Gerät steht am
+                              Ende des Namens und ist genau das, was die sechs
+                              Bankdrück-Varianten voneinander unterscheidet. */}
+                          <span className="min-w-0 line-clamp-2 text-sm">{exercise.name}</span>
+                          <BewaehrtAbzeichen exercise={exercise} />
+                        </p>
                         <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                           <RankBars exercise={exercise} />
                           {zusatzZeile(exercise) && (
