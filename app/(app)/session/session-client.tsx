@@ -16,7 +16,6 @@ import {
   TrendingUp,
   TrendingDown,
   Plus,
-  Repeat,
   SkipForward,
   Trash2,
   X,
@@ -44,7 +43,6 @@ import { summarizeSession } from "@/lib/session-stats";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
 import { saveSession, swapPlanExercise, updateExercise } from "@/lib/api-training";
-import { woerter } from "@/lib/exercise-suche";
 import { addDaysISO, isoDateDaysAgo, todayISO } from "@/lib/datum";
 import { newId } from "@/lib/ids";
 import { formatClock, formatDayLabel, formatNumber } from "@/lib/format";
@@ -196,53 +194,6 @@ function buildRows({
  */
 const ABSOLUT_ZU_LEICHT = 15;
 
-/** Wortüberlappung zweier Namen — 1 heißt identisch, 0 heißt kein gemeinsames Wort. */
-function namensAehnlichkeit(a: Exercise, b: Exercise): number {
-  const woerterA = new Set(woerter(a.en ?? a.name));
-  const woerterB = new Set(woerter(b.en ?? b.name));
-  const schnitt = [...woerterA].filter((w) => woerterB.has(w)).length;
-  const vereinigung = new Set([...woerterA, ...woerterB]).size;
-  return vereinigung === 0 ? 0 : schnitt / vereinigung;
-}
-
-/**
- * Dieselbe Maschine, nur die andere Ladeart — die Steckmaschine ist besetzt,
- * an der Scheiben-Version steht niemand. Genau eine, nicht mehrere: das ist
- * der Punkt gegenüber "Übung wechseln?" — kein Vorschlag zum Aussuchen,
- * sondern das eine Gegenstück, das man sucht. Beide Seiten müssen "Maschine"
- * sein — eine Langhantel ist nie die Scheiben-Version eines Lever-Geräts, nur
- * weil beide zufällig Scheiben nehmen, das ist ein eigenes Gerät. Unter den
- * verbleibenden Kandidaten gewinnt der ähnlichste Name (Wortüberlappung), bei
- * Gleichstand die höhere Beliebtheit. Bei einer Übung ohne feste Ladeart
- * (Langhantel, Kurzhantel, Kabelzug …) gibt es kein Gegenstück dieser Art.
- */
-function ladeartGegenstuecke(exercise: Exercise, alle: Exercise[]): Exercise[] {
-  const eigeneLadeart = ladeartVon(exercise);
-  if (
-    exercise.equipment !== "machine" ||
-    (eigeneLadeart !== "steck" && eigeneLadeart !== "scheiben")
-  ) {
-    return [];
-  }
-  const gesucht = eigeneLadeart === "steck" ? "scheiben" : "steck";
-
-  const kandidaten = alle.filter(
-    (e) =>
-      e.id !== exercise.id &&
-      !e.hidden &&
-      e.equipment === "machine" &&
-      e.muscle === exercise.muscle &&
-      e.region === exercise.region &&
-      ladeartVon(e) === gesucht &&
-      stufeVon(e) >= RANK_SICHTBAR_AB
-  );
-
-  const beste = kandidaten.sort(
-    (a, b) => namensAehnlichkeit(b, exercise) - namensAehnlichkeit(a, exercise) || b.rank - a.rank
-  )[0];
-  return beste ? [beste] : [];
-}
-
 /**
  * Andere Übungen für denselben Muskel — für den Moment, in dem das eigene
  * Gerät besetzt ist, egal ob Maschine, Langhantel oder sonst was. Dieselbe
@@ -251,18 +202,13 @@ function ladeartGegenstuecke(exercise: Exercise, alle: Exercise[]): Exercise[] {
  * und bei einer Übung ohne eigene Region-Angabe (z. B. ein Teil der
  * Schulterübungen) sonst gleich die ganze Muskelgruppe, vordere und hintere
  * Schulter durcheinander.
- *
- * Ohne die Steck-↔-Scheiben-Gegenstücke: die haben ihren eigenen, direkteren
- * Knopf (ladeartGegenstuecke) und sollen hier nicht doppelt auftauchen.
  */
 function wechselUebungen(exercise: Exercise, alle: Exercise[]): Exercise[] {
-  const gegenstuecke = new Set(ladeartGegenstuecke(exercise, alle).map((e) => e.id));
   return alle
     .filter(
       (e) =>
         e.id !== exercise.id &&
         !e.hidden &&
-        !gegenstuecke.has(e.id) &&
         e.muscle === exercise.muscle &&
         e.region === exercise.region &&
         // Dieselbe Grenze wie in der Übungsliste: eine Ganzkörper-Wippe als
@@ -273,46 +219,47 @@ function wechselUebungen(exercise: Exercise, alle: Exercise[]): Exercise[] {
 }
 
 /**
- * Ein aufklappbarer Knopf mit einem Bildergitter darunter — dasselbe Muster
- * für „Übung wechseln?" und „Andere Ladeart?", nur mit anderer Liste und
- * anderem Text.
+ * Der Knopf „Übung wechseln?": erscheint nur, wenn es welche gibt, und
+ * bleibt zu, bis jemand ihn braucht — die Bilder sind der Punkt (ein Gerät
+ * erkennt man an seiner Vorlage-Illustration eher als an seinem Namen), aber
+ * ein Dutzend Vorschaubilder soll nicht jede offene Übung aufblähen, die sie
+ * nie anschaut.
  */
-function UebungsGrid({
-  label,
-  icon: Icon,
-  liste,
+function WechselUebungen({
+  exercise,
+  alle,
   onWahl,
 }: {
-  label: string;
-  icon: typeof ArrowLeftRight;
-  liste: Exercise[];
+  exercise: Exercise;
+  alle: Exercise[];
   onWahl: (alternative: Exercise) => void;
 }) {
   const [offen, setOffen] = useState(false);
-  if (liste.length === 0) return null;
+  const alternativen = wechselUebungen(exercise, alle);
+  if (alternativen.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="mx-(--card-spacing) flex flex-col gap-2">
       <button
         type="button"
         onClick={() => setOffen((v) => !v)}
         className="flex w-fit items-center gap-1.5 rounded-field bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-foreground/5"
       >
-        <Icon className="size-3.5 shrink-0" />
-        {label}
+        <ArrowLeftRight className="size-3.5 shrink-0" />
+        Übung wechseln?
         <ChevronRight className={cn("size-3.5 shrink-0 transition-transform", offen && "rotate-90")} />
       </button>
 
       {offen && (
-        <div className="flex flex-wrap gap-2">
-          {liste.map((alt) => {
+        <div className="grid grid-cols-3 gap-2">
+          {alternativen.map((alt) => {
             const art = ladeartVon(alt);
             return (
               <button
                 key={alt.id}
                 type="button"
                 onClick={() => onWahl(alt)}
-                className="flex w-24 flex-col items-center gap-1 rounded-field bg-card p-2 text-center transition-colors hover:bg-foreground/5"
+                className="flex flex-col items-center gap-1 rounded-field bg-card p-2 text-center transition-colors hover:bg-foreground/5"
               >
                 <ExerciseThumb exercise={alt} className="size-16" />
                 <span className="line-clamp-2 text-xs font-medium">{alt.name}</span>
@@ -329,38 +276,10 @@ function UebungsGrid({
 }
 
 /**
- * Zwei Knöpfe nebeneinander: der direkte Gegenstück-Tausch (gleiche Übung,
- * andere Ladeart) und der breitere Wechsel (andere Übung, gleicher Muskel).
- * Beide erscheinen nur, wenn es dafür etwas gibt — bleibt einer leer, steht
- * eben nur der andere da.
- */
-function WechselUebungen({
-  exercise,
-  alle,
-  onWahl,
-}: {
-  exercise: Exercise;
-  alle: Exercise[];
-  onWahl: (alternative: Exercise) => void;
-}) {
-  const gegenstuecke = ladeartGegenstuecke(exercise, alle);
-  const alternativen = wechselUebungen(exercise, alle);
-  if (gegenstuecke.length === 0 && alternativen.length === 0) return null;
-
-  return (
-    <div className="mx-(--card-spacing) flex flex-wrap gap-2">
-      <UebungsGrid label="Andere Ladeart?" icon={Repeat} liste={gegenstuecke} onWahl={onWahl} />
-      <UebungsGrid label="Übung wechseln?" icon={ArrowLeftRight} liste={alternativen} onWahl={onWahl} />
-    </div>
-  );
-}
-
-/**
- * Für rund siebzig "Lever …"-Maschinen weiß der Datensatz die Ladeart nicht
- * (siehe ladeartVon) — im Bild oder GIF sieht man sie aber sofort: ein
+ * Für einen Rest der "Lever …"-Maschinen weiß der Datensatz die Ladeart noch
+ * nicht (siehe ladeartVon) — im Bild oder GIF sieht man sie aber sofort: ein
  * Gewichtsblock mit Stift oder Hörner für Scheiben. Also fragen, statt zu
- * raten, und die Antwort gleich für die Übung merken — einmal beantwortet,
- * bleibt sie beantwortet, und "Andere Ladeart?" bekommt etwas zu vergleichen.
+ * raten, und die Antwort gleich für die Übung merken.
  */
 function LadeartFrage({
   exercise,
