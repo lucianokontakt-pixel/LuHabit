@@ -2,7 +2,20 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Ellipsis, Eye, EyeOff, Pencil, Plus, Search, Sparkles, Star, Trash2 } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  Ellipsis,
+  Eye,
+  EyeOff,
+  Pencil,
+  Plus,
+  Search,
+  Sparkles,
+  Star,
+  Trash2,
+  Weight,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ExercisePicker } from "@/components/training/exercise-picker";
 import { ExerciseEditor } from "@/components/training/exercise-editor";
-import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
+import { ExerciseThumb } from "@/components/training/exercise-media";
 import { FilterSelect } from "@/components/training/filter-sheet";
 import { RankBars } from "@/components/training/rank-bars";
 import { useTraining } from "@/lib/training-store";
@@ -22,18 +35,26 @@ import { deleteExercise, updateExercise } from "@/lib/api-training";
 import {
   EQUIPMENT,
   EQUIPMENT_LABELS,
+  LADEARTEN,
+  LADEART_HINWEISE,
+  LADEART_LABELS,
+  LADEART_OFFEN,
+  LADEART_OFFEN_LABEL,
   MUSCLES,
   MUSCLE_LABELS,
   RANK_SICHTBAR_AB,
   REGION_SHORT,
   REGIONS,
   defaultIncrement,
+  ladeartVon,
   stufeVon,
   type Equipment,
   type Exercise,
+  type Ladeart,
   type Muscle,
   type Region,
 } from "@/lib/training";
+import { guete, suchwoerter, verlaufVon } from "@/lib/exercise-suche";
 import { useShowRare } from "@/lib/use-show-rare";
 import { cn } from "@/lib/utils";
 import { MUSCLE_TINT, TINT_FILL } from "@/lib/tints";
@@ -41,6 +62,15 @@ import { PageTitle } from "@/components/ui/page-title";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const EQUIPMENT_KEYS = EQUIPMENT;
+
+/** Der Ladeart-Filter kennt einen Wert mehr als die Ladeart: das Offene. */
+type LadeartFilter = Ladeart | typeof LADEART_OFFEN;
+
+function passtZurLadeart(exercise: Exercise, gewaehlt: LadeartFilter | null): boolean {
+  if (gewaehlt === null) return true;
+  const ist = ladeartVon(exercise);
+  return gewaehlt === LADEART_OFFEN ? ist === null : ist === gewaehlt;
+}
 
 /**
  * Wie viele Übungen eine Muskelgruppe zeigt, bevor sie aufgeklappt werden will.
@@ -78,10 +108,23 @@ const SORT_OPTIONS: { value: Sortierung; label: string; hint: string }[] = [
  * Alles andere ist ohnehin eine Ausnahme und darf bleiben: ein abweichender
  * Sprung, der Lastanteil bei Eigengewicht, „eigene", „ausgeblendet".
  */
+/**
+ * Die Ladeart in der Zeile — nur bei Maschinen und nur, wenn sie feststeht.
+ * Eine Vermutung sähe hier aus wie eine Auskunft.
+ */
+function ladeartMaschine(exercise: Exercise): string | null {
+  if (exercise.equipment !== "machine") return null;
+  const art = ladeartVon(exercise);
+  return art === null ? null : LADEART_LABELS[art];
+}
+
 function zusatzZeile(exercise: Exercise): string | null {
   const geraet = EQUIPMENT_LABELS[exercise.equipment];
   const teile = [
     exercise.name.toLowerCase().includes(geraet.toLowerCase()) ? null : geraet,
+    // Nur bei Maschinen: bei Langhantel und Kabelzug sagt die Ladeart nichts,
+    // was das Gerät nicht schon sagt.
+    ladeartMaschine(exercise),
     // Der Bereich steht vor dem Sprung: er sagt etwas über die Bewegung, alles
     // Weitere nur über die Einstellungen.
     exercise.region ? REGION_SHORT[exercise.region] : null,
@@ -104,50 +147,61 @@ export default function ExercisesPage() {
   const [muscle, setMuscle] = useState<Muscle | null>(null);
   const [equipment, setEquipment] = useState<Equipment | null>(null);
   const [region, setRegion] = useState<Region | null>(null);
+  const [ladeart, setLadeart] = useState<LadeartFilter | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [showRare, toggleShowRare] = useShowRare();
   const [sort, setSort] = useState<Sortierung>("beliebtheit");
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Exercise | null>(null);
-  const [detail, setDetail] = useState<Exercise | null>(null);
   const [expanded, setExpanded] = useState<Set<Muscle>>(new Set());
+  // Welche Muskelgruppen von Hand aufgeklappt wurden. Ungefiltert bleiben
+  // alle zehn zu — sonst ständen auf einen Blick zehnmal bis zu 24 Übungen
+  // samt Bild da, nur um „Brust" zu erreichen.
+  const [openGroups, setOpenGroups] = useState<Set<Muscle>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return exercises
-      .filter((e) => (showHidden ? true : !e.hidden))
-      .filter((e) => (favoritesOnly ? e.favorite : true))
-      // Die ungewöhnlichen bleiben draußen, bis jemand danach fragt — außer er
-      // hat die Übung als Favorit markiert, dann ist die Frage beantwortet.
-      .filter((e) => showRare || e.favorite || stufeVon(e) >= RANK_SICHTBAR_AB)
-      .filter((e) => (muscle === null ? true : e.muscle === muscle))
-      .filter((e) => (equipment === null ? true : e.equipment === equipment))
-      .filter((e) => (region === null ? true : e.region === region))
-      // Auch der englische Originalname zählt — wer "bench press" tippt, soll
-      // Bankdrücken finden.
-      .filter((e) =>
-        q
-          ? e.name.toLowerCase().includes(q) || (e.en?.toLowerCase().includes(q) ?? false)
-          : true
-      );
-  }, [exercises, query, muscle, equipment, region, showHidden, favoritesOnly, showRare]);
+  const gesucht = useMemo(() => suchwoerter(query), [query]);
 
   /**
-   * Wann eine Übung zuletzt vorkam. Aus den Einheiten, nicht aus der Übung
-   * selbst — die weiß nichts über den Verlauf. sessions kommt absteigend nach
-   * Datum, der erste Treffer ist also schon der jüngste.
+   * Wie gut jede Übung zur Eingabe passt. Dieselbe Suche wie im Übungswähler
+   * (lib/exercise-suche.ts): deutsche Begriffe für eine englische Bibliothek,
+   * Wortsuche statt Teilstring.
    */
-  const zuletztAm = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const session of sessions) {
-      for (const set of session.sets) {
-        if (map[set.exerciseId] === undefined) map[set.exerciseId] = session.date;
-      }
-    }
+  const treffer = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const e of exercises) map[e.id] = guete(e, gesucht, query);
     return map;
-  }, [sessions]);
+  }, [exercises, gesucht, query]);
+
+  const filtered = useMemo(
+    () =>
+      exercises
+        .filter((e) => (showHidden ? true : !e.hidden))
+        .filter((e) => (favoritesOnly ? e.favorite : true))
+        // Die ungewöhnlichen bleiben draußen, bis jemand danach fragt — außer er
+        // hat die Übung als Favorit markiert, dann ist die Frage beantwortet.
+        .filter((e) => showRare || e.favorite || stufeVon(e) >= RANK_SICHTBAR_AB)
+        .filter((e) => (muscle === null ? true : e.muscle === muscle))
+        .filter((e) => (region === null ? true : e.region === region))
+        .filter((e) => (equipment === null ? true : e.equipment === equipment))
+        .filter((e) => passtZurLadeart(e, ladeart))
+        .filter((e) => treffer[e.id] > 0),
+    [exercises, treffer, muscle, equipment, region, ladeart, showHidden, favoritesOnly, showRare]
+  );
+
+  /**
+   * Wie viele Übungen noch keine Ladeart haben. Steht als Hinweis am Filter —
+   * sonst wäre „Noch offen“ ein Eintrag, hinter dem man nicht weiß, ob sich
+   * das Antippen lohnt.
+   */
+  const offeneAnzahl = useMemo(
+    () => exercises.filter((e) => e.equipment === "machine" && ladeartVon(e) === null).length,
+    [exercises]
+  );
+
+  /** Wann und wie oft jede Übung vorkam — siehe lib/exercise-suche.ts. */
+  const verlauf = useMemo(() => verlaufVon(sessions), [sessions]);
 
   /**
    * Die Regionen, die zur Auswahl stehen. Ist eine Muskelgruppe gewählt, nur
@@ -176,7 +230,11 @@ export default function ExercisesPage() {
     // Lüge — eine Liste A–Z, die nicht bei A anfängt.
     const nachName = (a: Exercise, b: Exercise) => a.name.localeCompare(b.name, "de");
     const vergleich: Record<Sortierung, (a: Exercise, b: Exercise) => number> = {
+      // Bei „Beliebtheit" zählt zuerst, wie gut der Treffer zur Eingabe passt —
+      // die Frage lautet ja „was ist für mich das Naheliegendste". Bei „Name"
+      // wäre das eine Lüge: eine Liste A–Z, die nicht bei A anfängt.
       beliebtheit: (a, b) =>
+        treffer[b.id] - treffer[a.id] ||
         Number(b.favorite) - Number(a.favorite) ||
         stufeVon(b) - stufeVon(a) ||
         nachName(a, b),
@@ -184,8 +242,8 @@ export default function ExercisesPage() {
       // Nie trainiert heißt ganz nach hinten, nicht ganz nach vorn: ein leeres
       // Datum ist keine Null, sondern eine fehlende Angabe.
       zuletzt: (a, b) => {
-        const da = zuletztAm[a.id];
-        const db = zuletztAm[b.id];
+        const da = verlauf[a.id]?.zuletzt;
+        const db = verlauf[b.id]?.zuletzt;
         if (da && db) return db.localeCompare(da) || nachName(a, b);
         if (da) return -1;
         if (db) return 1;
@@ -196,12 +254,43 @@ export default function ExercisesPage() {
     return MUSCLES.map((m) => ({ key: m.key, label: m.label, items: map.get(m.key) ?? [] })).filter(
       (g) => g.items.length > 0
     );
-  }, [filtered, sort, zuletztAm]);
+  }, [filtered, sort, verlauf, treffer]);
+
+  // Sobald etwas die Liste schon eingrenzt, ist Aufklappen keine Hilfe mehr,
+  // sondern nur ein weiterer Tipp vor dem Ergebnis, nach dem gesucht wurde.
+  const gefiltert =
+    query.trim() !== "" ||
+    muscle !== null ||
+    equipment !== null ||
+    region !== null ||
+    ladeart !== null ||
+    favoritesOnly;
 
   async function toggleHidden(id: string, hidden: boolean) {
     setBusy(id);
     try {
       upsertExercise(await updateExercise({ id, hidden }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Konnte Übung nicht ändern");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /**
+   * Die Ladeart aus der Liste heraus setzen — ohne den Umweg über den Editor.
+   *
+   * Der Filter „Noch offen“ und diese zwei Einträge sind zusammen gedacht:
+   * einmal filtern, dann je Übung ein Tipp. Über den Editor wären es vier je
+   * Übung, und bei siebzig Maschinen ist das der Unterschied zwischen einer
+   * Sache, die man macht, und einer, die man sich vornimmt.
+   */
+  async function setzeLadeart(exercise: Exercise, art: Ladeart) {
+    setBusy(exercise.id);
+    try {
+      // Nochmal dasselbe wählen lässt sie wieder offen.
+      const naechste = exercise.ladeart === art ? null : art;
+      upsertExercise(await updateExercise({ id: exercise.id, ladeart: naechste }));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Konnte Übung nicht ändern");
     } finally {
@@ -275,6 +364,15 @@ export default function ExercisesPage() {
               setRegion(null);
             }}
           />
+          {regionOptions.length > 0 && (
+            <FilterSelect
+              label="Bereich"
+              allLabel="Alle Bereiche"
+              value={region}
+              options={regionOptions}
+              onChange={setRegion}
+            />
+          )}
           <FilterSelect
             label="Gerät"
             allLabel="Alle Geräte"
@@ -285,15 +383,28 @@ export default function ExercisesPage() {
             }))}
             onChange={setEquipment}
           />
-          {regionOptions.length > 0 && (
-            <FilterSelect
-              label="Bereich"
-              allLabel="Alle Bereiche"
-              value={region}
-              options={regionOptions}
-              onChange={setRegion}
-            />
-          )}
+          {/* Was das Gerät nicht sagt: ob man Scheiben auflegen muss oder nur
+              den Stift umsteckt. */}
+          <FilterSelect
+            label="Ladeart"
+            allLabel="Jede Ladeart"
+            value={ladeart}
+            options={[
+              ...LADEARTEN.map((key) => ({
+                value: key as LadeartFilter,
+                label: LADEART_LABELS[key],
+                hint: LADEART_HINWEISE[key],
+              })),
+              // Der Einstieg zum Durchgehen: alle Maschinen, bei denen es noch
+              // niemand entschieden hat.
+              {
+                value: LADEART_OFFEN as LadeartFilter,
+                label: LADEART_OFFEN_LABEL,
+                hint: `${offeneAnzahl}`,
+              },
+            ]}
+            onChange={setLadeart}
+          />
           {/* Die Sortierung hat kein „Alle“ — es ist immer eine gewählt.
               Darum trägt der Knopf sie auch immer im Text, und ein Tipp auf
               die schon gewählte Zeile lässt sie stehen. */}
@@ -351,21 +462,42 @@ export default function ExercisesPage() {
         </Card>
       ) : (
         <div className="flex flex-col gap-4">
-          {grouped.map((group) => (
+          {grouped.map((group) => {
+            const open = gefiltert || openGroups.has(group.key);
+            return (
             <Card key={group.key} className="gap-2">
-              <div className="flex items-baseline justify-between px-(--card-spacing)">
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenGroups((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(group.key)) next.delete(group.key);
+                    else next.add(group.key);
+                    return next;
+                  })
+                }
+                aria-expanded={open}
+                className="flex items-baseline justify-between px-(--card-spacing) text-left"
+              >
                 {/* Der Punkt trägt die Familienfarbe — dieselbe, die im
                     Kalender und auf den Kacheln steht. Hier lernt man sie
                     nebenbei, weil der Name direkt danebensteht. */}
                 <span className="flex items-baseline gap-2">
+                  <ChevronRight
+                    className={cn(
+                      "size-4 shrink-0 self-center text-muted-foreground transition-transform",
+                      open && "rotate-90"
+                    )}
+                  />
                   <span className={cn("size-2 shrink-0 translate-y-[-1px] rounded-full", TINT_FILL[MUSCLE_TINT[group.key]])} />
                   <h2 className="text-subheading font-display">{group.label}</h2>
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {group.items.length} · Standardsprung {defaultIncrement(group.key)} kg
                 </span>
-              </div>
+              </button>
 
+              {open && (
               <div className="flex flex-col px-(--card-spacing)">
                 {(expanded.has(group.key) ? group.items : group.items.slice(0, VORSCHAU)).map((exercise) => (
                   <div
@@ -375,26 +507,21 @@ export default function ExercisesPage() {
                       exercise.hidden && "opacity-50"
                     )}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setDetail(exercise)}
-                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                      aria-label={`${exercise.name} ansehen`}
-                    >
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
                       <ExerciseThumb exercise={exercise} />
                       <div className="min-w-0 flex-1">
-                      {/* Umbrechen statt abschneiden: das Gerät steht am Ende
-                          des Namens und ist genau das, was die sechs
-                          Bankdrück-Varianten voneinander unterscheidet. */}
-                      <p className="line-clamp-2 text-sm">{exercise.name}</p>
-                      <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                        <RankBars exercise={exercise} />
-                        {zusatzZeile(exercise) && (
-                          <span className="truncate">{zusatzZeile(exercise)}</span>
-                        )}
-                      </p>
+                        {/* Umbrechen statt abschneiden: das Gerät steht am Ende
+                            des Namens und ist genau das, was die sechs
+                            Bankdrück-Varianten voneinander unterscheidet. */}
+                        <p className="line-clamp-2 text-sm">{exercise.name}</p>
+                        <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                          <RankBars exercise={exercise} />
+                          {zusatzZeile(exercise) && (
+                            <span className="truncate">{zusatzZeile(exercise)}</span>
+                          )}
+                        </p>
                       </div>
-                    </button>
+                    </div>
 
                     <Button
                       variant="ghost"
@@ -429,6 +556,17 @@ export default function ExercisesPage() {
                           <Pencil />
                           Bearbeiten
                         </DropdownMenuItem>
+                        {exercise.equipment === "machine" &&
+                          LADEARTEN.filter((a) => a === "steck" || a === "scheiben").map((art) => (
+                            <DropdownMenuItem
+                              key={art}
+                              disabled={busy === exercise.id}
+                              onClick={() => setzeLadeart(exercise, art)}
+                            >
+                              {exercise.ladeart === art ? <Check /> : <Weight />}
+                              {LADEART_LABELS[art]}
+                            </DropdownMenuItem>
+                          ))}
                         <DropdownMenuItem
                           disabled={busy === exercise.id}
                           onClick={() => toggleHidden(exercise.id, !exercise.hidden)}
@@ -462,8 +600,10 @@ export default function ExercisesPage() {
                   </Button>
                 )}
               </div>
+              )}
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -479,7 +619,6 @@ export default function ExercisesPage() {
         onOpenChange={(open) => !open && setEditing(null)}
       />
 
-      <ExerciseDetail exercise={detail} onOpenChange={(open) => !open && setDetail(null)} />
     </div>
   );
 }

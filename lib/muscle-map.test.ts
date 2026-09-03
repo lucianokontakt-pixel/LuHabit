@@ -28,6 +28,7 @@ function exercise(id: string, muscle: Exercise["muscle"]): Exercise {
   region: null,
   rank: 5,
   rating: null,
+  ladeart: null,
   };
 }
 

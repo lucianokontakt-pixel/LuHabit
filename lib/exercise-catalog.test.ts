@@ -219,6 +219,7 @@ describe("mergeExercises", () => {
     loadFactor: null,
     warmup: "always" as const,
     rating: null,
+    ladeart: null,
   };
 
   it("liefert ohne eigene Zeilen genau den Katalog", () => {

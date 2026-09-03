@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { roundToIncrement, incrementFor, estimateOneRepMax, defaultIncrement } from "@/lib/training";
+import {
+  roundToIncrement,
+  incrementFor,
+  estimateOneRepMax,
+  defaultIncrement,
+  ladeartVon,
+} from "@/lib/training";
 import type { Exercise, PlanExercise } from "@/lib/training";
 
 const planExercise: PlanExercise = {
@@ -32,6 +38,7 @@ const exercise: Exercise = {
   region: null,
   rank: 5,
   rating: null,
+  ladeart: null,
 };
 
 describe("defaultIncrement", () => {
@@ -81,5 +88,37 @@ describe("estimateOneRepMax (Epley)", () => {
   it("gibt 0 zurück für ungültige Eingaben", () => {
     expect(estimateOneRepMax(0, 5)).toBe(0);
     expect(estimateOneRepMax(100, 0)).toBe(0);
+  });
+});
+
+describe("ladeartVon", () => {
+  const wie = (teil: Partial<Exercise>) => ladeartVon({ ...exercise, ...teil });
+
+  it("liest die eindeutigen Geräte direkt ab", () => {
+    expect(wie({ equipment: "barbell" })).toBe("scheiben");
+    expect(wie({ equipment: "dumbbell" })).toBe("frei");
+    expect(wie({ equipment: "kettlebell" })).toBe("frei");
+    expect(wie({ equipment: "cable" })).toBe("steck");
+    expect(wie({ equipment: "bodyweight" })).toBe("ohne");
+    expect(wie({ equipment: "band" })).toBe("ohne");
+  });
+
+  it("entscheidet bei Maschinen über den Namen", () => {
+    const maschine = (en: string) => wie({ equipment: "machine", en, name: en });
+    expect(maschine("smith bench press")).toBe("scheiben");
+    expect(maschine("sled 45 degrees leg press")).toBe("scheiben");
+    expect(maschine("hack calf raise")).toBe("scheiben");
+    // Wo der Name nichts hergibt, behauptet die App nichts: rund siebzig
+    // „Lever …“-Einträge stehen im Katalog mal mit Block, mal mit Scheiben.
+    expect(maschine("lever chest press")).toBeNull();
+    expect(maschine("assisted pull-up")).toBeNull();
+    // Dehnen zu zweit steht im Datensatz nur deshalb unter "assisted".
+    expect(maschine("assisted lying calves stretch")).toBe("ohne");
+  });
+
+  it("lässt das eigene Urteil die Schätzung schlagen", () => {
+    expect(wie({ equipment: "machine", en: "lever chest press", ladeart: "scheiben" })).toBe(
+      "scheiben"
+    );
   });
 });

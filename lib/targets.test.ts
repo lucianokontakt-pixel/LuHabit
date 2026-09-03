@@ -37,6 +37,7 @@ const bench: Exercise = {
   region: null,
   rank: 5,
   rating: null,
+  ladeart: null,
 };
 
 const pullup: Exercise = {
@@ -57,6 +58,7 @@ const pullup: Exercise = {
   region: null,
   rank: 5,
   rating: null,
+  ladeart: null,
 };
 
 const squat: Exercise = {
@@ -77,6 +79,7 @@ const squat: Exercise = {
   region: null,
   rank: 5,
   rating: null,
+  ladeart: null,
 };
 
 function plan(overrides: Partial<PlanExercise> = {}): PlanExercise {

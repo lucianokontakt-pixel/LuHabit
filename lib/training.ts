@@ -135,6 +135,44 @@ export const EQUIPMENT: Equipment[] = [
 ];
 
 /**
+ * Wie das Gewicht an das Gerät kommt.
+ *
+ * Das Gerät allein sagt darüber nichts: „Maschine" ist die Brustpresse mit
+ * Steckgewicht genauso wie die Multipresse, an die man Scheiben hängt. Im
+ * Training ist das der Unterschied zwischen zehn Sekunden und zwei Minuten je
+ * Gewichtswechsel — und damit die Frage, ob eine Übung heute überhaupt in
+ * Frage kommt.
+ */
+export type Ladeart = "steck" | "scheiben" | "frei" | "ohne";
+
+export const LADEART_LABELS: Record<Ladeart, string> = {
+  steck: "Steckgewicht",
+  scheiben: "Scheiben",
+  frei: "Freie Gewichte",
+  ohne: "Ohne Gewicht",
+};
+
+/** Was die Ladeart in der Praxis bedeutet — steht als Hinweis im Filterblatt. */
+export const LADEART_HINWEISE: Record<Ladeart, string> = {
+  steck: "Stift umstecken",
+  scheiben: "Scheiben auflegen",
+  frei: "Hantel greifen",
+  ohne: "nichts einzustellen",
+};
+
+/** Reihenfolge der Ladeart-Filter — das Schnelle zuerst. */
+export const LADEARTEN: Ladeart[] = ["steck", "scheiben", "frei", "ohne"];
+
+/**
+ * Der Filterwert für die Übungen, bei denen die Ladeart noch offen ist.
+ *
+ * Kein Wert der Ladeart selbst, sondern das Fehlen eines Werts — deshalb steht
+ * er neben dem Typ und nicht darin.
+ */
+export const LADEART_OFFEN = "offen";
+export const LADEART_OFFEN_LABEL = "Noch offen";
+
+/**
  * Standard-Gewichtssprung: Oberkörper 2,5 kg, Unterkörper 5 kg.
  * Pro Übung und pro Plan-Eintrag überschreibbar.
  */
@@ -194,11 +232,64 @@ export type Exercise = {
    * aus dem Namen soll nie gegen ein Urteil stehen, das jemand gefällt hat.
    */
   rating: number | null;
+  /**
+   * Die selbst festgelegte Ladeart. null heißt: es gilt die Ableitung aus
+   * Gerät und Name (siehe ladeartVon).
+   */
+  ladeart: Ladeart | null;
 };
 
 /** Die Stufe, die zählt: das eigene Urteil, sonst die Schätzung. */
 export function stufeVon(exercise: Pick<Exercise, "rank" | "rating">): number {
   return exercise.rating ?? exercise.rank;
+}
+
+/**
+ * Die Ladeart, die zählt: das eigene Urteil, sonst das, was aus Gerät und Name
+ * sicher folgt. null heißt: noch offen.
+ *
+ * Bei acht der neun Geräte folgt sie zwingend — eine Langhantel wird beladen,
+ * ein Kabelzug hat einen Block. Nur „Maschine" ist beides, und dort trägt der
+ * Name nur manchmal: eine Multipresse, ein Schlitten und eine Hackenschmidt
+ * nehmen Scheiben, das steht im Namen.
+ *
+ * Für den Rest — rund siebzig „Lever …"-Einträge — gibt der Datensatz nichts
+ * her. Name, Anleitungstext und Bild sagen es nicht einheitlich; im Katalog
+ * steht dieselbe Bauform einmal mit Gewichtsblock und einmal mit Scheiben auf
+ * den Hörnern. Hier stand darum kurz „im Zweifel Steckgewicht", und das war
+ * eine Behauptung mit einer Trefferquote von etwa der Hälfte — die aber genau
+ * so aussieht wie eine Angabe, die stimmt.
+ *
+ * Also lieber nichts sagen. Was offen ist, bleibt offen, bis jemand
+ * davorsteht und es entscheidet; dafür gibt es den Filter „Noch offen" und die
+ * zwei Einträge im Menü der Übungsliste.
+ */
+export function ladeartVon(
+  exercise: Pick<Exercise, "equipment" | "name" | "en" | "ladeart">
+): Ladeart | null {
+  if (exercise.ladeart) return exercise.ladeart;
+  switch (exercise.equipment) {
+    case "barbell":
+      return "scheiben";
+    case "dumbbell":
+    case "kettlebell":
+      return "frei";
+    case "cable":
+      return "steck";
+    case "machine":
+      break;
+    default:
+      // Körpergewicht, Band, Ball, Sonstiges — da ist nichts einzustellen.
+      return "ohne";
+  }
+
+  const name = (exercise.en ?? exercise.name).toLowerCase();
+  // Die „Assisted … Stretch"-Einträge sind Dehnübungen zu zweit; sie stehen im
+  // Datensatz nur deshalb unter „assisted" und haben kein Gerät.
+  if (/\bstretch\b/.test(name)) return "ohne";
+  if (/\bsmith\b/.test(name)) return "scheiben";
+  if (/\bsled\b/.test(name) || /\bhack\b/.test(name)) return "scheiben";
+  return null;
 }
 
 /**

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Outfit, Geist_Mono } from "next/font/google";
+import { Inter, Montserrat, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SyncRunner } from "@/components/sync-runner";
@@ -19,7 +19,7 @@ const sans = Inter({
 // durchgehend eine Schrift, kommt dabei aber mit sehr wenig Text aus; hier
 // stehen Satztabellen, Gewichte und Zahlenkolonnen, in denen Inter deutlich
 // besser liest. Deshalb zwei Schriften statt einer.
-const display = Outfit({
+const display = Montserrat({
   variable: "--font-display",
   subsets: ["latin"],
 });

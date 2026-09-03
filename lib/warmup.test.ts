@@ -20,6 +20,7 @@ const exercise: Exercise = {
   region: null,
   rank: 5,
   rating: null,
+  ladeart: null,
 };
 
 describe("needsWarmup", () => {

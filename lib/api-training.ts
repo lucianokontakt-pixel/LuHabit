@@ -4,6 +4,7 @@ import {
   type DayInput,
   type Equipment,
   type Exercise,
+  type Ladeart,
   type Muscle,
   type PlanDay,
   type WorkoutPlan,
@@ -111,6 +112,7 @@ export async function createExercise(params: {
     // ausgeblendeten Teil der Bibliothek landet.
     rank: CUSTOM_RANK,
     rating: null,
+    ladeart: null,
   };
   await enqueue({ kind: "exercise.save", exercise, isNew: true });
   void flushQueue();
@@ -129,6 +131,7 @@ export async function updateExercise(params: {
   hidden?: boolean;
   favorite?: boolean;
   rating?: number | null;
+  ladeart?: Ladeart | null;
 }): Promise<Exercise> {
   // Eine Katalogübung, die noch nie angefasst wurde, hat keine Zeile — ihre
   // Ausgangswerte kommen dann aus dem Katalog.
@@ -155,6 +158,7 @@ export async function updateExercise(params: {
     region: before?.region ?? entry?.region ?? null,
     rank: before?.rank ?? entry?.rank ?? CUSTOM_RANK,
     rating: params.rating === undefined ? before?.rating ?? null : params.rating,
+    ladeart: params.ladeart === undefined ? before?.ladeart ?? null : params.ladeart,
   };
   await enqueue({ kind: "exercise.save", exercise, isNew: false });
   void flushQueue();

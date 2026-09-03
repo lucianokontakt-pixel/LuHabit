@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NumberField } from "@/components/training/number-field";
 import { ExercisePicker } from "@/components/training/exercise-picker";
-import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
+import { ExerciseThumb } from "@/components/training/exercise-media";
 import { useDragSort } from "@/lib/use-drag-sort";
 import { useTraining } from "@/lib/training-store";
 import {
@@ -53,8 +53,7 @@ export function DayEditor({
   const [expanded, setExpanded] = useState<string | null>(null);
   // Beim Zusammenstellen eines Plans steht man oft vor einem Namen, den man aus
   // der Bibliothek übernommen, aber nie ausgeführt hat. Das Vorschaubild zeigt,
-  // welche Übung gemeint ist, das Antippen die Animation und die Anleitung.
-  const [detail, setDetail] = useState<Exercise | null>(null);
+  // welche Übung gemeint ist.
 
   const order = day.exercises.map((e) => e.key);
 
@@ -192,21 +191,10 @@ export function DayEditor({
                   <GripVertical className="size-4" />
                 </span>
 
-                {/* Eigener Knopf statt Teil der Zeile: die Zeile klappt die
-                    Vorgaben auf, das Bild zeigt die Übung. Zwei verschiedene
-                    Absichten, also zwei Ziele. */}
-                <button
-                  type="button"
-                  onClick={() => exercise && setDetail(exercise)}
-                  disabled={!exercise}
-                  aria-label={`${exercise?.name ?? "Übung"} ansehen`}
-                  className="shrink-0 rounded-md transition-opacity hover:opacity-80 disabled:opacity-100"
-                >
-                  <ExerciseThumb
-                    exercise={exercise ?? { id: entry.exerciseId, name: "", media: null }}
-                    className="size-12"
-                  />
-                </button>
+                <ExerciseThumb
+                  exercise={exercise ?? { id: entry.exerciseId, name: "", media: null }}
+                  className="size-14 shrink-0"
+                />
 
                 <button
                   type="button"
@@ -386,7 +374,6 @@ export function DayEditor({
         }
       />
 
-      <ExerciseDetail exercise={detail} onOpenChange={(open) => !open && setDetail(null)} />
     </Card>
   );
 }

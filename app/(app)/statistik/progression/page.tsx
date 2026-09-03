@@ -9,7 +9,7 @@ import { SectionTabs } from "@/components/section-tabs";
 import { STATISTIK_TABS } from "@/lib/nav-links";
 import { ExerciseTrendChart } from "@/components/training/exercise-trend-chart";
 import { ExerciseProgress } from "@/components/training/exercise-progress";
-import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
+import { ExerciseThumb } from "@/components/training/exercise-media";
 import { FilterSelect } from "@/components/training/filter-sheet";
 import { useTraining } from "@/lib/training-store";
 import { summarizeProgress, type ProgressSummary } from "@/lib/progression";
@@ -52,10 +52,8 @@ function ChangeBadge({ change, unit }: { change: number | null; unit: string }) 
 
 function ProgressRow({
   summary,
-  onDetail,
 }: {
   summary: ProgressSummary;
-  onDetail: (exercise: ProgressSummary["exercise"]) => void;
 }) {
   const [open, setOpen] = useState(false);
   const unit = summary.repsBased ? "Wdh" : "kg";
@@ -66,51 +64,42 @@ function ProgressRow({
   return (
     <div className="border-b border-border last:border-0">
       <div className="flex items-center gap-3 py-3">
-        {/* Eigener Knopf: die Zeile klappt den Verlauf auf, das Bild zeigt die
-            Übung — zwei Absichten, zwei Ziele. Wie im Plan-Editor. */}
+        <ExerciseThumb exercise={summary.exercise} className="size-16 shrink-0" />
+
         <button
           type="button"
-          onClick={() => onDetail(summary.exercise)}
-          aria-label={`${summary.exercise.name} ansehen`}
-          className="shrink-0 rounded-md transition-opacity hover:opacity-80"
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
-          <ExerciseThumb exercise={summary.exercise} className="size-11" />
-        </button>
-
-        <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex min-w-0 flex-1 items-center gap-3 text-left"
-      >
-        <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-2">
-            {/* Umbrechen statt abschneiden — sonst fällt das Gerät am Ende weg,
-                und genau das unterscheidet die Übung von ihren Geschwistern. */}
-            <span className="line-clamp-2 text-sm font-medium">{summary.exercise.name}</span>
-            {summary.stagnating && (
-              <span className="shrink-0 rounded-pill bg-tint-orange px-2 py-0.5 text-[10px] font-medium text-tint-orange-ink">
-                stagniert
-              </span>
-            )}
-          </span>
-          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-            {currentLabel} · {summary.points.length}{" "}
-            {summary.points.length === 1 ? "Einheit" : "Einheiten"}
-            {summary.lastDate ? ` · zuletzt ${formatDateLong(summary.lastDate)}` : ""}
-          </span>
-        </span>
-
-        <span className="hidden shrink-0 gap-4 sm:flex">
-          {WINDOWS.map((w) => (
-            <span key={w.weeks} className="w-20 text-right">
-              <ChangeBadge change={summary.changeIn(w.weeks)} unit={unit} />
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-2">
+              {/* Umbrechen statt abschneiden — sonst fällt das Gerät am Ende weg,
+                  und genau das unterscheidet die Übung von ihren Geschwistern. */}
+              <span className="line-clamp-2 text-sm font-medium">{summary.exercise.name}</span>
+              {summary.stagnating && (
+                <span className="shrink-0 rounded-pill bg-tint-orange px-2 py-0.5 text-[10px] font-medium text-tint-orange-ink">
+                  stagniert
+                </span>
+              )}
             </span>
-          ))}
-        </span>
+            <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+              {currentLabel} · {summary.points.length}{" "}
+              {summary.points.length === 1 ? "Einheit" : "Einheiten"}
+              {summary.lastDate ? ` · zuletzt ${formatDateLong(summary.lastDate)}` : ""}
+            </span>
+          </span>
 
-        <span className="shrink-0 sm:hidden">
-          <ChangeBadge change={summary.changeIn(4)} unit={unit} />
-        </span>
+          <span className="hidden shrink-0 gap-4 sm:flex">
+            {WINDOWS.map((w) => (
+              <span key={w.weeks} className="w-20 text-right">
+                <ChangeBadge change={summary.changeIn(w.weeks)} unit={unit} />
+              </span>
+            ))}
+          </span>
+
+          <span className="shrink-0 sm:hidden">
+            <ChangeBadge change={summary.changeIn(4)} unit={unit} />
+          </span>
 
           <ChevronDown
             className={cn(
@@ -154,7 +143,6 @@ export default function ProgressionPage() {
       .map((e) => summarizeProgress(e, sessions));
   }, [exercises, sessions]);
 
-  const [detail, setDetail] = useState<Exercise | null>(null);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -276,7 +264,7 @@ export default function ProgressionPage() {
                   </div>
                   <div className="flex flex-col px-(--card-spacing)">
                     {group.items.map((summary) => (
-                      <ProgressRow key={summary.exercise.id} summary={summary} onDetail={setDetail} />
+                      <ProgressRow key={summary.exercise.id} summary={summary} />
                     ))}
                   </div>
                 </Card>
@@ -299,7 +287,7 @@ export default function ProgressionPage() {
               </div>
               <div className="flex flex-col px-(--card-spacing)">
                 {visible.map((summary) => (
-                  <ProgressRow key={summary.exercise.id} summary={summary} onDetail={setDetail} />
+                  <ProgressRow key={summary.exercise.id} summary={summary} />
                 ))}
               </div>
             </Card>
@@ -316,7 +304,6 @@ export default function ProgressionPage() {
           <ExerciseProgress sessions={sessions} exerciseById={exerciseById} />
         </>
       )}
-      <ExerciseDetail exercise={detail} onOpenChange={(o) => !o && setDetail(null)} />
     </div>
   );
 }

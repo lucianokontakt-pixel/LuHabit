@@ -5,6 +5,7 @@ import {
   DEFAULT_BODYWEIGHT_LOAD,
   type Equipment,
   type Exercise,
+  type Ladeart,
   type Muscle,
   type Region,
 } from "@/lib/training";
@@ -62,6 +63,8 @@ export type ExerciseRecord = {
   warmup: "always" | "never" | null;
   /** Selbst vergebene Beliebtheitsstufe, oder null für die aus dem Katalog. */
   rating: number | null;
+  /** Selbst festgelegte Ladeart, oder null für die abgeleitete. */
+  ladeart: Ladeart | null;
 };
 
 /** Eine Katalogübung so, wie sie ohne jede Anpassung aussieht. */
@@ -89,6 +92,7 @@ export function fromCatalog(entry: CatalogExercise): Exercise {
     region: entry.region,
     rank: entry.rank,
     rating: null,
+    ladeart: null,
   };
 }
 
@@ -138,6 +142,7 @@ export function mergeExercises(records: ExerciseRecord[]): Exercise[] {
       loadFactor: row.loadFactor ?? base.loadFactor,
       warmup: row.warmup,
       rating: row.rating,
+      ladeart: row.ladeart,
     });
   }
 
@@ -165,6 +170,7 @@ export function mergeOne(record: ExerciseRecord): Exercise {
     loadFactor: record.loadFactor ?? base.loadFactor,
     warmup: record.warmup,
     rating: record.rating,
+    ladeart: record.ladeart,
   };
 }
 

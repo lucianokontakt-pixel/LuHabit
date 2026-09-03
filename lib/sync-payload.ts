@@ -11,6 +11,7 @@
  * mit Standardwerten an, als dass 500 andere Datensätze nicht ankommen.
  */
 
+import { LADEARTEN, type Ladeart } from "@/lib/training";
 import type {
   Equipment,
   Muscle,
@@ -40,6 +41,8 @@ export type StoredExercise = {
   warmup: "always" | "never" | null;
   /** Selbst vergebene Beliebtheitsstufe; die aus dem Katalog steht nicht in der DB. */
   rating: number | null;
+  /** Selbst festgelegte Ladeart; ohne sie gilt die Ableitung aus Gerät und Name. */
+  ladeart: Ladeart | null;
 };
 export type StoredBodyProfile = {
   age: number | null;
@@ -198,6 +201,10 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
       loadFactor: numOrNull(r.load_factor),
       warmup: r.warmup === "always" || r.warmup === "never" ? r.warmup : null,
       rating: numOrNull(r.rating),
+      // Geprüft statt gecastet: was hier ankommt, hat den Weg über die
+      // Leitung genommen und ist nur so lange ein Ladeart-Wert, wie es einer
+      // der vier ist.
+      ladeart: LADEARTEN.includes(r.ladeart as Ladeart) ? (r.ladeart as Ladeart) : null,
     }),
     // Route: ORDER BY name COLLATE NOCASE ASC
     (r) => str(r.name).toLowerCase()

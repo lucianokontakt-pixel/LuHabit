@@ -311,11 +311,13 @@
     @apply font-sans;
     -webkit-tap-highlight-color: transparent;
   }
-  /* Überschriften tragen Gewicht. Hier stand 400, solange die Anzeigeschrift
-     eine zarte Serif war — die Regel überlebt einen Schriftwechsel nicht: mit
-     ihr bliebe jede Überschrift dünn, egal was geladen ist. */
+  /* Überschriften tragen Gewicht — aber seit dem Wechsel auf Montserrat
+     weniger: 700 wirkte bei einer geometrischen Grotesk klobig, 500 war zu
+     dünn. 600 bleibt die Mitte. Die Regel überlebt einen weiteren
+     Schriftwechsel nicht automatisch: mit ihr bliebe jede Überschrift dünn,
+     egal was geladen ist. */
   .font-display {
-    font-weight: 700;
+    font-weight: 600;
   }
 }
 

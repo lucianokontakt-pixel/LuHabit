@@ -16,10 +16,15 @@ import { updateExercise } from "@/lib/api-training";
 import { useTraining } from "@/lib/training-store";
 import {
   EQUIPMENT_LABELS,
+  LADEARTEN,
+  LADEART_HINWEISE,
+  LADEART_LABELS,
   MUSCLES,
   defaultIncrement,
+  ladeartVon,
   type Equipment,
   type Exercise,
+  type Ladeart,
   type Muscle,
 } from "@/lib/training";
 import { WARMUP_OPTIONS, warmupHinweis } from "@/lib/warmup";
@@ -64,6 +69,8 @@ export function ExerciseEditor({
   const [warmup, setWarmup] = useState<"always" | "never" | null>(null);
   /** null heißt: es gilt die Stufe aus dem Katalog. */
   const [rating, setRating] = useState<number | null>(null);
+  /** null heißt: es gilt die aus Gerät und Name abgeleitete Ladeart. */
+  const [ladeart, setLadeart] = useState<Ladeart | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,12 +86,15 @@ export function ExerciseEditor({
     setStartFactor(toField(exercise.bodyweightFactor));
     setWarmup(exercise.warmup);
     setRating(exercise.rating);
+    setLadeart(exercise.ladeart);
     setError(null);
   }, [exercise]);
 
   if (!exercise) return null;
 
   const isBodyweight = equipment === "bodyweight";
+  /** Was ohne eigene Wahl gälte — mit dem Gerät, das gerade im Formular steht. */
+  const abgeleitet = ladeartVon({ ...exercise, equipment, ladeart: null });
 
   async function handleSave() {
     if (!exercise) return;
@@ -115,6 +125,7 @@ export function ExerciseEditor({
           bodyweightFactor: nextStart,
           warmup,
           rating,
+          ladeart,
         })
       );
       toast.success(`„${trimmed}“ gespeichert`);
@@ -177,6 +188,31 @@ export function ExerciseEditor({
                 </Chip>
               ))}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs text-muted-foreground">Ladeart</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {LADEARTEN.map((key) => (
+                <Chip
+                  key={key}
+                  active={ladeart === key}
+                  // Nochmal auf dasselbe tippen gibt die Entscheidung zurück an
+                  // die Ableitung — dieselbe Geste wie bei der Beliebtheit.
+                  onClick={() => setLadeart(ladeart === key ? null : key)}
+                >
+                  {LADEART_LABELS[key]}
+                </Chip>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              {ladeart !== null
+                ? `${LADEART_LABELS[ladeart]} — ${LADEART_HINWEISE[ladeart]}. Nochmal antippen, um es wieder offen zu lassen.`
+                : abgeleitet !== null
+                  ? `Ergibt sich aus dem Gerät: ${LADEART_LABELS[abgeleitet]}.`
+                  : "Noch offen — aus Gerät und Name ist nicht zu erkennen, ob hier Scheiben " +
+                    "aufliegen oder ein Stift umgesteckt wird. Antippen, wenn du davorstehst."}
+            </p>
           </div>
 
           <div className="flex flex-col gap-1.5">

@@ -10,7 +10,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Ellipsis,
   Flame,
   Lightbulb,
   Minus,
@@ -23,12 +22,6 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -44,7 +37,7 @@ import {
 import { RestTimer } from "@/components/training/rest-timer";
 import { SetRow, type SessionSet } from "@/components/training/set-row";
 import { SessionSummary } from "@/components/training/session-summary";
-import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
+import { ExerciseThumb } from "@/components/training/exercise-media";
 import { ExercisePicker } from "@/components/training/exercise-picker";
 import { summarizeSession } from "@/lib/session-stats";
 import { useTraining } from "@/lib/training-store";
@@ -64,6 +57,10 @@ import {
   setLabels,
   sessionVolume,
   suggestAdjustment,
+  ladeartVon,
+  LADEART_LABELS,
+  RANK_SICHTBAR_AB,
+  stufeVon,
   type PlanDay,
   type Exercise,
   type PlanExercise,
@@ -185,6 +182,112 @@ function buildRows({
     : workingRows;
 }
 
+/**
+ * Ab hier ist ein Satz eindeutig zu leicht — unabhängig vom Wiederholungs-
+ * bereich des Plans und unabhängig davon, ob es der letzte Satz der Übung
+ * ist. Ein 3×8–12-Plan löst über suggestAdjustment schon bei 12 aus, aber nur
+ * am Ende der Übung; ein Satz mit 20 Wiederholungen mittendrin blieb bisher
+ * folgenlos. Deutlich über jedem gängigen Wiederholungsziel, aber früh genug,
+ * um noch während der Übung aufzufallen statt erst danach.
+ */
+const ABSOLUT_ZU_LEICHT = 15;
+
+/**
+ * Andere Übungen für denselben Muskel — für den Moment, in dem das eigene
+ * Gerät besetzt ist, egal ob Maschine, Langhantel oder sonst was. Dieselbe
+ * Region ist Pflicht, nicht nur wo bekannt: sonst stünde bei "Kurzhantel
+ * Seitheben" das Bankdrücken daneben, nur weil beide auf die Brust zielen —
+ * und bei einer Übung ohne eigene Region-Angabe (z. B. ein Teil der
+ * Schulterübungen) sonst gleich die ganze Muskelgruppe, vordere und hintere
+ * Schulter durcheinander.
+ *
+ * Sortiert nach Ladeart zuerst: bei zwei Maschinen ist die mit der jeweils
+ * *anderen* Ladeart der eigentliche Ersatz — steht die eigene fest mit
+ * Steckgewicht, ist die Scheiben-Version die Antwort auf "meine ist besetzt".
+ * Außerhalb von Maschinen trägt das selten Gewicht (Langhantel bleibt
+ * Langhantel, "frei" gegen "frei"), fällt dann einfach auf die Beliebtheit
+ * zurück.
+ */
+function wechselUebungen(exercise: Exercise, alle: Exercise[]): Exercise[] {
+  const eigeneLadeart = ladeartVon(exercise);
+  return alle
+    .filter(
+      (e) =>
+        e.id !== exercise.id &&
+        !e.hidden &&
+        e.muscle === exercise.muscle &&
+        e.region === exercise.region &&
+        // Dieselbe Grenze wie in der Übungsliste: eine Ganzkörper-Wippe als
+        // Wechsel-Vorschlag hilft nicht, wenn das eigentliche Gerät besetzt ist.
+        stufeVon(e) >= RANK_SICHTBAR_AB
+    )
+    .sort((a, b) => {
+      const wertigkeit = (e: Exercise) => {
+        const art = ladeartVon(e);
+        if (art === null) return 1;
+        return art === eigeneLadeart ? 2 : 0;
+      };
+      return wertigkeit(a) - wertigkeit(b) || b.rank - a.rank;
+    });
+}
+
+/**
+ * Der Knopf „Übung wechseln?": erscheint nur, wenn es welche gibt, und
+ * bleibt zu, bis jemand ihn braucht — die Bilder sind der Punkt (ein Gerät
+ * erkennt man an seiner Vorlage-Illustration eher als an seinem Namen), aber
+ * ein Dutzend Vorschaubilder soll nicht jede offene Übung aufblähen, die sie
+ * nie anschaut.
+ */
+function WechselUebungen({
+  exercise,
+  alle,
+  onWahl,
+}: {
+  exercise: Exercise;
+  alle: Exercise[];
+  onWahl: (alternative: Exercise) => void;
+}) {
+  const [offen, setOffen] = useState(false);
+  const alternativen = wechselUebungen(exercise, alle);
+  if (alternativen.length === 0) return null;
+
+  return (
+    <div className="mx-(--card-spacing) flex flex-col gap-2">
+      <button
+        type="button"
+        onClick={() => setOffen((v) => !v)}
+        className="flex w-fit items-center gap-1.5 rounded-field bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-foreground/5"
+      >
+        <ArrowLeftRight className="size-3.5 shrink-0" />
+        Übung wechseln?
+        <ChevronRight className={cn("size-3.5 shrink-0 transition-transform", offen && "rotate-90")} />
+      </button>
+
+      {offen && (
+        <div className="grid grid-cols-3 gap-2">
+          {alternativen.map((alt) => {
+            const art = ladeartVon(alt);
+            return (
+              <button
+                key={alt.id}
+                type="button"
+                onClick={() => onWahl(alt)}
+                className="flex flex-col items-center gap-1 rounded-field bg-card p-2 text-center transition-colors hover:bg-foreground/5"
+              >
+                <ExerciseThumb exercise={alt} className="size-16" />
+                <span className="line-clamp-2 text-xs font-medium">{alt.name}</span>
+                <span className="text-[11px] text-muted-foreground">
+                  {art ? LADEART_LABELS[art] : "Ladeart offen"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function clearDraft() {
   try {
     localStorage.removeItem(DRAFT_KEY);
@@ -222,6 +325,7 @@ export function SessionClient() {
   const {
     plans,
     setPlans,
+    exercises: alleUebungen,
     exerciseById,
     sessions,
     pendingIds,
@@ -239,8 +343,6 @@ export function SessionClient() {
   /** Ausgelassen (null) oder getauscht — je Platz im Plan, nur für heute. */
   const [ersatz, setErsatz] = useState<Record<string, PlanExercise | null>>({});
   const [picking, setPicking] = useState(false);
-  /** Für welchen Platz der Wähler gerade offen ist — null heißt: dazunehmen. */
-  const [tauschFuer, setTauschFuer] = useState<string | null>(null);
   /** Was zu dieser Einheit zu sagen war. Ging bisher erst hinterher. */
   const [note, setNote] = useState("");
   const [startedAt, setStartedAt] = useState<number>(() => Date.now());
@@ -248,7 +350,6 @@ export function SessionClient() {
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
   const [restTotal, setRestTotal] = useState(0);
   const [activeExercise, setActiveExercise] = useState<string | null>(null);
-  const [detail, setDetail] = useState<Exercise | null>(null);
   const [confirmAbort, setConfirmAbort] = useState(false);
   /** Nach einem Tausch: welche Übung wen ersetzt hat — offen, bis explizit
    *  entschieden ist, ob das auch im Plan gilt. */
@@ -709,10 +810,7 @@ export function SessionClient() {
         if (!current) return prev;
         const nextDone = !current.done;
 
-        const next = {
-          ...prev,
-          [planExerciseId]: list.map((s, i) => (i === index ? { ...s, done: nextDone } : s)),
-        };
+        let updated = list.map((s, i) => (i === index ? { ...s, done: nextDone } : s));
 
         if (nextDone && restSeconds > 0) {
           // Nach einem Aufwärmsatz reicht die halbe Pause — er ist keine
@@ -728,22 +826,90 @@ export function SessionClient() {
         // Übung fertig: die nächste offene klappt auf, ohne dass jemand mit
         // schwitzigen Händen zwei Karten antippen muss. Der Aufwärmsatz zählt
         // dabei nicht mit — er ist eine Empfehlung, kein Pflichtsatz.
-        const workingNow = next[planExerciseId].filter((s) => !s.warmup);
-        if (nextDone && workingNow.length > 0 && workingNow.every((s) => s.done)) {
-          // Es sei denn, die Übung hat noch etwas zu sagen — etwa einen
-          // Zusatzsatz, weil der letzte über der Obergrenze lag. Dann bliebe
-          // das Angebot ungesehen, wenn die Karte sofort zuklappt.
+        const workingNow = updated.filter((s) => !s.warmup);
+        let advance = false;
+
+        if (nextDone && !current.warmup) {
+          // Einmal berechnet, für beide Auslöser: die eindeutig zu leichte
+          // Wiederholungszahl (überall in der Übung) und die Plan-Obergrenze
+          // (nur am Ende) teilen sich dieselbe Empfehlung — mit Gewicht
+          // hochsetzen, wo es eins gibt, sonst das Wiederholungsziel halten.
+          // Ohne das käme bei einem zu leichten Satz zwar ein neuer Satz dazu,
+          // aber mit demselben, immer noch zu leichten Gewicht.
           const pending = suggestAdjustment({
-            sets: next[planExerciseId],
+            sets: updated,
             repMin: pe.repMin,
             repMax: pe.repMax,
             increment: step,
           });
-          if (!pending || dismissed.has(`${planExerciseId}:${pending.index}`)) {
-            advanceFrom(planExerciseId, next);
+          const key = `${planExerciseId}:${index}`;
+          const eindeutigZuLeicht = current.reps >= ABSOLUT_ZU_LEICHT;
+          const amEndeAufDerObergrenze =
+            workingNow.length > 0 && workingNow.every((s) => s.done) && pending?.hasRemaining === false;
+
+          if (
+            !dismissed.has(key) &&
+            pending?.direction === "up" &&
+            (eindeutigZuLeicht || amEndeAufDerObergrenze)
+          ) {
+            const row: SessionSet = {
+              weight: pending.nextWeight,
+              reps: pending.nextReps,
+              done: false,
+              warmup: false,
+            };
+            updated = [...updated, row];
+            setDismissed((prevDismissed) => new Set(prevDismissed).add(key));
+            toast(
+              pending.axis === "reps"
+                ? `${current.reps} Wiederholungen — noch ein Satz mit ${pending.nextReps} Wdh.`
+                : `${current.reps} Wiederholungen — Satz mit ${formatNumber(pending.nextWeight)} kg hinzugefügt.`,
+              {
+                action: {
+                  label: "Rückgängig",
+                  onClick: () =>
+                    setSetsByExercise((prev2) => ({
+                      ...prev2,
+                      [planExerciseId]: (prev2[planExerciseId] ?? []).slice(0, -1),
+                    })),
+                },
+              }
+            );
+          } else if (eindeutigZuLeicht && !dismissed.has(key)) {
+            // Klar zu leicht, aber suggestAdjustment findet nichts zum Anheben
+            // (z. B. Schrittweite zu grob) — lieber ein Satz zum selben
+            // Gewicht als gar keine Reaktion.
+            const row: SessionSet = {
+              weight: current.weight,
+              reps: current.reps,
+              done: false,
+              warmup: false,
+            };
+            updated = [...updated, row];
+            setDismissed((prevDismissed) => new Set(prevDismissed).add(key));
+            toast(`${current.reps} Wiederholungen — noch ein Satz, weil es zu leicht war.`, {
+              action: {
+                label: "Rückgängig",
+                onClick: () =>
+                  setSetsByExercise((prev2) => ({
+                    ...prev2,
+                    [planExerciseId]: (prev2[planExerciseId] ?? []).slice(0, -1),
+                  })),
+              },
+            });
+          } else if (
+            workingNow.length > 0 &&
+            workingNow.every((s) => s.done) &&
+            (!pending || dismissed.has(key))
+          ) {
+            // Kein Grund mehr, die Karte offen zu lassen — entweder gibt es
+            // nichts vorzuschlagen, oder der Hinweis dazu ist schon weggeklickt.
+            advance = true;
           }
         }
 
+        const next = { ...prev, [planExerciseId]: updated };
+        if (advance) advanceFrom(planExerciseId, next);
         return next;
       });
     },
@@ -1005,12 +1171,23 @@ export function SessionClient() {
       {/* Wie weit die Einheit ist, ohne dass man zwei Zahlen im Kopf teilen
           muss. Ohne Farbe: im Training heißt Mint „erledigt" und Orange „läuft
           gerade" — ein farbiger Balken hier oben würde in beides hineinreden,
-          obwohl er nur zählt. */}
-      <div className="h-1 overflow-hidden rounded-pill bg-foreground/10">
-        <div
-          className="h-full rounded-pill bg-foreground transition-[width] duration-300 ease-out"
-          style={{ width: `${totalSets > 0 ? (completedSets / totalSets) * 100 : 0}%` }}
-        />
+          obwohl er nur zählt.
+
+          Oben angeheftet, unter der App-Kopfzeile (die selbst schon
+          sticky top-0 ist, daher top-16 — ihre Höhe): sonst verschwindet der
+          einzige Blick aufs Ganze, sobald man zu einer Übung weiter unten
+          scrollt. Undurchsichtiger Hintergrund statt der Transparenz, die die
+          Kopfzeile trägt — die schwebt über der ersten Karte, dieser Streifen
+          sitzt *zwischen* Karten, darunter schöbe sich sonst sichtbar eine
+          Kartenkante durch. Eigener Rand statt Schatten, um die Karte davor
+          von der danach zu trennen. */}
+      <div className="sticky top-16 z-30 border-b border-border bg-background py-3">
+        <div className="h-1 overflow-hidden rounded-pill bg-foreground/10">
+          <div
+            className="h-full rounded-pill bg-foreground transition-[width] duration-300 ease-out"
+            style={{ width: `${totalSets > 0 ? (completedSets / totalSets) * 100 : 0}%` }}
+          />
+        </div>
       </div>
 
       {/* Der ganze Trainingstag, nicht die einzelne Übung — die hat ihre eigene
@@ -1076,27 +1253,22 @@ export function SessionClient() {
               <div className="flex items-center gap-3 px-(--card-spacing)">
                 {/* Das Standbild bleibt an seinem Platz, offen wie geschlossen
                     — es sagt immer, welche Übung das ist, nicht nur die
-                    Nummer. Ein eigener Knopf, getrennt vom Rest der Zeile:
-                    hier tippt man für die Anleitung, daneben fürs Auf- und
-                    Zuklappen. */}
+                    Nummer. Ist die Übung aktiv, läuft dort schon das GIF
+                    (ExerciseThumb, animiert), ein eigener Dialog braucht es
+                    dafür nicht. */}
                 {exercise ? (
-                  <button
-                    type="button"
-                    onClick={() => setDetail(exercise)}
-                    aria-label={`${exercise.name} — Ausführung und Infos`}
-                    className="relative shrink-0"
-                  >
-                    <ExerciseThumb exercise={exercise} />
+                  <span className="relative shrink-0">
+                    <ExerciseThumb exercise={exercise} animiert={isActive} />
                     {allDone && (
                       <span className="absolute right-0 bottom-0 flex size-5 items-center justify-center rounded-tl-md bg-tint-mint text-tint-mint-ink">
                         <Check className="size-3" />
                       </span>
                     )}
-                  </button>
+                  </span>
                 ) : (
                   <span
                     className={cn(
-                      "flex size-11 shrink-0 items-center justify-center rounded-md text-sm font-medium",
+                      "flex size-20 shrink-0 items-center justify-center rounded-md text-sm font-medium",
                       allDone
                         ? STATE_DONE
                         : "bg-card text-muted-foreground"
@@ -1153,6 +1325,22 @@ export function SessionClient() {
                         </p>
                       )}
                     </div>
+                  )}
+
+                  {/* Nur solange nichts abgehakt ist — ein Tausch mittendrin
+                      nähme Protokolliertes mit, siehe swapExercise oben. */}
+                  {slotId && doneCount === 0 && exercise && (
+                    <WechselUebungen
+                      exercise={exercise}
+                      alle={alleUebungen}
+                      onWahl={(alternative) => {
+                        swapExercise(slotId, alternative);
+                        // Derselbe Wähler wie beim Tauschen über die Bibliothek:
+                        // der Wechsel gilt sofort für heute, ob er auch den Plan
+                        // ändert, ist eine eigene, ausdrückliche Entscheidung.
+                        setSwapConfirm({ slotId, exercise: alternative });
+                      }}
+                    />
                   )}
 
                   {suggestionOpen && (
@@ -1315,46 +1503,31 @@ export function SessionClient() {
                       </button>
                     </div>
 
-                    {/* Auslassen/Tauschen nur solange nichts abgehakt ist:
-                        sonst nähme ein Tipp Protokolliertes mit. Wer doch
-                        wechseln will, hakt erst wieder ab. */}
-                    {((slotId && doneCount === 0) || isExtra) && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          aria-label="Weitere Aktionen für diese Übung"
-                          className="touch-target ml-auto flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
-                        >
-                          <Ellipsis className="size-4" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {slotId && doneCount === 0 && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setTauschFuer(slotId);
-                                  setPicking(true);
-                                }}
-                              >
-                                <ArrowLeftRight />
-                                Tauschen
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => skipExercise(slotId)}>
-                                <SkipForward />
-                                Auslassen
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          {isExtra && (
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onClick={() => removeExercise(pe.id)}
-                            >
-                              <Trash2 />
-                              Übung entfernen
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    {/* Direkt statt hinter einem Menü — die beiden Fälle
+                        schließen sich aus (eine dazugenommene Übung hat keine
+                        slotId), es steht also nie mehr als eine Aktion hier.
+                        Auslassen nur solange nichts abgehakt ist: sonst nähme
+                        ein Tipp Protokolliertes mit. Aus Versehen getroffen?
+                        Der „Ausgelassen"-Bereich unten holt es zurück. */}
+                    {slotId && doneCount === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => skipExercise(slotId)}
+                        aria-label="Übung auslassen"
+                        className="touch-target ml-auto flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+                      >
+                        <SkipForward className="size-4" />
+                      </button>
+                    )}
+                    {isExtra && (
+                      <button
+                        type="button"
+                        onClick={() => removeExercise(pe.id)}
+                        aria-label="Übung entfernen"
+                        className="touch-target ml-auto flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
                     )}
                   </div>
                 </>
@@ -1448,49 +1621,13 @@ export function SessionClient() {
         </div>
       </div>
 
-      <ExerciseDetail
-        exercise={detail}
-        onOpenChange={(open) => !open && setDetail(null)}
-      />
-
-      {/* Ein Wähler für zwei Wege: dazunehmen, oder einen Platz im Plan
-          ersetzen. tauschFuer sagt, welcher von beiden gemeint ist. */}
       <ExercisePicker
         open={picking}
-        onOpenChange={(open) => {
-          setPicking(open);
-          if (!open) setTauschFuer(null);
-        }}
-        onPick={(exercise) => {
-          if (tauschFuer) {
-            const slotId = tauschFuer;
-            swapExercise(slotId, exercise);
-            // Der Tausch gilt sofort für heute. Ob er auch den Plan ändert,
-            // ist eine eigene Entscheidung — die muss explizit fallen, nicht
-            // per Toast, den man auch einfach wegwischen kann.
-            setSwapConfirm({ slotId, exercise });
-          } else {
-            addExercise(exercise);
-          }
-          setTauschFuer(null);
-        }}
+        onOpenChange={setPicking}
+        onPick={(exercise) => addExercise(exercise)}
         excludeIds={exercises.map((pe) => pe.exerciseId)}
-        title={tauschFuer ? "Übung tauschen" : "Übung hinzufügen"}
-        description={
-          tauschFuer
-            ? "Der Ersatz behält Satzzahl, Wiederholungen und Pause des Plans. Nur für heute — der Plan bleibt, wie er ist."
-            : "Aus der Bibliothek wählen oder eine eigene Übung anlegen."
-        }
-        // Die Übung, die gerade auf dem Platz steht — nach einem früheren
-        // Tausch ist das eine andere als die im Plan. `exercises` trägt den
-        // aktuellen Stand, `day.exercises` den geplanten.
-        alternativeTo={
-          tauschFuer
-            ? exerciseById[
-                exercises.find((pe) => slotVon[pe.id] === tauschFuer)?.exerciseId ?? ""
-              ] ?? null
-            : null
-        }
+        title="Übung hinzufügen"
+        description="Aus der Bibliothek wählen oder eine eigene Übung anlegen."
       />
 
       <AlertDialog open={confirmAbort} onOpenChange={setConfirmAbort}>
