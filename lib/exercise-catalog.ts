@@ -48,6 +48,16 @@ export type CatalogExercise = {
    * abweichen. Fehlt in älteren Katalog-Ständen, deshalb optional.
    */
   ladeart?: Ladeart | null;
+  /**
+   * Global ausgeblendet, für jeden Account gleich — anders als das persönliche
+   * `taste`: Varianten, Randgeräte, einarmige und andere Automatik-Vorschläge
+   * (siehe scripts/enrich_catalog.py und scripts/CONTEXT-uebungsdb.md).
+   * Fehlt, wo keine Regel greift, statt `false` — wie bei ladeart heißt
+   * fehlend "keine Angabe".
+   */
+  versteckt?: boolean;
+  /** Die Regel-Tags, die zu versteckt geführt haben — die Begründung dahinter. */
+  versteckRegeln?: string[];
 };
 
 export const CATALOG = catalogData as CatalogExercise[];
@@ -101,6 +111,8 @@ export function fromCatalog(entry: CatalogExercise): Exercise {
     rank: entry.rank,
     rating: null,
     ladeart: entry.ladeart ?? null,
+    versteckt: entry.versteckt ?? false,
+    versteckRegeln: entry.versteckRegeln ?? [],
   };
 }
 
@@ -110,10 +122,21 @@ export function fromCatalog(entry: CatalogExercise): Exercise {
  * kein englischer Name, keine Region — und die volle Beliebtheitsstufe, damit
  * eine selbst angelegte Übung nie im ausgeblendeten Teil landet.
  */
-function ohneKatalog(): Pick<Exercise, "media" | "secondary" | "en" | "region" | "rank"> {
+function ohneKatalog(): Pick<
+  Exercise,
+  "media" | "secondary" | "en" | "region" | "rank" | "versteckt" | "versteckRegeln"
+> {
   // Jedes Mal ein frisches Objekt: ein geteiltes `secondary`-Array wäre eines,
   // das sich eine Übung mit allen anderen teilt.
-  return { media: null, secondary: [], en: null, region: null, rank: CUSTOM_RANK };
+  return {
+    media: null,
+    secondary: [],
+    en: null,
+    region: null,
+    rank: CUSTOM_RANK,
+    versteckt: false,
+    versteckRegeln: [],
+  };
 }
 
 /**

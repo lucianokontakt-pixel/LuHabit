@@ -333,10 +333,16 @@ export default function ExercisesPage() {
     }
   }
 
-  async function unhideExercise(id: string) {
-    setBusy(id);
+  /**
+   * Neutral (0) reicht nur, wenn eine persönliche Wisch- oder Menü-Aktion die
+   * Übung versteckt hat. Kommt das Verstecken aus dem Katalog (`versteckt`),
+   * bleibt 0 wirkungslos — istAusgeblendet fällt dann wieder auf den Katalog
+   * zurück. Nur +1 schlägt eine Katalog-Regel wirklich.
+   */
+  async function unhideExercise(exercise: Exercise) {
+    setBusy(exercise.id);
     try {
-      upsertExercise(await updateExercise({ id, taste: 0 }));
+      upsertExercise(await updateExercise({ id: exercise.id, taste: exercise.versteckt ? 1 : 0 }));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Konnte Übung nicht einblenden");
     } finally {
@@ -697,7 +703,7 @@ export default function ExercisesPage() {
                             variant="ghost"
                             size="sm"
                             disabled={busy === exercise.id}
-                            onClick={() => unhideExercise(exercise.id)}
+                            onClick={() => unhideExercise(exercise)}
                           >
                             <Eye />
                             Einblenden

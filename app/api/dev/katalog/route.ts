@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { LADEARTEN, REGIONS, type Ladeart, type Region } from "@/lib/training";
+import { EQUIPMENT, LADEARTEN, REGIONS, type Equipment, type Ladeart, type Region } from "@/lib/training";
 
 /**
  * Schreibt einzelne Felder direkt in lib/exercise-catalog.json — den geteilten
@@ -16,10 +16,13 @@ import { LADEARTEN, REGIONS, type Ladeart, type Region } from "@/lib/training";
  */
 
 /** Welche Felder von Hand gesetzt werden dürfen — und sonst keine. */
-type Feld = "ladeart" | "region" | "name";
+type Feld = "ladeart" | "region" | "name" | "equipment";
 
+// equipment ist nie null: anders als ladeart oder region gibt es dafür keine
+// Ableitung, auf die "offen lassen" zurückfallen könnte — ein Gerät steht immer
+// im Katalog.
 function gueltig(feld: Feld, wert: unknown): boolean {
-  if (wert === null) return feld !== "name";
+  if (wert === null) return feld !== "name" && feld !== "equipment";
   switch (feld) {
     case "ladeart":
       return LADEARTEN.includes(wert as Ladeart);
@@ -27,6 +30,8 @@ function gueltig(feld: Feld, wert: unknown): boolean {
       return REGIONS.some((r) => r.key === (wert as Region));
     case "name":
       return typeof wert === "string" && wert.trim().length > 0;
+    case "equipment":
+      return EQUIPMENT.includes(wert as Equipment);
   }
 }
 
@@ -41,7 +46,7 @@ export async function POST(req: NextRequest) {
   if (!id || typeof id !== "string") {
     return NextResponse.json({ error: "id fehlt" }, { status: 400 });
   }
-  if (feld !== "ladeart" && feld !== "region" && feld !== "name") {
+  if (feld !== "ladeart" && feld !== "region" && feld !== "name" && feld !== "equipment") {
     return NextResponse.json({ error: "unbekanntes Feld" }, { status: 400 });
   }
   if (!gueltig(feld, wert)) {

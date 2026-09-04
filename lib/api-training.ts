@@ -112,6 +112,8 @@ export async function createExercise(params: {
     rank: CUSTOM_RANK,
     rating: null,
     ladeart: null,
+    versteckt: false,
+    versteckRegeln: [],
   };
   await enqueue({ kind: "exercise.save", exercise, isNew: true });
   void flushQueue();
@@ -156,6 +158,8 @@ export async function updateExercise(params: {
     rank: before?.rank ?? entry?.rank ?? CUSTOM_RANK,
     rating: params.rating === undefined ? before?.rating ?? null : params.rating,
     ladeart: params.ladeart === undefined ? before?.ladeart ?? null : params.ladeart,
+    versteckt: before?.versteckt ?? entry?.versteckt ?? false,
+    versteckRegeln: before?.versteckRegeln ?? entry?.versteckRegeln ?? [],
   };
   await enqueue({ kind: "exercise.save", exercise, isNew: false });
   void flushQueue();

@@ -242,6 +242,14 @@ export type Exercise = {
    * Gerät und Name (siehe ladeartVon).
    */
   ladeart: Ladeart | null;
+  /**
+   * Global ausgeblendet, für jeden Account gleich — Varianten, Randgeräte,
+   * einarmige und andere Automatik-Vorschläge aus dem Katalog. `false` bei
+   * jeder eigenen Übung: die ist per Definition gewollt.
+   */
+  versteckt: boolean;
+  /** Die Regel-Tags, die zu `versteckt` geführt haben. Leer, wenn keine gilt. */
+  versteckRegeln: string[];
 };
 
 /** Die Stufe, die zählt: das eigene Urteil, sonst die Schätzung. */
@@ -254,12 +262,19 @@ export const TASTE_MIN = -2;
 export const TASTE_MAX = 2;
 
 /**
- * Ab -1 taucht eine Übung nicht mehr in der Hauptliste auf — per Wisch oder
- * von Hand ausgeblendet. -2 ist für später reserviert (Grund-Dialog beim
- * Ausblenden), zählt aber schon jetzt zur Sichtbarkeit dazu.
+ * Ob eine Übung in der Hauptliste steht — zwei Quellen, eine Regel:
+ *
+ *   taste >= +1   immer sichtbar, schlägt jede Katalog-Regel
+ *   taste <= -1   immer ausgeblendet, per Wisch oder von Hand
+ *   taste === 0   der Katalog entscheidet: `versteckt` (Varianten,
+ *                 Randgeräte, einarmige Übungen — siehe
+ *                 scripts/CONTEXT-uebungsdb.md) gilt für jeden Account gleich,
+ *                 bis jemand sie persönlich beurteilt.
  */
-export function istAusgeblendet(exercise: Pick<Exercise, "taste">): boolean {
-  return exercise.taste <= -1;
+export function istAusgeblendet(exercise: Pick<Exercise, "taste" | "versteckt">): boolean {
+  if (exercise.taste >= 1) return false;
+  if (exercise.taste <= -1) return true;
+  return exercise.versteckt;
 }
 
 /**
