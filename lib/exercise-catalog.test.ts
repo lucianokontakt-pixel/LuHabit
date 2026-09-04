@@ -212,8 +212,7 @@ describe("mergeExercises", () => {
     muscle: "chest" as const,
     equipment: "barbell" as const,
     isCustom: false,
-    hidden: true,
-    favorite: false,
+    taste: -1,
     increment: 1.25,
     bodyweightFactor: null,
     loadFactor: null,
@@ -229,7 +228,7 @@ describe("mergeExercises", () => {
   it("legt eigene Werte über die Katalogübung, behält aber die Medien", () => {
     const merged = mergeOne(record);
     expect(merged.name).toBe("Mein Bankdrücken");
-    expect(merged.hidden).toBe(true);
+    expect(merged.taste).toBe(-1);
     expect(merged.increment).toBe(1.25);
     expect(merged.media).toBe(catalogEntry("og-0025")?.media);
   });

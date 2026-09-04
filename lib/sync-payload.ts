@@ -33,8 +33,7 @@ export type StoredExercise = {
   muscle: Muscle;
   equipment: Equipment;
   isCustom: boolean;
-  hidden: boolean;
-  favorite: boolean;
+  taste: number;
   increment: number | null;
   bodyweightFactor: number | null;
   loadFactor: number | null;
@@ -194,8 +193,7 @@ export function readSyncPayload(payload: unknown): SyncSnapshot {
       muscle: str(r.muscle) as Muscle,
       equipment: str(r.equipment) as Equipment,
       isCustom: bool(r.is_custom),
-      hidden: bool(r.hidden),
-      favorite: bool(r.favorite),
+      taste: num(r.taste),
       increment: numOrNull(r.increment),
       bodyweightFactor: numOrNull(r.bodyweight_factor),
       loadFactor: numOrNull(r.load_factor),

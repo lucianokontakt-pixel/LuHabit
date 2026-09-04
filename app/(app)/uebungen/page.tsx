@@ -29,6 +29,7 @@ import { ExercisePicker } from "@/components/training/exercise-picker";
 import { ExerciseEditor } from "@/components/training/exercise-editor";
 import { ExerciseThumb } from "@/components/training/exercise-media";
 import { FilterSelect } from "@/components/training/filter-sheet";
+import { SwipeToHide } from "@/components/training/swipe-to-hide";
 import { BewaehrtAbzeichen, RankBars } from "@/components/training/rank-bars";
 import { useTraining } from "@/lib/training-store";
 import { deleteExercise, updateExercise } from "@/lib/api-training";
@@ -46,6 +47,7 @@ import {
   REGION_SHORT,
   REGIONS,
   defaultIncrement,
+  istAusgeblendet,
   ladeartVon,
   stufeVon,
   type Equipment,
@@ -135,7 +137,7 @@ function zusatzZeile(exercise: Exercise): string | null {
       ? `${Math.round(exercise.loadFactor * 100)} % Last`
       : null,
     exercise.isCustom ? "eigene" : null,
-    exercise.hidden ? "ausgeblendet" : null,
+    istAusgeblendet(exercise) ? "ausgeblendet" : null,
   ].filter((teil): teil is string => teil !== null);
 
   return teile.length > 0 ? teile.join(" · ") : null;
@@ -148,7 +150,6 @@ export default function ExercisesPage() {
   const [equipment, setEquipment] = useState<Equipment | null>(null);
   const [region, setRegion] = useState<Region | null>(null);
   const [ladeart, setLadeart] = useState<LadeartFilter | null>(null);
-  const [showHidden, setShowHidden] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [showRare, toggleShowRare] = useShowRare();
   const [sort, setSort] = useState<Sortierung>("beliebtheit");
@@ -159,6 +160,10 @@ export default function ExercisesPage() {
   // alle zehn zu — sonst ständen auf einen Blick zehnmal bis zu 24 Übungen
   // samt Bild da, nur um „Brust" zu erreichen.
   const [openGroups, setOpenGroups] = useState<Set<Muscle>>(new Set());
+  // Wessen "+ N ausgeblendete Treffer anzeigen"-Zeile aufgeklappt wurde — pro
+  // Muskelgruppe, nicht global: die Ausgeblendeten einer Gruppe sind nur dort
+  // interessant, wo man gerade sucht.
+  const [openHidden, setOpenHidden] = useState<Set<Muscle>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
 
   const gesucht = useMemo(() => suchwoerter(query), [query]);
@@ -174,21 +179,30 @@ export default function ExercisesPage() {
     return map;
   }, [exercises, gesucht, query]);
 
-  const filtered = useMemo(
+  /**
+   * Alle Übungen, die zu den Filtern passen — ausgeblendete eingeschlossen.
+   * Erst danach trennt sich, was in der Hauptliste steht und was hinter der
+   * "+ N ausgeblendete Treffer anzeigen"-Zeile wartet: beide Listen sollen
+   * exakt dieselben Filter durchlaufen haben, sonst zeigt die Zeile eine Zahl,
+   * die zur aktuellen Suche gar nicht passt.
+   */
+  const passend = useMemo(
     () =>
       exercises
-        .filter((e) => (showHidden ? true : !e.hidden))
-        .filter((e) => (favoritesOnly ? e.favorite : true))
-        // Die ungewöhnlichen bleiben draußen, bis jemand danach fragt — außer er
-        // hat die Übung als Favorit markiert, dann ist die Frage beantwortet.
-        .filter((e) => showRare || e.favorite || stufeVon(e) >= RANK_SICHTBAR_AB)
+        .filter((e) => (favoritesOnly ? e.taste >= 1 : true))
+        // Die ungewöhnlichen bleiben draußen, bis jemand danach fragt — außer sie
+        // sind als Favorit markiert, dann ist die Frage beantwortet.
+        .filter((e) => showRare || e.taste >= 1 || stufeVon(e) >= RANK_SICHTBAR_AB)
         .filter((e) => (muscle === null ? true : e.muscle === muscle))
         .filter((e) => (region === null ? true : e.region === region))
         .filter((e) => (equipment === null ? true : e.equipment === equipment))
         .filter((e) => passtZurLadeart(e, ladeart))
         .filter((e) => treffer[e.id] > 0),
-    [exercises, treffer, muscle, equipment, region, ladeart, showHidden, favoritesOnly, showRare]
+    [exercises, treffer, muscle, equipment, region, ladeart, favoritesOnly, showRare]
   );
+
+  const filtered = useMemo(() => passend.filter((e) => !istAusgeblendet(e)), [passend]);
+  const ausgeblendetePassend = useMemo(() => passend.filter((e) => istAusgeblendet(e)), [passend]);
 
   /**
    * Wie viele Übungen noch keine Ladeart haben. Steht als Hinweis am Filter —
@@ -235,7 +249,7 @@ export default function ExercisesPage() {
       // wäre das eine Lüge: eine Liste A–Z, die nicht bei A anfängt.
       beliebtheit: (a, b) =>
         treffer[b.id] - treffer[a.id] ||
-        Number(b.favorite) - Number(a.favorite) ||
+        b.taste - a.taste ||
         stufeVon(b) - stufeVon(a) ||
         nachName(a, b),
       name: nachName,
@@ -251,10 +265,31 @@ export default function ExercisesPage() {
       },
     };
     for (const list of map.values()) list.sort(vergleich[sort]);
-    return MUSCLES.map((m) => ({ key: m.key, label: m.label, items: map.get(m.key) ?? [] })).filter(
-      (g) => g.items.length > 0
-    );
+    return map;
   }, [filtered, sort, verlauf, treffer]);
+
+  /** Dieselbe Gruppierung für die Ausgeblendeten — nach Name, mehr Ordnung braucht die Nebenliste nicht. */
+  const groupedHidden = useMemo(() => {
+    const map = new Map<Muscle, Exercise[]>();
+    for (const e of ausgeblendetePassend) {
+      const list = map.get(e.muscle) ?? [];
+      list.push(e);
+      map.set(e.muscle, list);
+    }
+    for (const list of map.values()) list.sort((a, b) => a.name.localeCompare(b.name, "de"));
+    return map;
+  }, [ausgeblendetePassend]);
+
+  const groups = useMemo(
+    () =>
+      MUSCLES.map((m) => ({
+        key: m.key,
+        label: m.label,
+        items: grouped.get(m.key) ?? [],
+        hiddenItems: groupedHidden.get(m.key) ?? [],
+      })).filter((g) => g.items.length > 0 || g.hiddenItems.length > 0),
+    [grouped, groupedHidden]
+  );
 
   // Sobald etwas die Liste schon eingrenzt, ist Aufklappen keine Hilfe mehr,
   // sondern nur ein weiterer Tipp vor dem Ergebnis, nach dem gesucht wurde.
@@ -266,12 +301,44 @@ export default function ExercisesPage() {
     ladeart !== null ||
     favoritesOnly;
 
-  async function toggleHidden(id: string, hidden: boolean) {
+  /**
+   * Ausblenden per Wisch oder über das Menü — dieselbe Handlung, zwei Wege
+   * dorthin. `taste` fällt auf -1 ("stört mich"), nicht auf -2 ("nie"): das
+   * bleibt dem noch fehlenden Grund-Dialog vorbehalten (siehe
+   * scripts/CONTEXT-uebungsdb.md). Der Toast trägt ein Rückgängig, das genau
+   * den vorherigen Wert wiederherstellt — nicht pauschal 0, sonst würde ein
+   * "beliebt" beim Ausversehen-Wischen zu "neutral".
+   */
+  async function hideExercise(exercise: Exercise) {
+    const vorher = exercise.taste;
+    setBusy(exercise.id);
+    try {
+      upsertExercise(await updateExercise({ id: exercise.id, taste: -1 }));
+      toast(`„${exercise.name}“ ausgeblendet`, {
+        action: {
+          label: "Rückgängig",
+          onClick: async () => {
+            try {
+              upsertExercise(await updateExercise({ id: exercise.id, taste: vorher }));
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Konnte nicht rückgängig gemacht werden");
+            }
+          },
+        },
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Konnte Übung nicht ausblenden");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function unhideExercise(id: string) {
     setBusy(id);
     try {
-      upsertExercise(await updateExercise({ id, hidden }));
+      upsertExercise(await updateExercise({ id, taste: 0 }));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Konnte Übung nicht ändern");
+      toast.error(e instanceof Error ? e.message : "Konnte Übung nicht einblenden");
     } finally {
       setBusy(null);
     }
@@ -298,10 +365,10 @@ export default function ExercisesPage() {
     }
   }
 
-  async function toggleFavorite(id: string, favorite: boolean) {
+  async function toggleFavorite(id: string, taste: number) {
     setBusy(id);
     try {
-      upsertExercise(await updateExercise({ id, favorite }));
+      upsertExercise(await updateExercise({ id, taste: taste >= 1 ? 0 : 1 }));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Konnte Übung nicht ändern");
     } finally {
@@ -321,8 +388,6 @@ export default function ExercisesPage() {
       setBusy(null);
     }
   }
-
-  const hiddenCount = exercises.filter((e) => e.hidden).length;
 
   return (
     <div className="flex flex-col gap-5">
@@ -437,24 +502,12 @@ export default function ExercisesPage() {
             <Sparkles className="size-4" />
             {showRare ? "Ungewöhnliche gezeigt" : "Ungewöhnliche zeigen"}
           </Button>
-
-          {hiddenCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-fit"
-              onClick={() => setShowHidden((v) => !v)}
-            >
-              {showHidden ? <EyeOff /> : <Eye />}
-              {showHidden ? "Ausgeblendete verbergen" : `${hiddenCount} ausgeblendete anzeigen`}
-            </Button>
-          )}
         </div>
       </div>
 
       {loading ? (
         <Skeleton className="h-64" />
-      ) : grouped.length === 0 ? (
+      ) : groups.length === 0 ? (
         <Card className="gap-0">
           <p className="px-(--card-spacing) text-sm text-muted-foreground">
             Keine Übung passt zu diesen Filtern.
@@ -462,8 +515,9 @@ export default function ExercisesPage() {
         </Card>
       ) : (
         <div className="flex flex-col gap-4">
-          {grouped.map((group) => {
+          {groups.map((group) => {
             const open = gefiltert || openGroups.has(group.key);
+            const hiddenOpen = openHidden.has(group.key);
             return (
             <Card key={group.key} className="gap-2">
               <button
@@ -500,96 +554,97 @@ export default function ExercisesPage() {
               {open && (
               <div className="flex flex-col px-(--card-spacing)">
                 {(expanded.has(group.key) ? group.items : group.items.slice(0, VORSCHAU)).map((exercise) => (
-                  <div
+                  <SwipeToHide
                     key={exercise.id}
-                    className={cn(
-                      "flex items-center gap-2 border-b border-border py-2.5 last:border-0",
-                      exercise.hidden && "opacity-50"
-                    )}
+                    disabled={busy === exercise.id}
+                    onHide={() => hideExercise(exercise)}
                   >
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <ExerciseThumb exercise={exercise} />
-                      <div className="min-w-0 flex-1">
-                        <p className="flex min-w-0 items-center gap-1.5">
-                          {/* Umbrechen statt abschneiden: das Gerät steht am
-                              Ende des Namens und ist genau das, was die sechs
-                              Bankdrück-Varianten voneinander unterscheidet. */}
-                          <span className="min-w-0 line-clamp-2 text-sm">{exercise.name}</span>
-                          <BewaehrtAbzeichen exercise={exercise} />
-                        </p>
-                        <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                          <RankBars exercise={exercise} />
-                          {zusatzZeile(exercise) && (
-                            <span className="truncate">{zusatzZeile(exercise)}</span>
-                          )}
-                        </p>
+                    <div className="flex items-center gap-2 border-b border-border py-2.5 last:border-0">
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <ExerciseThumb exercise={exercise} />
+                        <div className="min-w-0 flex-1">
+                          <p className="flex min-w-0 items-center gap-1.5">
+                            {/* Umbrechen statt abschneiden: das Gerät steht am
+                                Ende des Namens und ist genau das, was die sechs
+                                Bankdrück-Varianten voneinander unterscheidet. */}
+                            <span className="min-w-0 line-clamp-2 text-sm">{exercise.name}</span>
+                            <BewaehrtAbzeichen exercise={exercise} />
+                          </p>
+                          <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                            <RankBars exercise={exercise} />
+                            {zusatzZeile(exercise) && (
+                              <span className="truncate">{zusatzZeile(exercise)}</span>
+                            )}
+                          </p>
+                        </div>
                       </div>
-                    </div>
 
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      disabled={busy === exercise.id}
-                      onClick={() => toggleFavorite(exercise.id, !exercise.favorite)}
-                      aria-label={
-                        exercise.favorite
-                          ? `${exercise.name} aus Favoriten entfernen`
-                          : `${exercise.name} als Favorit markieren`
-                      }
-                    >
-                      <Star className={cn("size-4", exercise.favorite && "fill-current text-primary")} />
-                    </Button>
-
-                    {/* Bearbeiten, Ausblenden und Löschen zusammen unter
-                        einem Knopf. Nebeneinander nahmen sie in einer 375 px
-                        breiten Zeile so viel Platz, dass vom Gerät nur noch
-                        „Langhantel · Mi…“ übrig blieb — und keine der drei
-                        Handlungen kommt beim Durchsehen der Liste vor. Der
-                        Stern bleibt draußen: der ist genau dafür da. Dasselbe
-                        Muster wie in der laufenden Einheit. */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        aria-label={`Weitere Aktionen für ${exercise.name}`}
-                        className="touch-target flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled={busy === exercise.id}
+                        onClick={() => toggleFavorite(exercise.id, exercise.taste)}
+                        aria-label={
+                          exercise.taste >= 1
+                            ? `${exercise.name} aus Favoriten entfernen`
+                            : `${exercise.name} als Favorit markieren`
+                        }
                       >
-                        <Ellipsis className="size-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditing(exercise)}>
-                          <Pencil />
-                          Bearbeiten
-                        </DropdownMenuItem>
-                        {exercise.equipment === "machine" &&
-                          LADEARTEN.filter((a) => a === "steck" || a === "scheiben").map((art) => (
-                            <DropdownMenuItem
-                              key={art}
-                              disabled={busy === exercise.id}
-                              onClick={() => setzeLadeart(exercise, art)}
-                            >
-                              {exercise.ladeart === art ? <Check /> : <Weight />}
-                              {LADEART_LABELS[art]}
-                            </DropdownMenuItem>
-                          ))}
-                        <DropdownMenuItem
-                          disabled={busy === exercise.id}
-                          onClick={() => toggleHidden(exercise.id, !exercise.hidden)}
+                        <Star className={cn("size-4", exercise.taste >= 1 && "fill-current text-primary")} />
+                      </Button>
+
+                      {/* Bearbeiten, Ausblenden und Löschen zusammen unter
+                          einem Knopf. Nebeneinander nahmen sie in einer 375 px
+                          breiten Zeile so viel Platz, dass vom Gerät nur noch
+                          „Langhantel · Mi…“ übrig blieb — und keine der drei
+                          Handlungen kommt beim Durchsehen der Liste vor. Der
+                          Stern bleibt draußen: der ist genau dafür da. Dasselbe
+                          Muster wie in der laufenden Einheit. Ausblenden geht
+                          hier zusätzlich zum Wisch — für alles ohne Touch. */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          aria-label={`Weitere Aktionen für ${exercise.name}`}
+                          className="touch-target flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
                         >
-                          {exercise.hidden ? <Eye /> : <EyeOff />}
-                          {exercise.hidden ? "Einblenden" : "Ausblenden"}
-                        </DropdownMenuItem>
-                        {exercise.isCustom && (
-                          <DropdownMenuItem
-                            variant="destructive"
-                            disabled={busy === exercise.id}
-                            onClick={() => remove(exercise.id, exercise.name)}
-                          >
-                            <Trash2 />
-                            Löschen
+                          <Ellipsis className="size-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setEditing(exercise)}>
+                            <Pencil />
+                            Bearbeiten
                           </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                          {exercise.equipment === "machine" &&
+                            LADEARTEN.filter((a) => a === "steck" || a === "scheiben").map((art) => (
+                              <DropdownMenuItem
+                                key={art}
+                                disabled={busy === exercise.id}
+                                onClick={() => setzeLadeart(exercise, art)}
+                              >
+                                {exercise.ladeart === art ? <Check /> : <Weight />}
+                                {LADEART_LABELS[art]}
+                              </DropdownMenuItem>
+                            ))}
+                          <DropdownMenuItem
+                            disabled={busy === exercise.id}
+                            onClick={() => hideExercise(exercise)}
+                          >
+                            <EyeOff />
+                            Ausblenden
+                          </DropdownMenuItem>
+                          {exercise.isCustom && (
+                            <DropdownMenuItem
+                              variant="destructive"
+                              disabled={busy === exercise.id}
+                              onClick={() => remove(exercise.id, exercise.name)}
+                            >
+                              <Trash2 />
+                              Löschen
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </SwipeToHide>
                 ))}
 
                 {group.items.length > VORSCHAU && !expanded.has(group.key) && (
@@ -601,6 +656,55 @@ export default function ExercisesPage() {
                   >
                     Alle {group.items.length} anzeigen
                   </Button>
+                )}
+
+                {group.hiddenItems.length > 0 && (
+                  <div className="mt-1 flex flex-col">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-fit"
+                      onClick={() =>
+                        setOpenHidden((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(group.key)) next.delete(group.key);
+                          else next.add(group.key);
+                          return next;
+                        })
+                      }
+                    >
+                      {hiddenOpen ? "Ausgeblendete verbergen" : `+ ${group.hiddenItems.length} ausgeblendete Treffer anzeigen`}
+                    </Button>
+
+                    {hiddenOpen &&
+                      group.hiddenItems.map((exercise) => (
+                        <div
+                          key={exercise.id}
+                          className="flex items-center gap-2 border-b border-border py-2.5 opacity-50 last:border-0"
+                        >
+                          <div className="flex min-w-0 flex-1 items-center gap-3">
+                            <ExerciseThumb exercise={exercise} />
+                            <div className="min-w-0 flex-1">
+                              <p className="min-w-0 line-clamp-2 text-sm">{exercise.name}</p>
+                              <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                                {zusatzZeile(exercise) && (
+                                  <span className="truncate">{zusatzZeile(exercise)}</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={busy === exercise.id}
+                            onClick={() => unhideExercise(exercise.id)}
+                          >
+                            <Eye />
+                            Einblenden
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
                 )}
               </div>
               )}

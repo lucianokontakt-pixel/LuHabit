@@ -43,7 +43,7 @@ async function collect(userId: string) {
       [userId]
     ),
     d1Query<Row>(
-      `SELECT id, name, muscle, equipment, is_custom, hidden, increment, bodyweight_factor
+      `SELECT id, name, muscle, equipment, is_custom, taste, increment, bodyweight_factor
          FROM exercises WHERE user_id = ? AND deleted_at IS NULL ORDER BY name ASC`,
       [userId]
     ),

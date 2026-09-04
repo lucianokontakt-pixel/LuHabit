@@ -65,8 +65,7 @@ export type ExerciseRecord = {
   muscle: Muscle;
   equipment: Equipment;
   isCustom: boolean;
-  hidden: boolean;
-  favorite: boolean;
+  taste: number;
   increment: number | null;
   bodyweightFactor: number | null;
   loadFactor: number | null;
@@ -86,8 +85,7 @@ export function fromCatalog(entry: CatalogExercise): Exercise {
     muscle: entry.muscle,
     equipment: entry.equipment,
     isCustom: false,
-    hidden: false,
-    favorite: false,
+    taste: 0,
     increment: null,
     // Von Hand gesetzt schlägt geschätzt — auch eine ausdrückliche Null, die
     // heißt „für diese Übung gibt es keinen Startwert" und keine Lücke.
@@ -145,8 +143,7 @@ export function mergeExercises(records: ExerciseRecord[]): Exercise[] {
       name: row.name,
       muscle: row.muscle,
       equipment: row.equipment,
-      hidden: row.hidden,
-      favorite: row.favorite,
+      taste: row.taste,
       increment: row.increment,
       bodyweightFactor: row.bodyweightFactor ?? base.bodyweightFactor,
       loadFactor: row.loadFactor ?? base.loadFactor,
@@ -175,8 +172,7 @@ export function mergeOne(record: ExerciseRecord): Exercise {
     name: record.name,
     muscle: record.muscle,
     equipment: record.equipment,
-    hidden: record.hidden,
-    favorite: record.favorite,
+    taste: record.taste,
     increment: record.increment,
     bodyweightFactor: record.bodyweightFactor ?? base.bodyweightFactor,
     loadFactor: record.loadFactor ?? base.loadFactor,

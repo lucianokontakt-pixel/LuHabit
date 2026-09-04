@@ -195,9 +195,14 @@ export type Exercise = {
   muscle: Muscle;
   equipment: Equipment;
   isCustom: boolean;
-  hidden: boolean;
-  /** Zum schnelleren Finden in Bibliothek und Übungswähler markiert. */
-  favorite: boolean;
+  /**
+   * Wie gern jemand die Übung macht, -2 bis +2: -2 nie, -1 stört mich, 0
+   * neutral, +1 beliebt, +2 Kern. Ersetzt den früheren favorite-Boolean und
+   * das hidden-Flag in einem Feld — sonst hätten Sortierung und Sichtbarkeit
+   * zwei Quellen. `taste <= -1` heißt ausgeblendet, `taste >= +1` heißt immer
+   * sichtbar, auch gegen jede Verstecken-Regel.
+   */
+  taste: number;
   /** Überschreibt defaultIncrement, falls gesetzt. */
   increment: number | null;
   /** Startgewicht-Vorschlag = Körpergewicht × Faktor. */
@@ -242,6 +247,19 @@ export type Exercise = {
 /** Die Stufe, die zählt: das eigene Urteil, sonst die Schätzung. */
 export function stufeVon(exercise: Pick<Exercise, "rank" | "rating">): number {
   return exercise.rating ?? exercise.rank;
+}
+
+/** Kleinster und größter Wert der Geschmacksskala. */
+export const TASTE_MIN = -2;
+export const TASTE_MAX = 2;
+
+/**
+ * Ab -1 taucht eine Übung nicht mehr in der Hauptliste auf — per Wisch oder
+ * von Hand ausgeblendet. -2 ist für später reserviert (Grund-Dialog beim
+ * Ausblenden), zählt aber schon jetzt zur Sichtbarkeit dazu.
+ */
+export function istAusgeblendet(exercise: Pick<Exercise, "taste">): boolean {
+  return exercise.taste <= -1;
 }
 
 /**

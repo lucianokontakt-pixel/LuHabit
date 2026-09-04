@@ -32,6 +32,7 @@ import {
   RANK_SICHTBAR_AB,
   REGIONS,
   REGION_SHORT,
+  istAusgeblendet,
   kurzerName,
   ladeartVon,
   stufeVon,
@@ -168,7 +169,7 @@ export function ExercisePicker({
   async function toggleFavorite(exercise: Exercise) {
     setFavoriteBusy(exercise.id);
     try {
-      upsertExercise(await updateExercise({ id: exercise.id, favorite: !exercise.favorite }));
+      upsertExercise(await updateExercise({ id: exercise.id, taste: exercise.taste >= 1 ? 0 : 1 }));
     } finally {
       setFavoriteBusy(null);
     }
@@ -200,8 +201,8 @@ export function ExercisePicker({
   const visible = useMemo(
     () =>
       exercises
-        .filter((e) => !e.hidden)
-        .filter((e) => showRare || e.favorite || stufeVon(e) >= RANK_SICHTBAR_AB)
+        .filter((e) => !istAusgeblendet(e))
+        .filter((e) => showRare || e.taste >= 1 || stufeVon(e) >= RANK_SICHTBAR_AB)
         .filter((e) => (muscle === null ? true : e.muscle === muscle))
         .filter((e) => (region === null ? true : e.region === region))
         .filter((e) => (equipment === null ? true : e.equipment === equipment))
@@ -227,7 +228,7 @@ export function ExercisePicker({
       (naeheZu ? naeheZu(b.e) - naeheZu(a.e) : 0) ||
       b.g - a.g ||
       Number(verlauf[b.e.id] !== undefined) - Number(verlauf[a.e.id] !== undefined) ||
-      Number(b.e.favorite) - Number(a.e.favorite) ||
+      b.e.taste - a.e.taste ||
       wann(b.e.id).localeCompare(wann(a.e.id)) ||
       stufeVon(b.e) - stufeVon(a.e) ||
       a.e.name.localeCompare(b.e.name, "de");
@@ -671,13 +672,13 @@ function Treffer({
         disabled={favoritBeschaeftigt}
         onClick={onFavorit}
         aria-label={
-          exercise.favorite
+          exercise.taste >= 1
             ? `${exercise.name} aus Favoriten entfernen`
             : `${exercise.name} als Favorit markieren`
         }
         className="shrink-0 p-2 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
       >
-        <Star className={cn("size-4", exercise.favorite && "fill-current text-primary")} />
+        <Star className={cn("size-4", exercise.taste >= 1 && "fill-current text-primary")} />
       </button>
     </div>
   );

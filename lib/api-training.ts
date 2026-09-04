@@ -83,7 +83,7 @@ export async function createExercise(params: {
   increment?: number | null;
   bodyweightFactor?: number | null;
   warmup?: "always" | "never" | null;
-  favorite?: boolean;
+  taste?: number;
 }): Promise<Exercise> {
   const name = params.name.trim();
   const existing = await readAll<Exercise>("exercises");
@@ -98,8 +98,7 @@ export async function createExercise(params: {
     muscle: params.muscle,
     equipment: params.equipment,
     isCustom: true,
-    hidden: false,
-    favorite: params.favorite ?? false,
+    taste: params.taste ?? 0,
     increment: params.increment ?? null,
     bodyweightFactor: params.bodyweightFactor ?? null,
     loadFactor,
@@ -128,8 +127,7 @@ export async function updateExercise(params: {
   bodyweightFactor?: number | null;
   loadFactor?: number | null;
   warmup?: "always" | "never" | null;
-  hidden?: boolean;
-  favorite?: boolean;
+  taste?: number;
   rating?: number | null;
   ladeart?: Ladeart | null;
 }): Promise<Exercise> {
@@ -145,8 +143,7 @@ export async function updateExercise(params: {
     muscle: params.muscle ?? before?.muscle ?? "chest",
     equipment: params.equipment ?? before?.equipment ?? "barbell",
     isCustom: before?.isCustom ?? true,
-    hidden: params.hidden === undefined ? before?.hidden ?? false : params.hidden,
-    favorite: params.favorite === undefined ? before?.favorite ?? false : params.favorite,
+    taste: params.taste === undefined ? before?.taste ?? 0 : params.taste,
     increment: params.increment === undefined ? before?.increment ?? null : params.increment,
     bodyweightFactor:
       params.bodyweightFactor === undefined ? before?.bodyweightFactor ?? null : params.bodyweightFactor,
@@ -182,7 +179,7 @@ export async function deleteExercise(id: string): Promise<void> {
   // Eine Katalogübung lässt sich nicht löschen — sie steht im Code, nicht in
   // der Datenbank. Was hier "löschen" heißt, ist für sie immer ausblenden.
   if (usedInSessions || usedInPlans || catalogEntry(id)) {
-    await updateExercise({ id, hidden: true });
+    await updateExercise({ id, taste: -1 });
     return;
   }
   await enqueue({ kind: "exercise.delete", id });

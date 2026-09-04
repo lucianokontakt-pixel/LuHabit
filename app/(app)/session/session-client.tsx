@@ -57,6 +57,7 @@ import {
   setLabels,
   sessionVolume,
   suggestAdjustment,
+  istAusgeblendet,
   ladeartVon,
   LADEART_LABELS,
   LADEARTEN,
@@ -208,7 +209,7 @@ function wechselUebungen(exercise: Exercise, alle: Exercise[]): Exercise[] {
     .filter(
       (e) =>
         e.id !== exercise.id &&
-        !e.hidden &&
+        !istAusgeblendet(e) &&
         e.muscle === exercise.muscle &&
         e.region === exercise.region &&
         // Dieselbe Grenze wie in der Übungsliste: eine Ganzkörper-Wippe als

@@ -161,8 +161,8 @@ describe("readSyncPayload — Sortierschlüssel bilden die Reihenfolge des Serve
     const snap = readSyncPayload(
       payload({
         exercises: [
-          { id: "b", name: "Bankdrücken", muscle: "chest", equipment: "barbell", is_custom: 0, hidden: 0, increment: null, bodyweight_factor: null, load_factor: null, warmup: null, deleted_at: null },
-          { id: "a", name: "ab-wheel", muscle: "core", equipment: "bodyweight", is_custom: 0, hidden: 0, increment: null, bodyweight_factor: null, load_factor: null, warmup: null, deleted_at: null },
+          { id: "b", name: "Bankdrücken", muscle: "chest", equipment: "barbell", is_custom: 0, taste: 0, increment: null, bodyweight_factor: null, load_factor: null, warmup: null, deleted_at: null },
+          { id: "a", name: "ab-wheel", muscle: "core", equipment: "bodyweight", is_custom: 0, taste: 0, increment: null, bodyweight_factor: null, load_factor: null, warmup: null, deleted_at: null },
         ],
       })
     );
