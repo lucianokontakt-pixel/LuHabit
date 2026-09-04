@@ -1,0 +1,806 @@
+id;name_en;name_de_auto;name_de_final;konfidenz;rang;muskel;geraet
+# Anleitung;Spalte name_de_final ausfuellen;= eintragen wenn der englische Name bleiben soll (Dips, Curl, Hip Thrust, Face Pull ...);;;;;
+og-0007;Alternate Lateral Pulldown;alternierend Lateral Latzug;;mittel;5;back;cable
+og-0015;Assisted Parallel Close Grip Pull-Up;Unterstützt Parallel Enger Griff Klimmzug;;mittel;5;back;machine
+og-3017;Barbell Pendlay Row;Langhantel Pendlay Rudern;;niedrig;5;back;barbell
+og-1317;Barbell Reverse Grip Incline Bench Row;Langhantel Untergriff Schrägbank Bench Rudern;;mittel;5;back;barbell
+og-0150;Cable Bar Lateral Pulldown;Kabelzug Bar Lateral Latzug;;niedrig;5;back;cable
+og-0153;Cable Cross-Over Lateral Pulldown;Kabelzug Cross-over Lateral Latzug;;niedrig;5;back;cable
+og-0160;Cable Floor Seated Wide-Grip Row;Kabelzug Floor sitzend Weiter Griff Rudern;;mittel;5;back;cable
+og-0167;Cable High Row (Kneeling);Kabelzug High Rudern ( Kniend);;mittel;5;back;cable
+og-1318;Cable Incline Bench Row;Kabelzug Schrägbank Bench Rudern;;mittel;5;back;cable
+og-2330;Cable Lat Pulldown Full Range Of Motion;Kabelzug Latzug Full Range Of Motion;;niedrig;5;back;cable
+og-0177;Cable Lateral Pulldown (With Rope Attachment);Kabelzug Lateral Latzug ( mit Rope Attachment);;niedrig;5;back;cable
+og-2616;Cable Lateral Pulldown With V-Bar;Kabelzug Lateral Latzug mit V-bar;;mittel;5;back;cable
+og-0180;Cable Low Seated Row;Kabelzug Low sitzend Rudern;;mittel;5;back;cable
+og-0193;Cable One Arm Straight Back High Row (Kneeling);Kabelzug einarmig Straight Back High Rudern ( Kniend);;niedrig;5;back;cable
+og-1319;Cable Palm Rotational Row;Kabelzug Palm Rotational Rudern;;niedrig;5;back;cable
+og-0197;Cable Pulldown (Pro Lat Bar);Kabelzug Latzug (pro Lat Bar);;niedrig;5;back;cable
+og-0199;Cable Pushdown (Straight Arm) V. 2;Kabelzug Trizepsdrücken (straight Arm) V. 2;;niedrig;5;back;cable
+og-0205;Cable Rear Pulldown;Kabelzug Rear Latzug;;mittel;5;back;cable
+og-0208;Cable Reverse-Grip Straight Back Seated High Row;Kabelzug Untergriff Straight Back sitzend High Rudern;;mittel;5;back;cable
+og-1320;Cable Rope Crossover Seated Row;Kabelzug Rope Crossover sitzend Rudern;;niedrig;5;back;cable
+og-1321;Cable Rope Elevated Seated Row;Kabelzug Rope Elevated sitzend Rudern;;niedrig;5;back;cable
+og-1322;Cable Rope Extension Incline Bench Row;Kabelzug Rope Strecken Schrägbank Bench Rudern;;mittel;5;back;cable
+og-1323;Cable Rope Seated Row;Kabelzug Rope sitzend Rudern;;mittel;5;back;cable
+og-0213;Cable Seated High Row (V-Bar);Kabelzug sitzend High Rudern (v-bar);;mittel;5;back;cable
+og-1717;Cable Squat Row (With Rope Attachment);Kabelzug Kniebeuge Rudern ( mit Rope Attachment);;niedrig;5;back;cable
+og-0234;Cable Standing Row (V-Bar);Kabelzug stehend Rudern (v-bar);;mittel;5;back;cable
+og-0236;Cable Standing Twist Row (V-Bar);Kabelzug stehend Drehung Rudern (v-bar);;mittel;5;back;cable
+og-0238;Cable Straight Arm Pulldown;Kabelzug Straight Arm Latzug;;niedrig;5;back;cable
+og-0237;Cable Straight Arm Pulldown (With Rope);Kabelzug Straight Arm Latzug ( mit Rope);;niedrig;5;back;cable
+og-0239;Cable Straight Back Seated Row;Kabelzug Straight Back sitzend Rudern;;niedrig;5;back;cable
+og-2464;Cable Thibaudeau Kayak Row;Kabelzug Thibaudeau Kayak Rudern;;niedrig;5;back;cable
+og-0245;Cable Underhand Pulldown;Kabelzug Underhand Latzug;;niedrig;5;back;cable
+og-1324;Cable Upper Row;Kabelzug Upper Rudern;;mittel;5;back;cable
+og-0248;Cambered Bar Lying Row;Cambered Bar liegend Rudern;;niedrig;5;back;barbell
+og-1329;Dumbbell Palm Rotational Bent Over Row;Kurzhantel Palm Rotational Vorgebeugtes Rudern;;niedrig;5;back;dumbbell
+og-1331;Dumbbell Reverse Grip Incline Bench Two Arm Row;Kurzhantel Untergriff Schrägbank Bench Two Arm Rudern;;mittel;5;back;dumbbell
+og-2327;Dumbbell Reverse Grip Row (Female);Kurzhantel Untergriff Rudern (female);;mittel;5;back;dumbbell
+og-3664;Dumbbell Side Plank With Rear Fly;Kurzhantel Side Unterarmstütz mit Rear Fliegende;;mittel;5;back;dumbbell
+og-3200;Lever Bent-Over Row With V-Bar;Maschine Vorgebeugtes Rudern mit V-bar;;mittel;5;back;machine
+og-0580;Lever Gripless Shrug;Maschine Gripless Schulterheben;;niedrig;5;back;machine
+og-1439;Lever Gripless Shrug V. 2;Maschine Gripless Schulterheben V. 2;;niedrig;5;back;machine
+og-0581;Lever High Row;Maschine High Rudern;;mittel;5;back;machine
+og-0588;Lever Narrow Grip Seated Row;Maschine eng Grip sitzend Rudern;;mittel;5;back;machine
+og-1356;Lever One Arm Lateral High Row;Maschine einarmig Lateral High Rudern;;niedrig;5;back;machine
+og-1347;Lever One Arm Lateral Wide Pulldown;Maschine einarmig Lateral weit Latzug;;mittel;5;back;machine
+og-2736;Lever Reverse Grip Lateral Pulldown;Maschine Untergriff Lateral Latzug;;mittel;5;back;machine
+og-1348;Lever Reverse Grip Vertical Row;Maschine Untergriff Vertical Rudern;;mittel;5;back;machine
+og-1349;Lever Reverse T-Bar Row;Maschine Reverse T-bar Rudern;;niedrig;5;back;machine
+og-0606;Lever T Bar Row;Maschine T Bar Rudern;;mittel;5;back;machine
+og-1351;Lever T-Bar Reverse Grip Row;Maschine T-bar Untergriff Rudern;;mittel;5;back;machine
+og-1313;Lever Unilateral Row;Maschine Unilateral Rudern;;niedrig;5;back;machine
+og-0746;Smith Back Shrug;Multipresse Back Schulterheben;;mittel;5;back;machine
+og-0818;Twin Handle Parallel Grip Lat Pulldown;Twin Handle Parallel Grip Latzug;;niedrig;5;back;cable
+og-0023;Barbell Alternate Biceps Curl;Langhantel alternierend Biceps Curl;;mittel;5;biceps;barbell
+og-2407;Barbell Biceps Curl (With Arm Blaster);Langhantel Biceps Curl ( mit Arm Blaster);;niedrig;5;biceps;barbell
+og-0038;Barbell Drag Curl;Langhantel Drag Curl;;mittel;5;biceps;barbell
+og-1411;Barbell Palms Down Wrist Curl Over A Bench;Langhantel Palms Down Wrist Curl Over A Bench;;niedrig;5;biceps;barbell
+og-1412;Barbell Palms Up Wrist Curl Over A Bench;Langhantel Palms Up Wrist Curl Over A Bench;;niedrig;5;biceps;barbell
+og-0079;Barbell Revers Wrist Curl V. 2;Langhantel Revers Wrist Curl V. 2;;niedrig;5;biceps;barbell
+og-0080;Barbell Reverse Curl;Langhantel Reverse Curl;;mittel;5;biceps;barbell
+og-0081;Barbell Reverse Preacher Curl;Langhantel Reverse Scottcurl;;mittel;5;biceps;barbell
+og-0082;Barbell Reverse Wrist Curl;Langhantel Reverse Wrist Curl;;niedrig;5;biceps;barbell
+og-0104;Barbell Standing Back Wrist Curl;Langhantel stehend Back Wrist Curl;;mittel;5;biceps;barbell
+og-1629;Barbell Standing Wide Grip Biceps Curl;Langhantel stehend Weiter Griff Biceps Curl;;mittel;5;biceps;barbell
+og-0126;Barbell Wrist Curl;Langhantel Wrist Curl;;mittel;5;biceps;barbell
+og-0125;Barbell Wrist Curl V. 2;Langhantel Wrist Curl V. 2;;mittel;5;biceps;barbell
+og-1632;Cable Drag Curl;Kabelzug Drag Curl;;mittel;5;biceps;cable
+og-0165;Cable Hammer Curl (With Rope);Kabelzug Hammercurl ( mit Rope);;mittel;5;biceps;cable
+og-1634;Cable Lying Bicep Curl;Kabelzug liegend Bicep Curl;;mittel;5;biceps;cable
+og-1635;Cable One Arm Reverse Preacher Curl;Kabelzug einarmig Reverse Scottcurl;;mittel;5;biceps;cable
+og-1638;Cable Pulldown Bicep Curl;Kabelzug Latzug Bicep Curl;;mittel;5;biceps;cable
+og-0206;Cable Reverse Curl;Kabelzug Reverse Curl;;niedrig;5;biceps;cable
+og-1413;Cable Reverse One Arm Curl;Kabelzug Reverse einarmig Curl;;mittel;5;biceps;cable
+og-0209;Cable Reverse Preacher Curl;Kabelzug Reverse Scottcurl;;mittel;5;biceps;cable
+og-0210;Cable Reverse Wrist Curl;Kabelzug Reverse Wrist Curl;;niedrig;5;biceps;cable
+og-1639;Cable Rope Hammer Preacher Curl;Kabelzug Rope Hammer Scottcurl;;mittel;5;biceps;cable
+og-1640;Cable Rope One Arm Hammer Preacher Curl;Kabelzug Rope einarmig Hammer Scottcurl;;mittel;5;biceps;cable
+og-1644;Cable Squatting Curl;Kabelzug Squatting Curl;;niedrig;5;biceps;cable
+og-0224;Cable Standing Back Wrist Curl;Kabelzug stehend Back Wrist Curl;;mittel;5;biceps;cable
+og-0229;Cable Standing Inner Curl;Kabelzug stehend Inner Curl;;mittel;5;biceps;cable
+og-1645;Cable Two Arm Curl On Incline Bench;Kabelzug Two Arm Curl auf Schrägbank Bench;;mittel;5;biceps;cable
+og-0247;Cable Wrist Curl;Kabelzug Wrist Curl;;mittel;5;biceps;cable
+og-0285;Dumbbell Alternate Biceps Curl;Kurzhantel alternierend Biceps Curl;;mittel;5;biceps;dumbbell
+og-2403;Dumbbell Alternate Biceps Curl (With Arm Blaster);Kurzhantel alternierend Biceps Curl ( mit Arm Blaster);;mittel;5;biceps;dumbbell
+og-1646;Dumbbell Alternate Hammer Preacher Curl;Kurzhantel alternierend Hammer Scottcurl;;mittel;5;biceps;dumbbell
+og-1651;Dumbbell Bicep Curl Lunge With Bowling Motion;Kurzhantel Bicep Curl Ausfallschritt mit Bowling Motion;;niedrig;5;biceps;dumbbell
+og-1653;Dumbbell Bicep Curl With Stork Stance;Kurzhantel Bicep Curl mit Stork Stance;;niedrig;5;biceps;dumbbell
+og-0294;Dumbbell Biceps Curl;Kurzhantel Biceps Curl;;mittel;5;biceps;dumbbell
+og-2401;Dumbbell Biceps Curl (With Arm Blaster);Kurzhantel Biceps Curl ( mit Arm Blaster);;niedrig;5;biceps;dumbbell
+og-1654;Dumbbell Biceps Curl Reverse;Kurzhantel Biceps Curl Reverse;;niedrig;5;biceps;dumbbell
+og-1655;Dumbbell Biceps Curl Squat;Kurzhantel Biceps Curl Kniebeuge;;mittel;5;biceps;dumbbell
+og-0298;Dumbbell Cross Body Hammer Curl;Kurzhantel Cross Body Hammercurl;;mittel;5;biceps;dumbbell
+og-1657;Dumbbell Cross Body Hammer Curl V. 2;Kurzhantel Cross Body Hammercurl V. 2;;mittel;5;biceps;dumbbell
+og-1664;Dumbbell High Curl;Kurzhantel High Curl;;mittel;5;biceps;dumbbell
+og-0315;Dumbbell Incline Biceps Curl;Kurzhantel Schrägbank Biceps Curl;;mittel;5;biceps;dumbbell
+og-0322;Dumbbell Incline Inner Biceps Curl;Kurzhantel Schrägbank Inner Biceps Curl;;mittel;5;biceps;dumbbell
+og-1658;Dumbbell Lunge With Bicep Curl;Kurzhantel Ausfallschritt mit Bicep Curl;;mittel;5;biceps;dumbbell
+og-1661;Dumbbell Lying Supine Biceps Curl;Kurzhantel liegend Rückenliegend Biceps Curl;;mittel;5;biceps;dumbbell
+og-1663;Dumbbell One Arm Hammer Preacher Curl;Kurzhantel einarmig Hammer Scottcurl;;mittel;5;biceps;dumbbell
+og-1414;Dumbbell One Arm Reverse Preacher Curl;Kurzhantel einarmig Reverse Scottcurl;;mittel;5;biceps;dumbbell
+og-1667;Dumbbell One Arm Reverse Spider Curl;Kurzhantel einarmig Reverse Spider Curl;;niedrig;5;biceps;dumbbell
+og-0358;Dumbbell One Arm Reverse Wrist Curl;Kurzhantel einarmig Reverse Wrist Curl;;mittel;5;biceps;dumbbell
+og-1415;Dumbbell One Arm Seated Neutral Wrist Curl;Kurzhantel einarmig sitzend Neutral Wrist Curl;;mittel;5;biceps;dumbbell
+og-0364;Dumbbell One Arm Wrist Curl;Kurzhantel einarmig Wrist Curl;;mittel;5;biceps;dumbbell
+og-1672;Dumbbell One Arm Zottman Preacher Curl;Kurzhantel einarmig Zottman Scottcurl;;mittel;5;biceps;dumbbell
+og-0365;Dumbbell Over Bench Neutral Wrist Curl;Kurzhantel Over Bench Neutral Wrist Curl;;niedrig;5;biceps;dumbbell
+og-0366;Dumbbell Over Bench One Arm Neutral Wrist Curl;Kurzhantel Over Bench einarmig Neutral Wrist Curl;;niedrig;5;biceps;dumbbell
+og-1441;Dumbbell Over Bench One Arm Reverse Wrist Curl;Kurzhantel Over Bench einarmig Reverse Wrist Curl;;niedrig;5;biceps;dumbbell
+og-0367;Dumbbell Over Bench One Arm Wrist Curl;Kurzhantel Over Bench einarmig Wrist Curl;;niedrig;5;biceps;dumbbell
+og-0368;Dumbbell Over Bench Revers Wrist Curl;Kurzhantel Over Bench Revers Wrist Curl;;niedrig;5;biceps;dumbbell
+og-0369;Dumbbell Over Bench Wrist Curl;Kurzhantel Over Bench Wrist Curl;;niedrig;5;biceps;dumbbell
+og-0370;Dumbbell Peacher Hammer Curl;Kurzhantel Peacher Hammercurl;;mittel;5;biceps;dumbbell
+og-0382;Dumbbell Revers Grip Biceps Curl;Kurzhantel Revers Grip Biceps Curl;;niedrig;5;biceps;dumbbell
+og-0384;Dumbbell Reverse Preacher Curl;Kurzhantel Reverse Scottcurl;;mittel;5;biceps;dumbbell
+og-1675;Dumbbell Reverse Spider Curl;Kurzhantel Reverse Spider Curl;;niedrig;5;biceps;dumbbell
+og-0385;Dumbbell Reverse Wrist Curl;Kurzhantel Reverse Wrist Curl;;niedrig;5;biceps;dumbbell
+og-1677;Dumbbell Seated Bicep Curl;Kurzhantel sitzend Bicep Curl;;mittel;5;biceps;dumbbell
+og-3547;Dumbbell Seated Biceps Curl To Shoulder Press;Kurzhantel sitzend Biceps Curl zum Schulterdrücken;;mittel;5;biceps;dumbbell
+og-0393;Dumbbell Seated Inner Biceps Curl;Kurzhantel sitzend Inner Biceps Curl;;mittel;5;biceps;dumbbell
+og-0397;Dumbbell Seated Neutral Wrist Curl;Kurzhantel sitzend Neutral Wrist Curl;;mittel;5;biceps;dumbbell
+og-0401;Dumbbell Seated Palms Up Wrist Curl;Kurzhantel sitzend Palms Up Wrist Curl;;mittel;5;biceps;dumbbell
+og-0403;Dumbbell Seated Revers Grip Concentration Curl;Kurzhantel sitzend Revers Grip Konzentrationscurl;;mittel;5;biceps;dumbbell
+og-0416;Dumbbell Standing Biceps Curl;Kurzhantel stehend Biceps Curl;;mittel;5;biceps;dumbbell
+og-2321;Dumbbell Standing Inner Biceps Curl V. 2;Kurzhantel stehend Inner Biceps Curl V. 2;;mittel;5;biceps;dumbbell
+og-0422;Dumbbell Standing One Arm Curl (Over Incline Bench);Kurzhantel stehend einarmig Curl (over Schrägbank Bench);;mittel;5;biceps;dumbbell
+og-1680;Dumbbell Standing One Arm Curl Over Incline Bench;Kurzhantel stehend einarmig Curl Over Schrägbank Bench;;mittel;5;biceps;dumbbell
+og-0425;Dumbbell Standing One Arm Reverse Curl;Kurzhantel stehend einarmig Reverse Curl;;mittel;5;biceps;dumbbell
+og-0429;Dumbbell Standing Reverse Curl;Kurzhantel stehend Reverse Curl;;mittel;5;biceps;dumbbell
+og-2293;Dumbbell Standing Zottman Preacher Curl;Kurzhantel stehend Zottman Scottcurl;;mittel;5;biceps;dumbbell
+og-1684;Dumbbell Step Up Single Leg Balance With Bicep Curl;Kurzhantel Step-up einbeinig Balance mit Bicep Curl;;mittel;5;biceps;dumbbell
+og-5201;Dumbbell Waiter Biceps Curl;Kurzhantel Waiter Biceps Curl;;niedrig;5;biceps;dumbbell
+og-0439;Dumbbell Zottman Curl;Kurzhantel Zottman Curl;;mittel;5;biceps;dumbbell
+og-2294;Dumbbell Zottman Preacher Curl;Kurzhantel Zottman Scottcurl;;mittel;5;biceps;dumbbell
+og-0447;Ez Barbell Curl;Ez Langhantel Curl;;mittel;5;biceps;barbell
+og-0454;Ez Barbell Spider Curl;Ez Langhantel Spider Curl;;niedrig;5;biceps;barbell
+og-1628;Ez Barbell Spider Curl;Ez Langhantel Spider Curl;;niedrig;5;biceps;barbell
+og-2404;Ez-Bar Biceps Curl (With Arm Blaster);SZ-Stange Biceps Curl ( mit Arm Blaster);;niedrig;5;biceps;barbell
+og-2741;Ez-Barbell Standing Wide Grip Biceps Curl;Ez- Langhantel stehend Weiter Griff Biceps Curl;;mittel;5;biceps;barbell
+og-0575;Lever Bicep Curl;Maschine Bicep Curl;;mittel;5;biceps;machine
+og-1615;Lever Hammer Grip Preacher Curl;Maschine Hammer Grip Scottcurl;;mittel;5;biceps;machine
+og-0636;Olympic Barbell Hammer Curl;Olympic Langhantel Hammercurl;;mittel;5;biceps;barbell
+og-1683;Smith Machine Bicep Curl;Multipresse Bicep Curl;;mittel;5;biceps;machine
+og-1426;Smith Seated Wrist Curl;Multipresse sitzend Wrist Curl;;mittel;5;biceps;machine
+og-0771;Smith Standing Back Wrist Curl;Multipresse stehend Back Wrist Curl;;mittel;5;biceps;machine
+og-1370;Barbell Floor Calf Raise;Langhantel Floor Wadenheben;;mittel;5;calves;barbell
+og-0111;Barbell Standing Rocking Leg Calf Raise;Langhantel stehend Rocking Leg Wadenheben;;mittel;5;calves;barbell
+og-1380;Dumbbell Seated One Leg Calf Raise - Hammer Grip;Kurzhantel sitzend einbeinig Wadenheben - Hammer Grip;;mittel;5;calves;dumbbell
+og-1381;Dumbbell Seated One Leg Calf Raise - Palm Up;Kurzhantel sitzend einbeinig Wadenheben - Palm Up;;mittel;5;calves;dumbbell
+og-1383;Hack Calf Raise;Hack Wadenheben;;mittel;5;calves;machine
+og-1384;Hack One Leg Calf Raise;Hack einbeinig Wadenheben;;mittel;5;calves;machine
+og-1253;Lever Donkey Calf Raise;Maschine Donkey Wadenheben;;mittel;5;calves;machine
+og-1391;Sled Calf Press On Leg Press;Sled Calf Drücken auf Beinpresse;;mittel;5;calves;machine
+og-1392;Sled One Leg Calf Press On Leg Press;Sled einbeinig Calf Drücken auf Beinpresse;;mittel;5;calves;machine
+og-1393;Smith One Leg Floor Calf Raise;Multipresse einbeinig Floor Wadenheben;;mittel;5;calves;machine
+og-0763;Smith Reverse Calf Raises;Multipresse Reverse Calf Raises;;niedrig;5;calves;machine
+og-1394;Smith Reverse Calf Raises;Multipresse Reverse Calf Raises;;niedrig;5;calves;machine
+og-0009;Assisted Chest Dip (Kneeling);Unterstützt Chest Dip ( Kniend);;mittel;5;chest;machine
+og-2364;Assisted Wide-Grip Chest Dip (Kneeling);Unterstützt Weiter Griff Chest Dip ( Kniend);;mittel;5;chest;machine
+og-0045;Barbell Guillotine Bench Press;Langhantel Guillotine Bankdrücken;;mittel;5;chest;barbell
+og-0179;Cable Low Fly;Kabelzug Low Fliegende;;mittel;5;chest;cable
+og-0188;Cable Middle Fly;Kabelzug Middle Fliegende;;niedrig;5;chest;cable
+og-1262;Cable One Arm Decline Chest Fly;Kabelzug einarmig Negativbank Chest Fliegende;;mittel;5;chest;cable
+og-1285;Dumbbell One Arm Bench Fly;Kurzhantel einarmig Bench Fliegende;;mittel;5;chest;dumbbell
+og-1624;Dumbbell Reverse Bench Press;Kurzhantel Reverse Bankdrücken;;mittel;5;chest;dumbbell
+og-0458;Floor Fly (With Barbell);Floor Fliegende ( mit Langhantel);;mittel;5;chest;barbell
+og-3234;Hyght Dumbbell Fly;Hyght Kurzhantel Fliegende;;mittel;5;chest;dumbbell
+og-1301;Machine Inner Chest Press;Maschine Inner Brustpresse;;mittel;5;chest;machine
+og-1626;Smith Machine Reverse Decline Close Grip Bench Press;Multipresse Reverse Negativbank Enger Griff Bankdrücken;;mittel;5;chest;machine
+og-0012;Assisted Lying Leg Raise With Lateral Throw Down;Unterstützt liegend Beinheben mit Lateral Throw Down;;mittel;5;core;machine
+og-0013;Assisted Lying Leg Raise With Throw Down;Unterstützt liegend Beinheben mit Throw Down;;mittel;5;core;machine
+og-2799;Barbell Sitted Alternate Leg Raise;Langhantel Sitted alternierend Beinheben;;mittel;5;core;barbell
+og-2800;Barbell Sitted Alternate Leg Raise (Female);Langhantel Sitted alternierend Beinheben (female);;mittel;5;core;barbell
+og-0873;Cable Reverse Crunch;Kabelzug Reverse Crunch;;mittel;5;core;cable
+og-0223;Cable Side Crunch;Kabelzug Side Crunch;;mittel;5;core;cable
+og-0874;Cable Standing Crunch (With Rope Attachment);Kabelzug stehend Crunch ( mit Rope Attachment);;mittel;5;core;cable
+og-0242;Cable Tuck Reverse Crunch;Kabelzug Tuck Reverse Crunch;;niedrig;5;core;cable
+og-0595;Lever Seated Crunch (Chest Pad);Maschine sitzend Crunch (chest Pad);;mittel;5;core;machine
+og-0029;Barbell Clean-Grip Front Squat;Langhantel Umsetzen -grip Frontkniebeuge;;mittel;5;glutes;barbell
+og-0039;Barbell Front Chest Squat;Langhantel Vorne Chest Kniebeuge;;mittel;5;glutes;barbell
+og-0043;Barbell Full Squat;Langhantel Full Kniebeuge;;mittel;5;glutes;barbell
+og-1461;Barbell Full Squat (Back Pov);Langhantel Full Kniebeuge (back Pov);;niedrig;5;glutes;barbell
+og-1462;Barbell Full Squat (Side Pov);Langhantel Full Kniebeuge (side Pov);;niedrig;5;glutes;barbell
+og-1545;Barbell Full Zercher Squat;Langhantel Full Zercher Kniebeuge;;niedrig;5;glutes;barbell
+og-3562;Barbell Glute Bridge Two Legs On Bench (Male);Langhantel Glute Bridge Two Legs auf Bench (male);;niedrig;5;glutes;barbell
+og-1436;Barbell High Bar Squat;Langhantel High Bar Kniebeuge;;mittel;5;glutes;barbell
+og-0051;Barbell Jefferson Squat;Langhantel Jefferson Kniebeuge;;niedrig;5;glutes;barbell
+og-1410;Barbell Lateral Lunge;Langhantel Lateral Ausfallschritt;;mittel;5;glutes;barbell
+og-1435;Barbell Low Bar Squat;Langhantel Low Bar Kniebeuge;;mittel;5;glutes;barbell
+og-0063;Barbell Narrow Stance Squat;Langhantel eng Stance Kniebeuge;;mittel;5;glutes;barbell
+og-0066;Barbell One Arm Side Deadlift;Langhantel einarmig Side Kreuzheben;;mittel;5;glutes;barbell
+og-0078;Barbell Rear Lunge;Langhantel Rear Ausfallschritt;;mittel;5;glutes;barbell
+og-0077;Barbell Rear Lunge V. 2;Langhantel Rear Ausfallschritt V. 2;;mittel;5;glutes;barbell
+og-0101;Barbell Speed Squat;Langhantel Speed Kniebeuge;;mittel;5;glutes;barbell
+og-0117;Barbell Sumo Deadlift;Langhantel Sumo Kreuzheben;;mittel;5;glutes;barbell
+og-0127;Barbell Zercher Squat;Langhantel Zercher Kniebeuge;;mittel;5;glutes;barbell
+og-0291;Dumbbell Bench Squat;Kurzhantel Bench Kniebeuge;;mittel;5;glutes;dumbbell
+og-3635;Dumbbell Contralateral Forward Lunge;Kurzhantel Contralateral Forward Ausfallschritt;;niedrig;5;glutes;dumbbell
+og-0371;Dumbbell Plyo Squat;Kurzhantel Plyo Kniebeuge;;mittel;5;glutes;dumbbell
+og-0381;Dumbbell Rear Lunge;Kurzhantel Rear Ausfallschritt;;mittel;5;glutes;dumbbell
+og-2805;Dumbbell Single Leg Deadlift With Stepbox Support;Kurzhantel einbeinig Kreuzheben mit Stepbox Support;;mittel;5;glutes;dumbbell
+og-0434;Dumbbell Straight Leg Deadlift;Kurzhantel Straight Leg Kreuzheben;;niedrig;5;glutes;dumbbell
+og-3194;Frankenstein Squat;Frankenstein Kniebeuge;;niedrig;5;glutes;barbell
+og-2611;Lever Horizontal One Leg Press;Maschine Horizontal One Beinpresse;;niedrig;5;glutes;machine
+og-1425;Sled 45 Degrees One Leg Press;Sled 45 Degrees One Beinpresse;;niedrig;5;glutes;machine
+og-0739;Sled 45° Leg Press;Sled 45° Beinpresse;;mittel;5;glutes;machine
+og-1464;Sled 45° Leg Press (Back Pov);Sled 45° Beinpresse (back Pov);;niedrig;5;glutes;machine
+og-1463;Sled 45° Leg Press (Side Pov);Sled 45° Beinpresse (side Pov);;niedrig;5;glutes;machine
+og-1433;Smith Front Squat (Clean Grip);Multipresse Frontkniebeuge ( Umsetzen Grip);;mittel;5;glutes;machine
+og-3281;Smith Full Squat;Multipresse Full Kniebeuge;;mittel;5;glutes;machine
+og-1434;Smith Low Bar Squat;Multipresse Low Bar Kniebeuge;;mittel;5;glutes;machine
+og-0769;Smith Sprint Lunge;Multipresse Sprint Ausfallschritt;;mittel;5;glutes;machine
+og-3142;Smith Sumo Squat;Multipresse Sumo Kniebeuge;;mittel;5;glutes;machine
+og-0811;Trap Bar Deadlift;Trap Bar Kreuzheben;;niedrig;5;glutes;barbell
+og-0116;Barbell Straight Leg Deadlift;Langhantel Straight Leg Kreuzheben;;niedrig;5;hamstrings;barbell
+og-3235;Cable Assisted Inverse Leg Curl;Kabelzug Unterstützt Inverse Beinbeuger;;mittel;5;hamstrings;cable
+og-3195;Lever Lying Two-One Leg Curl;Maschine liegend Two-one Beinbeuger;;mittel;5;hamstrings;machine
+og-0024;Barbell Bench Front Squat;Langhantel Bench Frontkniebeuge;;mittel;5;quads;barbell
+og-0026;Barbell Bench Squat;Langhantel Bench Kniebeuge;;mittel;5;quads;barbell
+og-0102;Barbell Squat (On Knees);Langhantel Kniebeuge ( auf Knees);;mittel;5;quads;barbell
+og-2798;Barbell Squat Jump Step Rear Lunge;Langhantel Kniebeuge Sprung Step Rear Ausfallschritt;;mittel;5;quads;barbell
+og-1760;Dumbbell Goblet Squat;Kurzhantel Goblet Kniebeuge;;mittel;5;quads;dumbbell
+og-2803;Dumbbell Supported Squat;Kurzhantel Supported Kniebeuge;;niedrig;5;quads;dumbbell
+og-0786;Squat Jerk;Kniebeuge Jerk;;niedrig;5;quads;barbell
+og-0086;Barbell Seated Behind Head Military Press;Langhantel sitzend Behind Head Nackendrücken;;mittel;5;shoulders;barbell
+og-0107;Barbell Standing Front Raise Over Head;Langhantel stehend Frontheben Over Head;;mittel;5;shoulders;barbell
+og-0154;Cable Cross-Over Revers Fly;Kabelzug Cross-over Revers Fliegende;;niedrig;5;shoulders;cable
+og-3697;Cable Kneeling Rear Delt Row (With Rope) (Male);Kabelzug kniend Hintere Schulter Rudern ( mit Rope) (male);;mittel;5;shoulders;cable
+og-0202;Cable Rear Delt Row (Stirrups);Kabelzug Hintere Schulter Rudern (stirrups);;mittel;5;shoulders;cable
+og-0203;Cable Rear Delt Row (With Rope);Kabelzug Hintere Schulter Rudern ( mit Rope);;mittel;5;shoulders;cable
+og-0225;Cable Standing Cross-Over High Reverse Fly;Kabelzug stehend Cross-over High Reverse Fliegende;;mittel;5;shoulders;cable
+og-0311;Dumbbell Full Can Lateral Raise;Kurzhantel Full Can Seitheben;;mittel;5;shoulders;dumbbell
+og-0335;Dumbbell Lateral To Front Raise;Kurzhantel Lateral zum Frontheben;;mittel;5;shoulders;dumbbell
+og-0356;Dumbbell One Arm Lateral Raise With Support;Kurzhantel einarmig Seitheben mit Support;;mittel;5;shoulders;dumbbell
+og-0378;Dumbbell Rear Fly;Kurzhantel Rear Fliegende;;mittel;5;shoulders;dumbbell
+og-0380;Dumbbell Rear Lateral Raise;Kurzhantel Rear Seitheben;;mittel;5;shoulders;dumbbell
+og-0379;Dumbbell Rear Lateral Raise (Support Head);Kurzhantel Rear Seitheben (support Head);;niedrig;5;shoulders;dumbbell
+og-2317;Dumbbell Seated Bent Arm Lateral Raise;Kurzhantel sitzend Bent Arm Seitheben;;mittel;5;shoulders;dumbbell
+og-0404;Dumbbell Seated Shoulder Press (Parallel Grip);Kurzhantel sitzend Schulterdrücken (parallel Grip);;mittel;5;shoulders;dumbbell
+og-0419;Dumbbell Standing Front Raise Above Head;Kurzhantel stehend Frontheben Above Head;;mittel;5;shoulders;dumbbell
+og-1765;Dumbbell Upright Row (Back Pov);Kurzhantel Aufrechtes Rudern (back Pov);;mittel;5;shoulders;dumbbell
+og-3237;Landmine Lateral Raise;Landmine Seitheben;;mittel;5;shoulders;barbell
+og-0601;Lever Seated Reverse Fly (Parallel Grip);Maschine sitzend Reverse Fliegende (parallel Grip);;mittel;5;shoulders;machine
+og-0772;Smith Standing Behind Head Military Press;Multipresse stehend Behind Head Nackendrücken;;mittel;5;shoulders;machine
+og-0019;Assisted Triceps Dip (Kneeling);Unterstützt Triceps Dip ( Kniend);;mittel;5;triceps;machine
+og-2187;Barbell Reverse Close-Grip Bench Press;Langhantel Reverse Enger Griff Bankdrücken;;mittel;5;triceps;barbell
+og-1721;Barbell Reverse Grip Skullcrusher;Langhantel Untergriff Skullcrusher;;mittel;5;triceps;barbell
+og-1723;Cable One Arm Tricep Pushdown;Kabelzug einarmig Tricep Trizepsdrücken;;mittel;5;triceps;cable
+og-0194;Cable Overhead Triceps Extension (Rope Attachment);Kabelzug überkopf Trizepsstrecken (rope Attachment);;mittel;5;triceps;cable
+og-0200;Cable Pushdown (With Rope Attachment);Kabelzug Trizepsdrücken ( mit Rope Attachment);;niedrig;5;triceps;cable
+og-2406;Cable Reverse Grip Triceps Pushdown (Sz-Bar) (With Arm Blaster);Kabelzug Untergriff Triceps Trizepsdrücken (sz-bar) ( mit Arm Blaster);;niedrig;5;triceps;cable
+og-0241;Cable Triceps Pushdown (V-Bar);Kabelzug Triceps Trizepsdrücken (v-bar);;niedrig;5;triceps;cable
+og-2405;Cable Triceps Pushdown (V-Bar) (With Arm Blaster);Kabelzug Triceps Trizepsdrücken (v-bar) ( mit Arm Blaster);;niedrig;5;triceps;cable
+og-1732;Dumbbell Forward Lunge Triceps Extension;Kurzhantel Forward Ausfallschritt Trizepsstrecken;;mittel;5;triceps;dumbbell
+og-0344;Dumbbell Lying One Arm Pronated Triceps Extension;Kurzhantel liegend einarmig Pronated Trizepsstrecken;;mittel;5;triceps;dumbbell
+og-0346;Dumbbell Lying One Arm Supinated Triceps Extension;Kurzhantel liegend einarmig Supinated Trizepsstrecken;;mittel;5;triceps;dumbbell
+og-1623;Dumbbell Palms In Incline Bench Press;Kurzhantel Palms In Schrägbank Bankdrücken;;mittel;5;triceps;dumbbell
+og-0373;Dumbbell Pronate-Grip Triceps Extension;Kurzhantel Pronate-grip Trizepsstrecken;;mittel;5;triceps;dumbbell
+og-1743;Dumbbell Twisting Bench Press;Kurzhantel Twisting Bankdrücken;;mittel;5;triceps;dumbbell
+og-2189;Dumbbells Seated Triceps Extension;Dumbbells sitzend Trizepsstrecken;;mittel;5;triceps;dumbbell
+og-1748;Ez Bar Lying Close Grip Triceps Extension Behind Head;SZ-Stange liegend Enger Griff Trizepsstrecken Behind Head;;mittel;5;triceps;barbell
+og-0450;Ez Barbell Jm Bench Press;Ez Langhantel Jm Bankdrücken;;mittel;5;triceps;barbell
+og-0591;Lever Overhand Triceps Dip;Maschine Overhand Triceps Dip;;niedrig;5;triceps;machine
+og-0637;Olympic Barbell Triceps Extension;Olympic Langhantel Trizepsstrecken;;mittel;5;triceps;barbell
+og-1316;Barbell Bent Arm Pullover;Langhantel Bent Arm Pullover;;mittel;4;back;barbell
+og-0034;Barbell Decline Bent Arm Pullover;Langhantel Negativbank Bent Arm Pullover;;mittel;4;back;barbell
+og-3019;Bench Pull-Ups;Bench Pull-ups;;niedrig;4;back;bodyweight
+og-3168;Bodyweight Squatting Row;Eigengewicht Squatting Rudern;;niedrig;4;back;bodyweight
+og-0184;Cable Lying Extension Pullover (With Rope Attachment);Kabelzug liegend Strecken Pullover ( mit Rope Attachment);;mittel;4;back;cable
+og-0244;Cable Twisting Pull;Kabelzug Twisting Pull;;niedrig;4;back;cable
+og-0253;Chin-Ups (Narrow Parallel Grip);Chin-ups ( eng Parallel Grip);;niedrig;4;back;bodyweight
+og-1772;Elbow Lift - Reverse Push-Up;Elbow Lift - Reverse Liegestütz;;niedrig;4;back;bodyweight
+og-3010;Ez Bar Lying Bent Arms Pullover;SZ-Stange liegend Bent Arms Pullover;;mittel;4;back;barbell
+og-0499;Inverted Row;Inverted Rudern;;niedrig;4;back;bodyweight
+og-2300;Inverted Row Bent Knees;Inverted Rudern Bent Knees;;niedrig;4;back;bodyweight
+og-2298;Inverted Row On Bench;Inverted Rudern auf Bench;;niedrig;4;back;bodyweight
+og-0497;Inverted Row V. 2;Inverted Rudern V. 2;;niedrig;4;back;bodyweight
+og-0498;Inverted Row With Straps;Inverted Rudern mit Straps;;niedrig;4;back;bodyweight
+og-1352;Lower Back Curl;Lower Back Curl;;niedrig;4;back;bodyweight
+og-0627;Mixed Grip Chin-Up;Mixed Grip Klimmzug Untergriff;;niedrig;4;back;bodyweight
+og-0670;Rear Pull-Up;Rear Klimmzug;;mittel;4;back;bodyweight
+og-0678;Rocky Pull-Up Pulldown;Rocky Klimmzug Latzug;;mittel;4;back;bodyweight
+og-3012;Scapula Dips;Scapula Dips;;niedrig;4;back;bodyweight
+og-0688;Scapular Pull-Up;Scapular Klimmzug;;niedrig;4;back;bodyweight
+og-1763;Shoulder Grip Pull-Up;Shoulder Grip Klimmzug;;niedrig;4;back;bodyweight
+og-0808;Suspended Row;Suspended Rudern;;niedrig;4;back;bodyweight
+og-1367;Wide Grip Rear Pull-Up;Weiter Griff Rear Klimmzug;;mittel;4;back;bodyweight
+og-1770;Biceps Leg Concentration Curl;Biceps Leg Konzentrationscurl;;mittel;4;biceps;bodyweight
+og-0139;Biceps Narrow Pull-Ups;Biceps eng Pull-ups;;niedrig;4;biceps;bodyweight
+og-0140;Biceps Pull-Up;Biceps Klimmzug;;niedrig;4;biceps;bodyweight
+og-1769;Bodyweight Side Lying Biceps Curl;Eigengewicht Side liegend Biceps Curl;;mittel;4;biceps;bodyweight
+og-1437;Dumbbell Finger Curls;Kurzhantel Finger Curls;;niedrig;4;biceps;dumbbell
+og-2402;Dumbbell Hammer Curls (With Arm Blaster);Kurzhantel Hammer Curls ( mit Arm Blaster);;niedrig;4;biceps;dumbbell
+og-0347;Dumbbell Lying Pronation;Kurzhantel liegend Pronation;;niedrig;4;biceps;dumbbell
+og-2705;Dumbbell Lying Pronation On Floor;Kurzhantel liegend Pronation auf Floor;;niedrig;4;biceps;dumbbell
+og-0349;Dumbbell Lying Supination;Kurzhantel liegend Supination;;niedrig;4;biceps;dumbbell
+og-2706;Dumbbell Lying Supination On Floor;Kurzhantel liegend Supination auf Floor;;niedrig;4;biceps;dumbbell
+og-0399;Dumbbell Seated One Arm Rotate;Kurzhantel sitzend einarmig Rotate;;mittel;4;biceps;dumbbell
+og-1458;Ez Barbell Seated Curls;Ez Langhantel sitzend Curls;;mittel;4;biceps;barbell
+og-0455;Finger Curls;Finger Curls;;niedrig;4;biceps;barbell
+og-2288;Lever Gripper Hands;Maschine Gripper Hands;;niedrig;4;biceps;machine
+og-1708;Assisted Lying Calves Stretch;Unterstützt liegend Calves Dehnung;;mittel;4;calves;machine
+og-0284;Donkey Calf Raise;Donkey Wadenheben;;mittel;4;calves;bodyweight
+og-2289;Lever Calf Press;Maschine Calf Drücken;;mittel;4;calves;machine
+og-2315;Lever Rotary Calf;Maschine Rotary Calf;;niedrig;4;calves;machine
+og-2335;Lever Seated Calf Press;Maschine sitzend Calf Drücken;;mittel;4;calves;machine
+og-1386;One Leg Donkey Calf Raise;einbeinig Donkey Wadenheben;;mittel;4;calves;bodyweight
+og-1387;One Leg Floor Calf Raise;einbeinig Floor Wadenheben;;mittel;4;calves;bodyweight
+og-1396;Smith Toe Raise;Multipresse Toe Heben;;mittel;4;calves;machine
+og-1490;Standing Calf Raise (On A Staircase);stehend Wadenheben ( auf A Staircase);;mittel;4;calves;bodyweight
+og-0833;Weighted Donkey Calf Raise;mit Zusatzgewicht Donkey Wadenheben;;mittel;4;calves;bodyweight
+og-1259;Behind Head Chest Stretch;Behind Head Chest Dehnung;;niedrig;4;chest;machine
+og-0155;Cable Cross-Over Variation;Kabelzug Cross-over Variation;;niedrig;4;chest;cable
+og-0191;Cable One Arm Lateral Bent-Over;Kabelzug einarmig Lateral vorgebeugt;;mittel;4;chest;cable
+og-1269;Cable Standing Up Straight Crossovers;Kabelzug stehend Up Straight Crossovers;;niedrig;4;chest;cable
+og-1270;Cable Upper Chest Crossovers;Kabelzug Upper Chest Crossovers;;niedrig;4;chest;cable
+og-0251;Chest Dip;Chest Dip;;niedrig;4;chest;bodyweight
+og-1430;Chest Dip (On Dip-Pull-Up Cage);Chest Dip ( auf Dip - Klimmzug Cage);;mittel;4;chest;bodyweight
+og-2462;Chest Dip On Straight Bar;Chest Dip auf Straight Bar;;niedrig;4;chest;bodyweight
+og-3216;Chest Tap Push-Up (Male);Chest Tap Liegestütz (male);;niedrig;4;chest;bodyweight
+og-0258;Clock Push-Up;Clock Liegestütz;;niedrig;4;chest;bodyweight
+og-1274;Deep Push Up;Deep Liegestütz;;mittel;4;chest;dumbbell
+og-0288;Dumbbell Around Pullover;Kurzhantel Around Pullover;;mittel;4;chest;dumbbell
+og-0303;Dumbbell Decline Hammer Press;Kurzhantel Negativbank Hammer Drücken;;mittel;4;chest;dumbbell
+og-0316;Dumbbell Incline Breeding;Kurzhantel Schrägbank Breeding;;mittel;4;chest;dumbbell
+og-0321;Dumbbell Incline Hammer Press;Kurzhantel Schrägbank Hammer Drücken;;mittel;4;chest;dumbbell
+og-0324;Dumbbell Incline Palm-In Press;Kurzhantel Schrägbank Palm-in Drücken;;mittel;4;chest;dumbbell
+og-0331;Dumbbell Incline Twisted Flyes;Kurzhantel Schrägbank Twisted Flyes;;niedrig;4;chest;dumbbell
+og-0340;Dumbbell Lying Hammer Press;Kurzhantel liegend Hammer Drücken;;mittel;4;chest;dumbbell
+og-0433;Dumbbell Straight Arm Pullover;Kurzhantel Straight Arm Pullover;;niedrig;4;chest;dumbbell
+og-3327;Full Planche Push-Up;Full Planche Liegestütz;;niedrig;4;chest;bodyweight
+og-2139;Hands Bike;Hands Bike;;niedrig;4;chest;machine
+og-3785;Incline Push-Up (On Box);Schrägbank Liegestütz ( auf Box);;mittel;4;chest;bodyweight
+og-3211;Kneeling Push-Up (Male);kniend Liegestütz (male);;mittel;4;chest;bodyweight
+og-3288;Korean Dips;Korean Dips;;niedrig;4;chest;bodyweight
+og-3217;Modified Hindu Push-Up (Male);Modified Hindu Liegestütz (male);;niedrig;4;chest;bodyweight
+og-3145;Push-Up Plus;Liegestütz Plus;;mittel;4;chest;bodyweight
+og-0699;Shoulder Tap Push-Up;Shoulder Tap Liegestütz;;niedrig;4;chest;bodyweight
+og-0803;Superman Push-Up;Superman Liegestütz;;niedrig;4;chest;bodyweight
+og-0806;Suspended Push-Up;Suspended Liegestütz;;niedrig;4;chest;bodyweight
+og-3313;Weighted Straight Bar Dip;mit Zusatzgewicht Straight Bar Dip;;niedrig;4;chest;bodyweight
+og-2363;Wide-Grip Chest Dip On High Parallel Bars;Weiter Griff Chest Dip auf High Parallel Bars;;niedrig;4;chest;bodyweight
+og-0011;Assisted Hanging Knee Raise;Unterstützt Hanging Knieheben;;mittel;4;core;machine
+og-0010;Assisted Hanging Knee Raise With Throw Down;Unterstützt Hanging Knieheben mit Throw Down;;niedrig;4;core;machine
+og-1714;Assisted Prone Rectus Femoris Stretch;Unterstützt Bauchliegend Rectus Femoris Dehnung;;mittel;4;core;machine
+og-0050;Barbell Incline Shoulder Raise;Langhantel Schrägbank Shoulder Heben;;mittel;4;core;barbell
+og-0096;Barbell Side Bent V. 2;Langhantel Side Bent V. 2;;niedrig;4;core;barbell
+og-3544;Bodyweight Incline Side Plank;Eigengewicht Schrägbank Side Unterarmstütz;;mittel;4;core;bodyweight
+og-0174;Cable Judo Flip;Kabelzug Judo Flip;;niedrig;4;core;cable
+og-0222;Cable Side Bend;Kabelzug Side Bend;;niedrig;4;core;cable
+og-0230;Cable Standing Lift;Kabelzug stehend Lift;;mittel;4;core;cable
+og-0862;Cable Twist (Up-Down);Kabelzug Drehung (up-down);;mittel;4;core;cable
+og-0262;Cross Body Crunch;Cross Body Crunch;;niedrig;4;core;bodyweight
+og-0267;Crunch (Hands Overhead);Crunch (hands Überkopf);;mittel;4;core;bodyweight
+og-0274;Crunch Floor;Crunch Floor;;niedrig;4;core;bodyweight
+og-3016;Curl-Up;Curl -up;;mittel;4;core;bodyweight
+og-0328;Dumbbell Incline Shoulder Raise;Kurzhantel Schrägbank Shoulder Heben;;mittel;4;core;dumbbell
+og-0407;Dumbbell Side Bend;Kurzhantel Side Bend;;niedrig;4;core;dumbbell
+og-2429;Frog Crunch;Frog Crunch;;mittel;4;core;bodyweight
+og-0469;Groin Crunch;Groin Crunch;;niedrig;4;core;bodyweight
+og-0472;Hanging Leg Raise;Hanging Beinheben;;niedrig;4;core;bodyweight
+og-0475;Hanging Straight Leg Raise;Hanging Straight Beinheben;;niedrig;4;core;bodyweight
+og-3640;Knee Touch Crunch;Knee Touch Crunch;;niedrig;4;core;bodyweight
+og-3239;Kneeling Plank Tap Shoulder (Male);kniend Unterarmstütz Tap Shoulder (male);;niedrig;4;core;bodyweight
+og-0562;Landmine 180;Landmine 180;;niedrig;4;core;barbell
+og-0620;Lying Leg Raise Flat Bench;liegend Beinheben Flat Bench;;niedrig;4;core;bodyweight
+og-0634;Negative Crunch;Negative Crunch;;niedrig;4;core;bodyweight
+og-1495;Oblique Crunch V. 2;Oblique Crunch V. 2;;niedrig;4;core;bodyweight
+og-0635;Oblique Crunches Floor;Oblique Crunches Floor;;niedrig;4;core;bodyweight
+og-3119;Potty Squat;Potty Kniebeuge;;niedrig;4;core;bodyweight
+og-3665;Power Point Plank;Power Point Unterarmstütz;;niedrig;4;core;bodyweight
+og-0664;Push-Up To Side Plank;Liegestütz zum Side Unterarmstütz;;mittel;4;core;bodyweight
+og-0872;Reverse Crunch;Reverse Crunch;;niedrig;4;core;bodyweight
+og-3663;Reverse Plank With Leg Lift;Reverse Unterarmstütz mit Leg Lift;;niedrig;4;core;bodyweight
+og-3021;Scapula Push-Up;Scapula Liegestütz;;niedrig;4;core;bodyweight
+og-0756;Smith Hip Raise;Multipresse Hip Heben;;mittel;4;core;machine
+og-0759;Smith Incline Shoulder Raises;Multipresse Schrägbank Shoulder Raises;;niedrig;4;core;machine
+og-0777;Spell Caster;Spell Caster;;niedrig;4;core;dumbbell
+og-0807;Suspended Reverse Crunch;Suspended Reverse Crunch;;niedrig;4;core;bodyweight
+og-0871;Tuck Crunch;Tuck Crunch;;mittel;4;core;bodyweight
+og-2802;Twisted Leg Raise;Twisted Beinheben;;niedrig;4;core;bodyweight
+og-2801;Twisted Leg Raise (Female);Twisted Beinheben (female);;niedrig;4;core;bodyweight
+og-0826;Vertical Leg Raise (On Parallel Bars);Vertical Beinheben ( auf Parallel Bars);;niedrig;4;core;bodyweight
+og-1709;Assisted Lying Glutes Stretch;Unterstützt liegend Glutes Dehnung;;mittel;4;glutes;machine
+og-1710;Assisted Lying Gluteus And Piriformis Stretch;Unterstützt liegend Gluteus And Piriformis Dehnung;;niedrig;4;glutes;machine
+og-0058;Barbell Lying Lifting (On Hip);Langhantel liegend Lifting ( auf Hip);;niedrig;4;glutes;barbell
+og-0074;Barbell Rack Pull;Langhantel Rack Pull;;niedrig;4;glutes;barbell
+og-3543;Bodyweight Drop Jump Squat;Eigengewicht Drop Sprung Kniebeuge;;mittel;4;glutes;bodyweight
+og-0196;Cable Pull Through (With Rope);Kabelzug Pull Through ( mit Rope);;niedrig;4;glutes;cable
+og-3769;Curtsey Squat;Curtsey Kniebeuge;;niedrig;4;glutes;bodyweight
+og-2808;Dumbbell Sumo Pull Through;Kurzhantel Sumo Pull Through;;niedrig;4;glutes;dumbbell
+og-3470;Forward Lunge (Male);Forward Ausfallschritt (male);;niedrig;4;glutes;bodyweight
+og-3561;Glute Bridge March;Glute Bridge March;;mittel;4;glutes;bodyweight
+og-3523;Glute Bridge Two Legs On Bench (Male);Glute Bridge Two Legs auf Bench (male);;niedrig;4;glutes;bodyweight
+og-2286;Lever Hip Extension V. 2;Maschine Hip Strecken V. 2;;mittel;4;glutes;machine
+og-0593;Lever Reverse Hyperextension;Maschine Reverse Hyperextension;;mittel;4;glutes;machine
+og-3013;Low Glute Bridge On Floor;Low Glute Bridge auf Floor;;mittel;4;glutes;bodyweight
+og-0642;Outside Leg Kick Push-Up;Outside Leg Kick Liegestütz;;niedrig;4;glutes;bodyweight
+og-3662;Pike-To-Cobra Push-Up;Pike- zum -cobra Liegestütz;;niedrig;4;glutes;bodyweight
+og-3132;Potty Squat With Support;Potty Kniebeuge mit Support;;niedrig;4;glutes;bodyweight
+og-0661;Push-Up Inside Leg Kick;Liegestütz Inside Leg Kick;;niedrig;4;glutes;bodyweight
+og-1759;Single Leg Squat (Pistol) Male;einbeinig Kniebeuge (pistol) Male;;niedrig;4;glutes;bodyweight
+og-0749;Smith Bent Knee Good Morning;Multipresse Bent Knee Good Morning;;mittel;4;glutes;machine
+og-1460;Walking Lunge;Walking Ausfallschritt;;niedrig;4;glutes;bodyweight
+og-3643;Weighted Cossack Squats (Male);mit Zusatzgewicht Cossack Squats (male);;niedrig;4;glutes;bodyweight
+og-0016;Assisted Prone Hamstring;Unterstützt Bauchliegend Hamstring;;niedrig;4;hamstrings;machine
+og-0339;Dumbbell Lying Femoral;Kurzhantel liegend Femoral;;mittel;4;hamstrings;dumbbell
+og-0496;Inverse Leg Curl (Bench Support);Inverse Beinbeuger (bench Support);;niedrig;4;hamstrings;bodyweight
+og-2400;Inverse Leg Curl (On Pull-Up Cable Machine);Inverse Beinbeuger ( auf Klimmzug Kabelzug Maschine);;mittel;4;hamstrings;bodyweight
+og-0648;Power Clean;Power Umsetzen;;niedrig;4;hamstrings;barbell
+og-0795;Standing Single Leg Curl;stehend Single Beinbeuger;;mittel;4;hamstrings;bodyweight
+og-1713;Assisted Prone Lying Quads Stretch;Unterstützt Bauchliegend liegend Quads Dehnung;;mittel;4;quads;machine
+og-1712;Assisted Side Lying Adductor Stretch;Unterstützt Side liegend Adductor Dehnung;;mittel;4;quads;machine
+og-0168;Cable Hip Adduction;Kabelzug Hip Adduktion;;mittel;4;quads;cable
+og-2133;Farmers Walk;Farmers Walk;;niedrig;4;quads;dumbbell
+og-1775;Side Plank Hip Adduction;Side Unterarmstütz Hip Adduktion;;mittel;4;quads;bodyweight
+og-1489;Sissy Squat;Sissy Kniebeuge;;niedrig;4;quads;bodyweight
+og-0776;Snatch Pull;Reißen Pull;;mittel;4;quads;barbell
+og-2368;Split Squats;Split Squats;;niedrig;4;quads;bodyweight
+og-1685;Squat To Overhead Reach;Kniebeuge zum überkopf Reach;;mittel;4;quads;bodyweight
+og-1686;Squat To Overhead Reach With Twist;Kniebeuge zum überkopf Reach mit Drehung;;mittel;4;quads;bodyweight
+og-0809;Suspended Split Squat;Suspended Split Kniebeuge;;mittel;4;quads;bodyweight
+og-0851;Weighted Sissy Squat;mit Zusatzgewicht Sissy Kniebeuge;;mittel;4;quads;bodyweight
+og-0087;Barbell Seated Bradford Rocky Press;Langhantel sitzend Bradford Rocky Drücken;;niedrig;4;shoulders;barbell
+og-0100;Barbell Skier;Langhantel Skier;;niedrig;4;shoulders;barbell
+og-0105;Barbell Standing Bradford Press;Langhantel stehend Bradford Drücken;;mittel;4;shoulders;barbell
+og-0161;Cable Forward Raise;Kabelzug Forward Heben;;niedrig;4;shoulders;cable
+og-0164;Cable Front Shoulder Raise;Kabelzug Vorne Shoulder Heben;;mittel;4;shoulders;cable
+og-0216;Cable Seated Shoulder Internal Rotation;Kabelzug sitzend Shoulder Internal Rotation;;niedrig;4;shoulders;cable
+og-0235;Cable Standing Shoulder External Rotation;Kabelzug stehend Shoulder External Rotation;;niedrig;4;shoulders;cable
+og-0286;Dumbbell Alternate Side Press;Kurzhantel alternierend Side Drücken;;mittel;4;shoulders;dumbbell
+og-2137;Dumbbell Arnold Press;Kurzhantel Arnold Drücken;;mittel;4;shoulders;dumbbell
+og-0287;Dumbbell Arnold Press V. 2;Kurzhantel Arnold Drücken V. 2;;mittel;4;shoulders;dumbbell
+og-0290;Dumbbell Bench Seated Press;Kurzhantel Bench sitzend Drücken;;mittel;4;shoulders;dumbbell
+og-0299;Dumbbell Cuban Press;Kurzhantel Cuban Drücken;;mittel;4;shoulders;dumbbell
+og-2136;Dumbbell Cuban Press V. 2;Kurzhantel Cuban Drücken V. 2;;mittel;4;shoulders;dumbbell
+og-0332;Dumbbell Iron Cross;Kurzhantel Iron Cross;;niedrig;4;shoulders;dumbbell
+og-0863;Dumbbell Lying External Shoulder Rotation;Kurzhantel liegend External Shoulder Rotation;;niedrig;4;shoulders;dumbbell
+og-2470;Dumbbell Lying On Floor Rear Delt Raise;Kurzhantel liegend auf Floor Hintere Schulter Heben;;mittel;4;shoulders;dumbbell
+og-0341;Dumbbell Lying One Arm Deltoid Rear;Kurzhantel liegend einarmig Deltoid Rear;;mittel;4;shoulders;dumbbell
+og-0377;Dumbbell Rear Delt Row_shoulder;Kurzhantel Hintere Schulter Rudern _shoulder;;mittel;4;shoulders;dumbbell
+og-2397;Dumbbell Scott Press;Kurzhantel Scott Drücken;;mittel;4;shoulders;dumbbell
+og-3546;Dumbbell Seated Alternate Shoulder;Kurzhantel sitzend alternierend Shoulder;;mittel;4;shoulders;dumbbell
+og-0408;Dumbbell Side Lying One Hand Raise;Kurzhantel Side liegend One Hand Heben;;mittel;4;shoulders;dumbbell
+og-2143;Dumbbell Standing Around World;Kurzhantel stehend Around World;;niedrig;4;shoulders;dumbbell
+og-0424;Dumbbell Standing One Arm Palm In Press;Kurzhantel stehend einarmig Palm In Drücken;;mittel;4;shoulders;dumbbell
+og-0427;Dumbbell Standing Palms In Press;Kurzhantel stehend Palms In Drücken;;mittel;4;shoulders;dumbbell
+og-0864;Dumbbell Upright Shoulder External Rotation;Kurzhantel Upright Shoulder External Rotation;;niedrig;4;shoulders;dumbbell
+og-0445;Ez Barbell Anti Gravity Press;Ez Langhantel Anti Gravity Drücken;;niedrig;4;shoulders;barbell
+og-1720;Barbell Lying Back Of The Head Tricep Extension;Langhantel liegend Back Of The Head Tricep Strecken;;niedrig;4;triceps;barbell
+og-0065;Barbell One Arm Floor Press;Langhantel einarmig Floor Drücken;;mittel;4;triceps;barbell
+og-1751;Barbell Pin Presses;Langhantel Pin Presses;;niedrig;4;triceps;barbell
+og-0129;Bench Dip (Knees Bent);Bench Dip (knees Bent);;niedrig;4;triceps;bodyweight
+og-1399;Bench Dip On Floor;Bench Dip auf Floor;;niedrig;4;triceps;bodyweight
+og-0152;Cable Concentration Extension (On Knee);Kabelzug Concentration Strecken ( auf Knee);;niedrig;4;triceps;cable
+og-1722;Cable High Pulley Overhead Tricep Extension;Kabelzug High Pulley überkopf Tricep Strecken;;niedrig;4;triceps;cable
+og-0204;Cable Rear Drive;Kabelzug Rear Drive;;niedrig;4;triceps;cable
+og-1724;Cable Rope High Pulley Overhead Tricep Extension;Kabelzug Rope High Pulley überkopf Tricep Strecken;;niedrig;4;triceps;cable
+og-1725;Cable Rope Incline Tricep Extension;Kabelzug Rope Schrägbank Tricep Strecken;;mittel;4;triceps;cable
+og-1726;Cable Rope Lying On Floor Tricep Extension;Kabelzug Rope liegend auf Floor Tricep Strecken;;niedrig;4;triceps;cable
+og-1728;Cable Two Arm Tricep Kickback;Kabelzug Two Arm Tricep Kickback;;niedrig;4;triceps;cable
+og-2398;Close-Grip Push-Up (On Knees);Enger Griff Liegestütz ( auf Knees);;mittel;4;triceps;bodyweight
+og-0283;Diamond Push-Up;Diamond Liegestütz;;niedrig;4;triceps;bodyweight
+og-1617;Dumbbell Decline One Arm Hammer Press;Kurzhantel Negativbank einarmig Hammer Drücken;;mittel;4;triceps;dumbbell
+og-1619;Dumbbell Incline One Arm Hammer Press;Kurzhantel Schrägbank einarmig Hammer Drücken;;mittel;4;triceps;dumbbell
+og-1733;Dumbbell Incline Two Arm Extension;Kurzhantel Schrägbank Two Arm Strecken;;mittel;4;triceps;dumbbell
+og-0338;Dumbbell Lying Elbow Press;Kurzhantel liegend Elbow Drücken;;mittel;4;triceps;dumbbell
+og-0337;Dumbbell Lying Extension (Across Face);Kurzhantel liegend Strecken (across Face);;mittel;4;triceps;dumbbell
+og-1735;Dumbbell Lying Single Extension;Kurzhantel liegend Single Strecken;;mittel;4;triceps;dumbbell
+og-0389;Dumbbell Seated Bench Extension;Kurzhantel sitzend Bench Strecken;;mittel;4;triceps;dumbbell
+og-0436;Dumbbell Tate Press;Kurzhantel Tate Drücken;;mittel;4;triceps;dumbbell
+og-1742;Dumbbell Tricep Kickback With Stork Stance;Kurzhantel Tricep Kickback mit Stork Stance;;niedrig;4;triceps;dumbbell
+og-3287;Elbow Dips;Elbow Dips;;niedrig;4;triceps;bodyweight
+og-0448;Ez Barbell Decline Close Grip Face Press;Ez Langhantel Negativbank Enger Griff Face Drücken;;mittel;4;triceps;barbell
+og-0471;Handstand Push-Up;Handstand Liegestütz;;niedrig;4;triceps;bodyweight
+og-3289;Impossible Dips;Impossible Dips;;niedrig;4;triceps;bodyweight
+og-1467;Push-Up On Lower Arms;Liegestütz auf Lower Arms;;niedrig;4;triceps;bodyweight
+og-0672;Reverse Dip;Reverse Dip;;niedrig;4;triceps;bodyweight
+og-0677;Ring Dips;Ring Dips;;niedrig;4;triceps;bodyweight
+og-0717;Side Push-Up;Side Liegestütz;;mittel;4;triceps;bodyweight
+og-2142;Ski Ergometer;Ski Ergometer;;niedrig;4;triceps;machine
+og-1752;Smith Machine Incline Tricep Extension;Multipresse Schrägbank Tricep Strecken;;mittel;4;triceps;machine
+og-1753;Three Bench Dip;Three Bench Dip;;niedrig;4;triceps;bodyweight
+og-0814;Triceps Dip;Triceps Dip;;niedrig;4;triceps;bodyweight
+og-0812;Triceps Dip (Bench Leg);Triceps Dip (bench Leg);;niedrig;4;triceps;bodyweight
+og-0813;Triceps Dip (Between Benches);Triceps Dip (between Benches);;niedrig;4;triceps;bodyweight
+og-0815;Triceps Dips Floor;Triceps Dips Floor;;niedrig;4;triceps;bodyweight
+og-0830;Weighted Bench Dip;mit Zusatzgewicht Bench Dip;;mittel;4;triceps;bodyweight
+og-1754;Weighted Three Bench Dips;mit Zusatzgewicht Three Bench Dips;;niedrig;4;triceps;bodyweight
+og-1755;Weighted Tricep Dips;mit Zusatzgewicht Tricep Dips;;niedrig;4;triceps;bodyweight
+og-1767;Weighted Triceps Dip On High Parallel Bars;mit Zusatzgewicht Triceps Dip auf High Parallel Bars;;niedrig;4;triceps;bodyweight
+og-3293;Archer Pull Up;Archer Klimmzug;;niedrig;3;back;bodyweight
+og-3297;Back Lever;Back Maschine;;niedrig;3;back;bodyweight
+og-1405;Back Pec Stretch;Back Pec Dehnung;;niedrig;3;back;bodyweight
+og-3117;Band Fixed Back Close Grip Pulldown;Band Fixed Back Enger Griff Latzug;;mittel;3;back;band
+og-3116;Band Fixed Back Underhand Pulldown;Band Fixed Back Underhand Latzug;;niedrig;3;back;band
+og-0990;Band One Arm Twisting Seated Row;Band einarmig Twisting sitzend Rudern;;mittel;3;back;band
+og-1010;Band Straight Leg Deadlift;Band Straight Leg Kreuzheben;;niedrig;3;back;band
+og-1013;Band Underhand Pulldown;Band Underhand Latzug;;niedrig;3;back;band
+og-3292;Elevator;Elevator;;niedrig;3;back;bodyweight
+og-3295;Front Lever Reps;Vorne Maschine Reps;;mittel;3;back;bodyweight
+og-0466;Gironda Sternum Chin;Gironda Sternum Chin;;niedrig;3;back;bodyweight
+og-0488;Hyperextension (On Bench);Hyperextension ( auf Bench);;mittel;3;back;bodyweight
+og-0521;Kettlebell Alternating Renegade Row;Kettlebell alternierend Renegade Rudern;;mittel;3;back;kettlebell
+og-1345;Kettlebell Two Arm Row;Kettlebell Two Arm Rudern;;mittel;3;back;kettlebell
+og-0558;Kipping Muscle Up;Kipping Muscle Up;;niedrig;3;back;bodyweight
+og-1346;Kneeling Lat Stretch;kniend Lat Dehnung;;mittel;3;back;bodyweight
+og-0631;Muscle Up;Muscle Up;;niedrig;3;back;bodyweight
+og-1401;Muscle-Up (On Vertical Bar);Muscle-up ( auf Vertical Bar);;niedrig;3;back;bodyweight
+og-1403;Neck Side Stretch;Neck Side Dehnung;;niedrig;3;back;bodyweight
+og-3144;Resistance Band Seated Straight Back Row;Widerstandsband sitzend Straight Back Rudern;;mittel;3;back;band
+og-0690;Seated Lower Back Stretch;sitzend Lower Back Dehnung;;niedrig;3;back;bodyweight
+og-1358;Side Lying Floor Stretch;Side liegend Floor Dehnung;;niedrig;3;back;bodyweight
+og-0716;Side Push Neck Stretch;Side Push Neck Dehnung;;niedrig;3;back;bodyweight
+og-0720;Side-To-Side Chin;Side- zum -side Chin;;niedrig;3;back;bodyweight
+og-3304;Skin The Cat;Skin The Cat;;niedrig;3;back;bodyweight
+og-1362;Sphinx;Sphinx;;niedrig;3;back;bodyweight
+og-1363;Spine Stretch;Spine Dehnung;;niedrig;3;back;bodyweight
+og-3669;Standing Archer;stehend Archer;;niedrig;3;back;bodyweight
+og-0794;Standing Lateral Stretch;stehend Lateral Dehnung;;mittel;3;back;bodyweight
+og-1364;Standing Pelvic Tilt;stehend Pelvic Tilt;;niedrig;3;back;bodyweight
+og-3231;Two Toe Touch (Male);Two Toe Touch (male);;niedrig;3;back;bodyweight
+og-1365;Upper Back Stretch;Upper Back Dehnung;;niedrig;3;back;bodyweight
+og-1366;Upward Facing Dog;Upward Facing Dog;;niedrig;3;back;bodyweight
+og-3286;Weighted Muscle Up;mit Zusatzgewicht Muscle Up;;niedrig;3;back;bodyweight
+og-3312;Weighted Muscle Up (On Bar);mit Zusatzgewicht Muscle Up ( auf Bar);;niedrig;3;back;bodyweight
+og-3290;Weighted One Hand Pull Up;mit Zusatzgewicht One Hand Klimmzug;;mittel;3;back;bodyweight
+og-0968;Band Alternating Biceps Curl;Band alternierend Biceps Curl;;mittel;3;biceps;band
+og-0986;Band One Arm Overhead Biceps Curl;Band einarmig überkopf Biceps Curl;;mittel;3;biceps;band
+og-0994;Band Reverse Wrist Curl;Band Reverse Wrist Curl;;niedrig;3;biceps;band
+og-1016;Band Wrist Curl;Band Wrist Curl;;mittel;3;biceps;band
+og-1421;Modified Push Up To Lower Arms;Modified Liegestütz zum Lower Arms;;niedrig;3;biceps;bodyweight
+og-3123;Resistance Band Seated Biceps Curl;Widerstandsband sitzend Biceps Curl;;mittel;3;biceps;band
+og-0721;Side Wrist Pull Stretch;Side Wrist Pull Dehnung;;niedrig;3;biceps;bodyweight
+og-0854;Weighted Standing Hand Squeeze;mit Zusatzgewicht stehend Hand Squeeze;;niedrig;3;biceps;bodyweight
+og-1428;Wrist Circles;Wrist Circles;;niedrig;3;biceps;bodyweight
+og-1368;Ankle Circles;Ankle Circles;;niedrig;3;calves;bodyweight
+og-1000;Band Single Leg Reverse Calf Raise;Band einbeinig Reverse Wadenheben;;mittel;3;calves;band
+og-1369;Band Two Legs Calf Raise - (Band Under Both Legs) V. 2;Band Two Legs Wadenheben - ( Band Under Both Legs) V. 2;;niedrig;3;calves;band
+og-1374;Box Jump Down With One Leg Stabilization;Box Sprung Down mit einbeinig Stabilization;;niedrig;3;calves;bodyweight
+og-0257;Circles Knee Stretch;Circles Knee Dehnung;;niedrig;3;calves;bodyweight
+og-1390;Seated Calf Stretch (Male);sitzend Calf Dehnung (male);;mittel;3;calves;bodyweight
+og-1397;Standing Calves;stehend Calves;;niedrig;3;calves;bodyweight
+og-1398;Standing Calves Calf Stretch;stehend Calves Calf Dehnung;;mittel;3;calves;bodyweight
+og-3294;Archer Push Up;Archer Liegestütz;;niedrig;3;chest;bodyweight
+og-0989;Band One Arm Twisting Chest Press;Band einarmig Twisting Brustpresse;;mittel;3;chest;band
+og-1271;Chest And Front Of Shoulder Stretch;Chest And Vorne Of Shoulder Dehnung;;niedrig;3;chest;bodyweight
+og-1273;Clap Push Up;Clap Liegestütz;;mittel;3;chest;bodyweight
+og-1275;Drop Push Up;Drop Liegestütz;;mittel;3;chest;bodyweight
+og-1167;Dynamic Chest Stretch (Male);Dynamic Chest Dehnung (male);;niedrig;3;chest;bodyweight
+og-0492;Incline Push Up Depth Jump;Schrägbank Liegestütz Depth Sprung;;mittel;3;chest;bodyweight
+og-1297;Isometric Chest Squeeze;isometrisch Chest Squeeze;;niedrig;3;chest;bodyweight
+og-0500;Isometric Wipers;isometrisch Wipers;;mittel;3;chest;bodyweight
+og-0545;Kettlebell Plyo Push-Up;Kettlebell Plyo Liegestütz;;mittel;3;chest;kettlebell
+og-1306;Plyo Push Up;Plyo Liegestütz;;mittel;3;chest;bodyweight
+og-1689;Push And Pull Bodyweight;Push And Pull Eigengewicht;;niedrig;3;chest;bodyweight
+og-1310;Weighted Drop Push Up;mit Zusatzgewicht Drop Liegestütz;;mittel;3;chest;bodyweight
+og-0856;Weighted Svend Press;mit Zusatzgewicht Svend Drücken;;mittel;3;chest;bodyweight
+og-1311;Wide Hand Push Up;weit Hand Liegestütz;;mittel;3;chest;bodyweight
+og-0002;45° Side Bend;45° Side Bend;;niedrig;3;core;bodyweight
+og-0003;Air Bike;Air Bike;;niedrig;3;core;bodyweight
+og-0006;Alternate Heel Touchers;alternierend Heel Touchers;;niedrig;3;core;bodyweight
+og-2355;Arm Slingers Hanging Bent Knee Legs;Arm Slingers Hanging Bent Knee Legs;;niedrig;3;core;bodyweight
+og-2333;Arm Slingers Hanging Straight Legs;Arm Slingers Hanging Straight Legs;;niedrig;3;core;bodyweight
+og-3204;Arms Overhead Full Sit-Up (Male);Arms überkopf Full Sit-up (male);;niedrig;3;core;bodyweight
+og-0972;Band Bicycle Crunch;Band Bicycle Crunch;;niedrig;3;core;band
+og-0985;Band Kneeling Twisting Crunch;Band kniend Twisting Crunch;;mittel;3;core;band
+og-1002;Band Lying Straight Leg Raise;Band liegend Straight Beinheben;;mittel;3;core;band
+og-1007;Band Standing Twisting Crunch;Band stehend Twisting Crunch;;mittel;3;core;band
+og-0138;Bottoms-Up;Bottoms-up;;niedrig;3;core;bodyweight
+og-2466;Bridge - Mountain Climber (Cross Body);Bridge - Mountain Climber (cross Body);;niedrig;3;core;bodyweight
+og-0870;Butt-Ups;Butt-ups;;niedrig;3;core;bodyweight
+og-0260;Cocoons;Cocoons;;niedrig;3;core;bodyweight
+og-1468;Crab Twist Toe Touch;Crab Drehung Toe Touch;;niedrig;3;core;bodyweight
+og-0276;Dead Bug;Dead Bug;;niedrig;3;core;bodyweight
+og-0443;Elbow-To-Knee;Elbow- zum -knee;;niedrig;3;core;bodyweight
+og-3303;Flag;Flag;;niedrig;3;core;bodyweight
+og-0456;Flexion Leg Sit Up (Bent Knee);Flexion Leg Sit-up (bent Knee);;niedrig;3;core;bodyweight
+og-0457;Flexion Leg Sit Up (Straight Arm);Flexion Leg Sit-up (straight Arm);;niedrig;3;core;bodyweight
+og-3301;Frog Planche;Frog Planche;;niedrig;3;core;bodyweight
+og-3315;Full Maltese;Full Maltese;;niedrig;3;core;bodyweight
+og-3299;Full Planche;Full Planche;;niedrig;3;core;bodyweight
+og-0467;Gorilla Chin;Gorilla Chin;;niedrig;3;core;bodyweight
+og-3202;Half Sit-Up (Male);Half Sit-up (male);;niedrig;3;core;bodyweight
+og-1764;Hanging Leg Hip Raise;Hanging Leg Hip Heben;;niedrig;3;core;bodyweight
+og-1761;Hanging Oblique Knee Raise;Hanging Oblique Knieheben;;niedrig;3;core;bodyweight
+og-0473;Hanging Pike;Hanging Pike;;niedrig;3;core;bodyweight
+og-0474;Hanging Straight Leg Hip Raise;Hanging Straight Leg Hip Heben;;niedrig;3;core;bodyweight
+og-0476;Hanging Straight Twisting Leg Hip Raise;Hanging Straight Twisting Leg Hip Heben;;niedrig;3;core;bodyweight
+og-0484;Hip Raise (Bent Knee);Hip Heben (bent Knee);;niedrig;3;core;bodyweight
+og-1471;Inchworm;Inchworm;;niedrig;3;core;bodyweight
+og-3698;Inchworm V. 2;Inchworm V. 2;;niedrig;3;core;bodyweight
+og-0491;Incline Leg Hip Raise (Leg Straight);Schrägbank Leg Hip Heben (leg Straight);;niedrig;3;core;bodyweight
+og-3011;Incline Scapula Push Up;Schrägbank Scapula Liegestütz;;mittel;3;core;bodyweight
+og-0495;Incline Twisting Sit-Up;Schrägbank Twisting Sit-up;;mittel;3;core;bodyweight
+og-0507;Jackknife Sit-Up;Jackknife Sit-up;;niedrig;3;core;bodyweight
+og-0508;Janda Sit-Up;Janda Sit-up;;niedrig;3;core;bodyweight
+og-3419;L-Sit On Floor;L-sit auf Floor;;niedrig;3;core;bodyweight
+og-3300;Lean Planche;Lean Planche;;niedrig;3;core;bodyweight
+og-0570;Leg Pull In Flat Bench;Leg Pull In Flat Bench;;niedrig;3;core;bodyweight
+og-2312;Lying Elbow To Knee;liegend Elbow zum Knee;;niedrig;3;core;bodyweight
+og-0865;Lying Leg-Hip Raise;liegend Leg-hip Heben;;mittel;3;core;bodyweight
+og-0641;Otis Up;Otis Up;;niedrig;3;core;bodyweight
+og-3147;Pelvic Tilt;Pelvic Tilt;;niedrig;3;core;bodyweight
+og-1687;Posterior Step To Overhead Reach;Posterior Step zum überkopf Reach;;niedrig;3;core;bodyweight
+og-3203;Prisoner Half Sit-Up (Male);Prisoner Half Sit-up (male);;niedrig;3;core;bodyweight
+og-3201;Quarter Sit-Up;Quarter Sit-up;;niedrig;3;core;bodyweight
+og-3699;Shoulder Tap;Shoulder Tap;;niedrig;3;core;bodyweight
+og-0705;Side Bridge V. 2;Side Bridge V. 2;;niedrig;3;core;bodyweight
+og-0709;Side Hip (On Parallel Bars);Side Hip ( auf Parallel Bars);;niedrig;3;core;bodyweight
+og-3213;Side-To-Side Toe Touch (Male);Side- zum -side Toe Touch (male);;niedrig;3;core;bodyweight
+og-0735;Sit-Up V. 2;Sit-up V. 2;;mittel;3;core;bodyweight
+og-3679;Sit-Up With Arms On Chest;Sit-up mit Arms auf Chest;;niedrig;3;core;bodyweight
+og-2329;Spine Twist;Spine Drehung;;niedrig;3;core;bodyweight
+og-3314;Straddle Maltese;Straddle Maltese;;niedrig;3;core;bodyweight
+og-3298;Straddle Planche;Straddle Planche;;niedrig;3;core;bodyweight
+og-0805;Suspended Abdominal Fallout;Suspended Abdominal Fallout;;niedrig;3;core;bodyweight
+og-3420;V-Sit On Floor;V-sit auf Floor;;niedrig;3;core;bodyweight
+og-0866;Weighted Hanging Leg-Hip Raise;mit Zusatzgewicht Hanging Leg-hip Heben;;niedrig;3;core;bodyweight
+og-0858;Wind Sprints;Wind Sprints;;niedrig;3;core;bodyweight
+og-3214;Arms Apart Circular Toe Touch (Male);Arms Apart Circular Toe Touch (male);;niedrig;3;glutes;bodyweight
+og-1023;Band Straight Back Stiff Leg Deadlift;Band Straight Back Gestrecktes Bein Kreuzheben;;mittel;3;glutes;band
+og-3212;Basic Toe Touch (Male);Basic Toe Touch (male);;niedrig;3;glutes;bodyweight
+og-0130;Bench Hip Extension;Bench Hip Strecken;;niedrig;3;glutes;bodyweight
+og-3639;Bent Knee Lying Twist (Male);Bent Knee liegend Drehung (male);;niedrig;3;glutes;bodyweight
+og-0459;Flutter Kicks;Flutter Kicks;;niedrig;3;glutes;bodyweight
+og-3218;Hands Clasped Circular Toe Touch (Male);Hands Clasped Circular Toe Touch (male);;niedrig;3;glutes;bodyweight
+og-3215;Hands Reversed Clasped Circular Toe Touch (Male);Hands Reversed Clasped Circular Toe Touch (male);;niedrig;3;glutes;bodyweight
+og-1418;Hug Keens To Chest;Hug Keens zum Chest;;niedrig;3;glutes;bodyweight
+og-1419;Iron Cross Stretch;Iron Cross Dehnung;;niedrig;3;glutes;bodyweight
+og-0534;Kettlebell Goblet Squat;Kettlebell Goblet Kniebeuge;;mittel;3;glutes;kettlebell
+og-0536;Kettlebell Lunge Pass Through;Kettlebell Ausfallschritt Pass Through;;niedrig;3;glutes;kettlebell
+og-0544;Kettlebell Pistol Squat;Kettlebell Pistol Kniebeuge;;mittel;3;glutes;kettlebell
+og-0551;Kettlebell Turkish Get Up (Squat Style);Kettlebell Turkish Get Up ( Kniebeuge Style);;niedrig;3;glutes;kettlebell
+og-0628;Monster Walk;Monster Walk;;niedrig;3;glutes;bodyweight
+og-1422;Pelvic Tilt Into Bridge;Pelvic Tilt Into Bridge;;niedrig;3;glutes;bodyweight
+og-0668;Rear Decline Bridge;Rear Negativbank Bridge;;niedrig;3;glutes;bodyweight
+og-3236;Resistance Band Hip Thrusts On Knees (Female);Widerstandsband Hip Thrusts auf Knees (female);;niedrig;3;glutes;band
+og-1423;Reverse Hyper On Flat Bench;Reverse Hyper auf Flat Bench;;niedrig;3;glutes;bodyweight
+og-2571;Rocking Frog Stretch;Rocking Frog Dehnung;;niedrig;3;glutes;bodyweight
+og-1424;Seated Glute Stretch;sitzend Glute Dehnung;;mittel;3;glutes;bodyweight
+og-2567;Seated Piriformis Stretch;sitzend Piriformis Dehnung;;niedrig;3;glutes;bodyweight
+og-1774;Side Bridge Hip Abduction;Side Bridge Hip Abduktion;;niedrig;3;glutes;bodyweight
+og-0710;Side Hip Abduction;Side Hip Abduktion;;niedrig;3;glutes;bodyweight
+og-3645;Single Leg Bridge With Outstretched Leg;einbeinig Bridge mit Outstretched Leg;;niedrig;3;glutes;bodyweight
+og-0778;Spider Crawl Push Up;Spider Crawl Liegestütz;;niedrig;3;glutes;bodyweight
+og-1427;Straight Leg Outer Hip Abductor;Straight Leg Outer Hip Abductor;;niedrig;3;glutes;bodyweight
+og-3433;Swimmer Kicks V. 2 (Male);Swimmer Kicks V. 2 (male);;niedrig;3;glutes;bodyweight
+og-1466;Twist Hip Lift;Drehung Hip Lift;;niedrig;3;glutes;bodyweight
+og-3193;Glute-Ham Raise;Glute-ham Heben;;niedrig;3;hamstrings;bodyweight
+og-1511;Hamstring Stretch;Hamstring Dehnung;;niedrig;3;hamstrings;bodyweight
+og-0555;Kick Out Sit;Kick Out Sit;;niedrig;3;hamstrings;bodyweight
+og-1576;Leg Up Hamstring Stretch;Leg Up Hamstring Dehnung;;niedrig;3;hamstrings;bodyweight
+og-1585;Runners Stretch;Runners Dehnung;;niedrig;3;hamstrings;bodyweight
+og-1587;Seated Wide Angle Pose Sequence;sitzend weit Angle Pose Sequence;;niedrig;3;hamstrings;bodyweight
+og-0730;Single Leg Platform Slide;einbeinig Platform Slide;;niedrig;3;hamstrings;bodyweight
+og-1604;World Greatest Stretch;World Greatest Dehnung;;niedrig;3;hamstrings;bodyweight
+og-1512;All Fours Squad Stretch;All Fours Squad Dehnung;;niedrig;3;quads;bodyweight
+og-1473;Backward Jump;Backward Sprung;;niedrig;3;quads;bodyweight
+og-1494;Butterfly Yoga Pose;Butterfly Yoga Pose;;niedrig;3;quads;bodyweight
+og-1472;Forward Jump;Forward Sprung;;niedrig;3;quads;bodyweight
+og-0613;Lying (Side) Quads Stretch;liegend (side) Quads Dehnung;;niedrig;3;quads;bodyweight
+og-3533;Quads;Quads;;niedrig;3;quads;bodyweight
+og-3552;Quick Feet V. 2;Quick Feet V. 2;;niedrig;3;quads;bodyweight
+og-3667;Side Lying Hip Adduction (Male);Side liegend Hip Adduktion (male);;niedrig;3;quads;bodyweight
+og-1012;Band Twisting Overhead Press;Band Twisting Ueberkopfdrücken;;mittel;3;shoulders;band
+og-0539;Kettlebell One Arm Military Press To The Side;Kettlebell einarmig Nackendrücken zum The Side;;mittel;3;shoulders;kettlebell
+og-1438;Kettlebell Seated Two Arm Military Press;Kettlebell sitzend Two Arm Nackendrücken;;mittel;3;shoulders;kettlebell
+og-0553;Kettlebell Two Arm Military Press;Kettlebell Two Arm Nackendrücken;;mittel;3;shoulders;kettlebell
+og-2271;Left Hook. Boxing;Left Hook. Boxing;;niedrig;3;shoulders;bodyweight
+og-0669;Rear Deltoid Stretch;Rear Deltoid Dehnung;;niedrig;3;shoulders;bodyweight
+og-0844;Weighted Round Arm;mit Zusatzgewicht Round Arm;;niedrig;3;shoulders;bodyweight
+og-0998;Band Side Triceps Extension;Band Side Trizepsstrecken;;mittel;3;triceps;band
+og-0137;Body-Up;Body-up;;niedrig;3;triceps;bodyweight
+og-3302;Handstand;Handstand;;niedrig;3;triceps;bodyweight
+og-0643;Overhead Triceps Stretch;überkopf Triceps Dehnung;;mittel;3;triceps;bodyweight
+og-3291;Stalder Press;Stalder Drücken;;niedrig;3;triceps;bodyweight
+og-0816;Triceps Press;Triceps Drücken;;niedrig;3;triceps;bodyweight
+og-0817;Triceps Stretch;Triceps Dehnung;;niedrig;3;triceps;bodyweight
+og-0548;Kettlebell Sumo High Pull;Kettlebell Sumo High Pull;;niedrig;2;back;kettlebell
+og-0525;Kettlebell Bottoms Up Clean From The Hang Position;Kettlebell Bottoms Up Umsetzen From The Hang Position;;niedrig;2;biceps;kettlebell
+og-0526;Kettlebell Double Alternating Hang Clean;Kettlebell Double alternierend Hang Umsetzen;;mittel;2;biceps;kettlebell
+og-0519;Kettlebell Alternating Press On Floor;Kettlebell alternierend Drücken auf Floor;;mittel;2;chest;kettlebell
+og-0531;Kettlebell Extended Range One Arm Press On Floor;Kettlebell Extended Range einarmig Drücken auf Floor;;niedrig;2;chest;kettlebell
+og-1298;Kettlebell One Arm Floor Press;Kettlebell einarmig Floor Drücken;;mittel;2;chest;kettlebell
+og-0969;Band Alternating V-Up;Band alternierend V-up;;mittel;2;core;band
+og-0979;Band Horizontal Pallof Press;Band Horizontal Pallof Drücken;;niedrig;2;core;band
+og-0981;Band Jack Knife Sit-Up;Band Jack Knife Sit-up;;niedrig;2;core;band
+og-0992;Band Push Sit-Up;Band Push Sit-up;;mittel;2;core;band
+og-1014;Band V-Up;Band V-up;;niedrig;2;core;band
+og-1015;Band Vertical Pallof Press;Band Vertical Pallof Drücken;;niedrig;2;core;band
+og-0517;Kettlebell Advanced Windmill;Kettlebell Advanced Windmill;;niedrig;2;core;kettlebell
+og-0524;Kettlebell Bent Press;Kettlebell Bent Drücken;;mittel;2;core;kettlebell
+og-0530;Kettlebell Double Windmill;Kettlebell Double Windmill;;niedrig;2;core;kettlebell
+og-0532;Kettlebell Figure 8;Kettlebell Figure 8;;mittel;2;core;kettlebell
+og-0554;Kettlebell Windmill;Kettlebell Windmill;;niedrig;2;core;kettlebell
+og-1408;Band Hip Lift;Band Hip Lift;;niedrig;2;glutes;band
+og-0984;Band Lying Hip Internal Rotation;Band liegend Hip Internal Rotation;;mittel;2;glutes;band
+og-0991;Band Pull Through;Band Pull Through;;niedrig;2;glutes;band
+og-0996;Band Seated Hip Internal Rotation;Band sitzend Hip Internal Rotation;;mittel;2;glutes;band
+og-0535;Kettlebell Hang Clean;Kettlebell Hang Umsetzen;;mittel;2;hamstrings;kettlebell
+og-0523;Kettlebell Arnold Press;Kettlebell Arnold Drücken;;mittel;2;shoulders;kettlebell
+og-0527;Kettlebell Double Jerk;Kettlebell Double Jerk;;niedrig;2;shoulders;kettlebell
+og-0529;Kettlebell Double Snatch;Kettlebell Double Reißen;;mittel;2;shoulders;kettlebell
+og-0537;Kettlebell One Arm Clean And Jerk;Kettlebell einarmig Umsetzen And Jerk;;mittel;2;shoulders;kettlebell
+og-0538;Kettlebell One Arm Jerk;Kettlebell einarmig Jerk;;mittel;2;shoulders;kettlebell
+og-0543;Kettlebell Pirate Supper Legs;Kettlebell Pirate Supper Legs;;niedrig;2;shoulders;kettlebell
+og-0547;Kettlebell Seesaw Press;Kettlebell Seesaw Drücken;;mittel;2;shoulders;kettlebell
+og-0552;Kettlebell Two Arm Clean;Kettlebell Two Arm Umsetzen;;mittel;2;shoulders;kettlebell
+og-3167;Bodyweight Squatting Row (With Towel);Eigengewicht Squatting Rudern ( mit Towel);;niedrig;1;back;bodyweight
+og-3165;Bodyweight Standing Row (With Towel);Eigengewicht stehend Rudern ( mit Towel);;mittel;1;back;bodyweight
+og-1332;Exercise Ball Alternating Arm Ups;Gymnastikball alternierend Arm Ups;;mittel;1;back;ball
+og-1333;Exercise Ball Back Extension With Arms Extended;Gymnastikball Rückenstrecken mit Arms Extended;;mittel;1;back;ball
+og-1334;Exercise Ball Back Extension With Hands Behind Head;Gymnastikball Rückenstrecken mit Hands Behind Head;;mittel;1;back;ball
+og-1335;Exercise Ball Back Extension With Knees Off Ground;Gymnastikball Rückenstrecken mit Knees Off Ground;;mittel;1;back;ball
+og-1338;Exercise Ball Hug;Gymnastikball Hug;;mittel;1;back;ball
+og-1341;Exercise Ball Lower Back Stretch (Pyramid);Gymnastikball Lower Back Dehnung (pyramid);;niedrig;1;back;ball
+og-1342;Exercise Ball Lying Side Lat Stretch;Gymnastikball liegend Side Lat Dehnung;;mittel;1;back;ball
+og-0609;London Bridge;London Bridge;;niedrig;1;back;other
+og-1353;Medicine Ball Catch And Overhead Throw;Medicine Ball Catch And überkopf Throw;;niedrig;1;back;ball
+og-1354;Medicine Ball Overhead Slam;Medicine Ball überkopf Slam;;niedrig;1;back;ball
+og-1355;One Arm Against Wall;einarmig Against Wall;;niedrig;1;back;bodyweight
+og-1773;One Arm Towel Row;einarmig Towel Rudern;;mittel;1;back;bodyweight
+og-2208;Roller Back Stretch;Roller Back Dehnung;;niedrig;1;back;other
+og-2207;Roller Side Lat Stretch;Roller Side Lat Dehnung;;niedrig;1;back;other
+og-0680;Rope Climb;Rope Climb;;niedrig;1;back;other
+og-1649;Dumbbell Alternating Bicep Curl With Leg Raised On Exercise Ball;Kurzhantel alternierend Bicep Curl mit Leg Raised auf Gymnastikball;;mittel;1;biceps;dumbbell
+og-1652;Dumbbell Bicep Curl On Exercise Ball With Leg Raised;Kurzhantel Bicep Curl auf Gymnastikball mit Leg Raised;;mittel;1;biceps;dumbbell
+og-1656;Dumbbell Biceps Curl V Sit On Bosu Ball;Kurzhantel Biceps Curl V Sit auf Bosu Ball;;niedrig;1;biceps;dumbbell
+og-0390;Dumbbell Seated Biceps Curl (On Stability Ball);Kurzhantel sitzend Biceps Curl ( auf Gymnastikball);;mittel;1;biceps;dumbbell
+og-1679;Dumbbell Seated One Arm Bicep Curl On Exercise Ball With Leg Raised;Kurzhantel sitzend einarmig Bicep Curl auf Gymnastikball mit Leg Raised;;mittel;1;biceps;dumbbell
+og-0859;Wrist Rollerer;Wrist Rollerer;;niedrig;1;biceps;bodyweight
+og-1407;Calf Push Stretch With Hands Against Wall;Calf Push Dehnung mit Hands Against Wall;;niedrig;1;calves;bodyweight
+og-1377;Calf Stretch With Hands Against Wall;Calf Dehnung mit Hands Against Wall;;niedrig;1;calves;bodyweight
+og-1378;Calf Stretch With Rope;Calf Dehnung mit Rope;;niedrig;1;calves;other
+og-1382;Exercise Ball On The Wall Calf Raise;Gymnastikball auf The Wall Wadenheben;;mittel;1;calves;dumbbell
+og-3241;Exercise Ball On The Wall Calf Raise (Tennis Ball Between Ankles);Gymnastikball auf The Wall Wadenheben (tennis Ball Between Ankles);;niedrig;1;calves;dumbbell
+og-3240;Exercise Ball On The Wall Calf Raise (Tennis Ball Between Knees);Gymnastikball auf The Wall Wadenheben (tennis Ball Between Knees);;niedrig;1;calves;dumbbell
+og-1388;Peroneals Stretch;Peroneals Dehnung;;niedrig;1;calves;other
+og-1389;Posterior Tibialis Stretch;Posterior Tibialis Dehnung;;niedrig;1;calves;other
+og-0738;Sled 45° Calf Press;Sled 45° Calf Drücken;;niedrig;1;calves;machine
+og-0742;Sled Forward Angled Calf Raise;Sled Forward Angled Wadenheben;;niedrig;1;calves;machine
+og-2334;Sled Lying Calf Press;Sled liegend Calf Drücken;;niedrig;1;calves;machine
+og-1716;Assisted Seated Pectoralis Major Stretch With Stability Ball;Unterstützt sitzend Pectoralis Major Dehnung mit Gymnastikball;;mittel;1;chest;machine
+og-1272;Chest Stretch With Exercise Ball;Chest Dehnung mit Gymnastikball;;mittel;1;chest;ball
+og-1296;Exercise Ball Pike Push Up;Gymnastikball Pike Liegestütz;;mittel;1;chest;ball
+og-1302;Medicine Ball Chest Pass;Medicine Ball Chest Pass;;niedrig;1;chest;ball
+og-1303;Medicine Ball Chest Push From 3 Point Stance;Medicine Ball Chest Push From 3 Point Stance;;niedrig;1;chest;ball
+og-1304;Medicine Ball Chest Push Multiple Response;Medicine Ball Chest Push Multiple Response;;niedrig;1;chest;ball
+og-1305;Medicine Ball Chest Push Single Response;Medicine Ball Chest Push Single Response;;niedrig;1;chest;ball
+og-1312;Medicine Ball Chest Push With Run Release;Medicine Ball Chest Push mit Run Release;;niedrig;1;chest;ball
+og-1307;Push Up On Bosu Ball;Liegestütz auf Bosu Ball;;niedrig;1;chest;ball
+og-0653;Push-Up (Bosu Ball);Liegestütz (bosu Ball);;niedrig;1;chest;ball
+og-0659;Push-Up (Wall);Liegestütz (wall);;mittel;1;chest;bodyweight
+og-0658;Push-Up (Wall) V. 2;Liegestütz (wall) V. 2;;niedrig;1;chest;bodyweight
+og-0663;Push-Up Medicine Ball;Liegestütz Medicine Ball;;niedrig;1;chest;ball
+og-2203;Roller Seated Shoulder Flexor Depresor Retractor;Roller sitzend Shoulder Flexor Depresor Retractor;;niedrig;1;chest;other
+og-2209;Roller Seated Single Leg Shoulder Flexor Depresor Retractor;Roller sitzend einbeinig Shoulder Flexor Depresor Retractor;;niedrig;1;chest;other
+og-0971;Band Assisted Wheel Rollerout;Band Unterstützt Wheel Rollerout;;niedrig;1;core;band
+og-0084;Barbell Rollerout;Langhantel Rollerout;;niedrig;1;core;barbell
+og-0083;Barbell Rollerout From Bench;Langhantel Rollerout From Bench;;niedrig;1;core;barbell
+og-0103;Barbell Standing Ab Rollerout;Langhantel stehend Ab Rollerout;;niedrig;1;core;barbell
+og-0211;Cable Russian Twists (On Stability Ball);Kabelzug Russian Twists ( auf Gymnastikball);;mittel;1;core;cable
+og-0221;Cable Side Bend Crunch (Bosu Ball);Kabelzug Side Bend Crunch (bosu Ball);;niedrig;1;core;cable
+og-2963;Captains Chair Straight Leg Raise;Captains Chair Straight Beinheben;;niedrig;1;core;bodyweight
+og-0272;Crunch (On Stability Ball, Arms Straight);Crunch ( auf Gymnastikball, Arms Straight);;mittel;1;core;ball
+og-0640;One Arm Slam (With Medicine Ball);einarmig Slam ( mit Medicine Ball);;niedrig;1;core;ball
+og-0650;Pull-In (On Stability Ball);Pull-in ( auf Gymnastikball);;mittel;1;core;ball
+og-2204;Roller Body Saw;Roller Body Saw;;niedrig;1;core;other
+og-2206;Roller Reverse Crunch;Roller Reverse Crunch;;niedrig;1;core;other
+og-0691;Seated Side Crunch (Wall);sitzend Side Crunch (wall);;mittel;1;core;bodyweight
+og-1496;Sledge Hammer;Sledge Hammer;;niedrig;1;core;other
+og-2297;Stability Ball Crunch (Full Range Hands Behind Head);Gymnastikball Crunch (full Range Hands Behind Head);;niedrig;1;core;ball
+og-0796;Standing Wheel Rollerout;stehend Wheel Rollerout;;niedrig;1;core;other
+og-0850;Weighted Side Bend (On Stability Ball);mit Zusatzgewicht Side Bend ( auf Gymnastikball);;mittel;1;core;bodyweight
+og-0857;Wheel Rollerout;Wheel Rollerout;;niedrig;1;core;other
+og-1559;Exercise Ball Hip Flexor Stretch;Gymnastikball Hip Flexor Dehnung;;mittel;1;glutes;ball
+og-1416;Exercise Ball One Leg Prone Lower Body Rotation;Gymnastikball einbeinig Bauchliegend Lower Body Rotation;;mittel;1;glutes;ball
+og-1417;Exercise Ball One Legged Diagonal Kick Hamstring Curl;Gymnastikball One Legged Diagonal Kick Hamstring Curl;;niedrig;1;glutes;ball
+og-0624;March Sit (Wall);March Sit (wall);;niedrig;1;glutes;bodyweight
+og-0675;Reverse Hyper Extension (On Stability Ball);Reverse Hyper Strecken ( auf Gymnastikball);;mittel;1;glutes;ball
+og-2205;Roller Hip Lat Stretch;Roller Hip Lat Dehnung;;niedrig;1;glutes;other
+og-2202;Roller Hip Stretch;Roller Hip Dehnung;;niedrig;1;glutes;other
+og-0740;Sled 45° Leg Wide Press;Sled 45° Leg weit Drücken;;niedrig;1;glutes;machine
+og-0741;Sled Closer Hack Squat;Sled Closer Hackenschmidt;;niedrig;1;glutes;machine
+og-0743;Sled Hack Squat;Sled Hackenschmidt;;mittel;1;glutes;machine
+og-0744;Sled Lying Squat;Sled liegend Kniebeuge;;mittel;1;glutes;machine
+og-2459;Tire Flip;Tire Flip;;niedrig;1;glutes;other
+og-1560;Exercise Ball Seated Hamstring Stretch;Gymnastikball sitzend Hamstring Dehnung;;mittel;1;hamstrings;ball
+og-1582;Reclining Big Toe Pose With Rope;Reclining Big Toe Pose mit Rope;;niedrig;1;hamstrings;other
+og-0697;Self Assisted Inverse Leg Curl;Self Unterstützt Inverse Beinbeuger;;niedrig;1;hamstrings;bodyweight
+og-1766;Self Assisted Inverse Leg Curl;Self Unterstützt Inverse Beinbeuger;;niedrig;1;hamstrings;bodyweight
+og-0696;Self Assisted Inverse Leg Curl (On Floor);Self Unterstützt Inverse Beinbeuger ( auf Floor);;niedrig;1;hamstrings;bodyweight
+og-1599;Standing Hamstring And Calf Stretch With Strap;stehend Hamstring And Calf Dehnung mit Strap;;niedrig;1;hamstrings;other
+og-0020;Balance Board;Balance Board;;niedrig;1;quads;bodyweight
+og-1548;Chair Leg Extended Stretch;Chair Leg Extended Dehnung;;niedrig;1;quads;bodyweight
+og-1564;Intermediate Hip Flexor And Quad Stretch;Intermediate Hip Flexor And Quad Dehnung;;niedrig;1;quads;other
+og-0750;Smith Chair Squat;Multipresse Chair Kniebeuge;;mittel;1;quads;machine
+og-1705;Squat On Bosu Ball;Kniebeuge auf Bosu Ball;;niedrig;1;quads;ball
+og-0128;Battling Ropes;Battling Ropes;;niedrig;1;shoulders;other
+og-1734;Dumbbell Kickbacks On Exercise Ball;Kurzhantel Kickbacks auf Gymnastikball;;mittel;1;triceps;dumbbell
+og-1621;Dumbbell One Arm Hammer Press On Exercise Ball;Kurzhantel einarmig Hammer Drücken auf Gymnastikball;;mittel;1;triceps;dumbbell
+og-1745;Exercise Ball Seated Triceps Stretch;Gymnastikball sitzend Triceps Dehnung;;mittel;1;triceps;ball
+og-1701;Medicine Ball Close Grip Push Up;Medicine Ball Enger Griff Liegestütz;;niedrig;1;triceps;ball
+og-1750;Medicine Ball Supine Chest Throw;Medicine Ball Rückenliegend Chest Throw;;niedrig;1;triceps;ball
