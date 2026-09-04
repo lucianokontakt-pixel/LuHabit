@@ -158,6 +158,7 @@ export async function updateExercise(params: {
       ? {
           media: before.media,
           bilder: before.bilder,
+          geraetKuerzel: before.geraetKuerzel,
           secondary: before.secondary,
           en: before.en,
           kategorie: before.kategorie,

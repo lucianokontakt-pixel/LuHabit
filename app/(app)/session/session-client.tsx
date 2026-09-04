@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Flame,
+  Info,
   Lightbulb,
   Minus,
   TrendingUp,
@@ -37,7 +38,7 @@ import {
 import { RestTimer } from "@/components/training/rest-timer";
 import { SetRow, type SessionSet } from "@/components/training/set-row";
 import { SessionSummary } from "@/components/training/session-summary";
-import { ExerciseThumb } from "@/components/training/exercise-media";
+import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
 import { ExercisePicker } from "@/components/training/exercise-picker";
 import { summarizeSession } from "@/lib/session-stats";
 import { useTraining } from "@/lib/training-store";
@@ -344,6 +345,7 @@ export function SessionClient() {
   /** Ausgelassen (null) oder getauscht — je Platz im Plan, nur für heute. */
   const [ersatz, setErsatz] = useState<Record<string, PlanExercise | null>>({});
   const [picking, setPicking] = useState(false);
+  const [detail, setDetail] = useState<Exercise | null>(null);
   /** Was zu dieser Einheit zu sagen war. Ging bisher erst hinterher. */
   const [note, setNote] = useState("");
   const [startedAt, setStartedAt] = useState<number>(() => Date.now());
@@ -1504,6 +1506,20 @@ export function SessionClient() {
                       </button>
                     </div>
 
+                    {/* Die Anleitung — hier gebraucht, nicht in der
+                        Bibliothek: wer vor dem Gerät steht und die Ausführung
+                        nachsehen will, ist mitten in der Einheit. */}
+                    {exercise && (
+                      <button
+                        type="button"
+                        onClick={() => setDetail(exercise)}
+                        aria-label={`${exercise.name} — Anleitung und Muskeln`}
+                        className="touch-target ml-auto flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+                      >
+                        <Info className="size-4" />
+                      </button>
+                    )}
+
                     {/* Direkt statt hinter einem Menü — die beiden Fälle
                         schließen sich aus (eine dazugenommene Übung hat keine
                         slotId), es steht also nie mehr als eine Aktion hier.
@@ -1515,7 +1531,7 @@ export function SessionClient() {
                         type="button"
                         onClick={() => skipExercise(slotId)}
                         aria-label="Übung auslassen"
-                        className="touch-target ml-auto flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+                        className="touch-target flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
                       >
                         <SkipForward className="size-4" />
                       </button>
@@ -1525,7 +1541,7 @@ export function SessionClient() {
                         type="button"
                         onClick={() => removeExercise(pe.id)}
                         aria-label="Übung entfernen"
-                        className="touch-target ml-auto flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        className="touch-target flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                       >
                         <Trash2 className="size-4" />
                       </button>
@@ -1621,6 +1637,12 @@ export function SessionClient() {
           </div>
         </div>
       </div>
+
+      <ExerciseDetail
+        exercise={detail}
+        onOpenChange={(open) => !open && setDetail(null)}
+        koerpergewicht={bodyweight}
+      />
 
       <ExercisePicker
         open={picking}

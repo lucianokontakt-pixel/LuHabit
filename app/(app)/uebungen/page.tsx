@@ -8,6 +8,7 @@ import {
   Ellipsis,
   Eye,
   EyeOff,
+  Info,
   Pencil,
   Plus,
   Search,
@@ -27,11 +28,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ExercisePicker } from "@/components/training/exercise-picker";
 import { ExerciseEditor } from "@/components/training/exercise-editor";
-import { ExerciseThumb } from "@/components/training/exercise-media";
+import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
 import { FilterSelect } from "@/components/training/filter-sheet";
 import { BewaehrtAbzeichen, RankBars } from "@/components/training/rank-bars";
 import { kernRang } from "@/lib/kern-uebungen";
 import { useTraining } from "@/lib/training-store";
+import { useMetricData } from "@/lib/use-metric-data";
 import { deleteExercise, updateExercise } from "@/lib/api-training";
 import {
   EQUIPMENT,
@@ -40,7 +42,8 @@ import {
   LADEART_HINWEISE,
   LADEART_LABELS,
   LADEART_OFFEN,
-  LADEART_OFFEN_LABEL,
+  KATEGORIEN,
+  KATEGORIE_LABELS,
   MUSCLES,
   MUSCLE_LABELS,
   RANK_SICHTBAR_AB,
@@ -51,9 +54,13 @@ import {
   stufeVon,
   type Equipment,
   type Exercise,
+  SCHWIERIGKEITEN,
+  SCHWIERIGKEIT_LABELS,
+  type Kategorie,
   type Ladeart,
   type Muscle,
   type Region,
+  type Schwierigkeit,
 } from "@/lib/training";
 import { guete, suchwoerter, verlaufVon } from "@/lib/exercise-suche";
 import { useShowRare } from "@/lib/use-show-rare";
@@ -144,17 +151,22 @@ function zusatzZeile(exercise: Exercise): string | null {
 
 export default function ExercisesPage() {
   const { exercises, sessions, upsertExercise, reload, loading } = useTraining();
+  // Für die Kalorienangabe im Detail — ohne Messwert bleibt sie ungesagt.
+  const { entries: gewichte } = useMetricData("weight");
   const [query, setQuery] = useState("");
   const [muscle, setMuscle] = useState<Muscle | null>(null);
   const [equipment, setEquipment] = useState<Equipment | null>(null);
   const [region, setRegion] = useState<Region | null>(null);
   const [ladeart, setLadeart] = useState<LadeartFilter | null>(null);
+  const [schwierigkeit, setSchwierigkeit] = useState<Schwierigkeit | null>(null);
+  const [kategorie, setKategorie] = useState<Kategorie | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [showRare, toggleShowRare] = useShowRare();
   const [sort, setSort] = useState<Sortierung>("beliebtheit");
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Exercise | null>(null);
+  const [detail, setDetail] = useState<Exercise | null>(null);
   const [expanded, setExpanded] = useState<Set<Muscle>>(new Set());
   // Welche Muskelgruppen von Hand aufgeklappt wurden. Ungefiltert bleiben
   // alle zehn zu — sonst ständen auf einen Blick zehnmal bis zu 24 Übungen
@@ -187,18 +199,22 @@ export default function ExercisesPage() {
         .filter((e) => (region === null ? true : e.region === region))
         .filter((e) => (equipment === null ? true : e.equipment === equipment))
         .filter((e) => passtZurLadeart(e, ladeart))
+        .filter((e) => (schwierigkeit === null ? true : e.schwierigkeit === schwierigkeit))
+        .filter((e) => (kategorie === null ? true : e.kategorie === kategorie))
         .filter((e) => treffer[e.id] > 0),
-    [exercises, treffer, muscle, equipment, region, ladeart, showHidden, favoritesOnly, showRare]
-  );
-
-  /**
-   * Wie viele Übungen noch keine Ladeart haben. Steht als Hinweis am Filter —
-   * sonst wäre „Noch offen“ ein Eintrag, hinter dem man nicht weiß, ob sich
-   * das Antippen lohnt.
-   */
-  const offeneAnzahl = useMemo(
-    () => exercises.filter((e) => e.equipment === "machine" && ladeartVon(e) === null).length,
-    [exercises]
+    [
+      exercises,
+      treffer,
+      muscle,
+      equipment,
+      region,
+      ladeart,
+      schwierigkeit,
+      kategorie,
+      showHidden,
+      favoritesOnly,
+      showRare,
+    ]
   );
 
   /** Wann und wie oft jede Übung vorkam — siehe lib/exercise-suche.ts. */
@@ -392,21 +408,38 @@ export default function ExercisesPage() {
             label="Ladeart"
             allLabel="Jede Ladeart"
             value={ladeart}
-            options={[
-              ...LADEARTEN.map((key) => ({
-                value: key as LadeartFilter,
-                label: LADEART_LABELS[key],
-                hint: LADEART_HINWEISE[key],
-              })),
-              // Der Einstieg zum Durchgehen: alle Maschinen, bei denen es noch
-              // niemand entschieden hat.
-              {
-                value: LADEART_OFFEN as LadeartFilter,
-                label: LADEART_OFFEN_LABEL,
-                hint: `${offeneAnzahl}`,
-              },
-            ]}
+            // Kein „Noch offen“ mehr: seit RepDB steht die Ladeart bei jeder
+            // Übung fest, und ein Filter, der immer leer ausgeht, ist eine
+            // Sackgasse mit Beschriftung.
+            options={LADEARTEN.map((key) => ({
+              value: key as LadeartFilter,
+              label: LADEART_LABELS[key],
+              hint: LADEART_HINWEISE[key],
+            }))}
             onChange={setLadeart}
+          />
+          {/* Was der Datensatz über die Bewegung selbst sagt. Beides steht
+              hinter Muskel und Gerät: man sucht zuerst, was man trainieren
+              will, und erst dann, wie schwer es sein darf. */}
+          <FilterSelect
+            label="Schwierigkeit"
+            allLabel="Jede Schwierigkeit"
+            value={schwierigkeit}
+            options={SCHWIERIGKEITEN.map((key) => ({
+              value: key,
+              label: SCHWIERIGKEIT_LABELS[key],
+            }))}
+            onChange={setSchwierigkeit}
+          />
+          <FilterSelect
+            label="Art"
+            allLabel="Jede Art"
+            value={kategorie}
+            options={KATEGORIEN.map((key) => ({
+              value: key,
+              label: KATEGORIE_LABELS[key],
+            }))}
+            onChange={setKategorie}
           />
           {/* Die Sortierung hat kein „Alle“ — es ist immer eine gewählt.
               Darum trägt der Knopf sie auch immer im Text, und ein Tipp auf
@@ -529,6 +562,17 @@ export default function ExercisesPage() {
                       </div>
                     </div>
 
+                    {/* Antippen des Bilds öffnete das früher — und ging als
+                        „das nervt" wieder raus. Ein eigener Knopf trifft nur,
+                        wer ihn trifft. */}
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setDetail(exercise)}
+                      aria-label={`${exercise.name} — Anleitung und Muskeln`}
+                    >
+                      <Info />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -612,6 +656,12 @@ export default function ExercisesPage() {
           })}
         </div>
       )}
+
+      <ExerciseDetail
+        exercise={detail}
+        onOpenChange={(open) => !open && setDetail(null)}
+        koerpergewicht={gewichte[gewichte.length - 1]?.value ?? null}
+      />
 
       <ExercisePicker
         open={creating}

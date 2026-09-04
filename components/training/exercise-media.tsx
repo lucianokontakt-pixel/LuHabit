@@ -4,16 +4,26 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Dumbbell } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { bildUrl, ladeUebungstext, type Uebungstext } from "@/lib/exercise-catalog";
+import {
+  bildUrl,
+  geraetBildUrl,
+  ladeUebungstext,
+  muskelBildUrl,
+  type Uebungstext,
+} from "@/lib/exercise-catalog";
+import { muskelName, tagName, zielName } from "@/lib/repdb-begriffe";
 import {
   EQUIPMENT_LABELS,
+  KATEGORIE_LABELS,
   LADEART_LABELS,
   MECHANIK_LABELS,
   MUSCLE_LABELS,
   SCHWIERIGKEIT_LABELS,
+  ZUGART_LABELS,
   ladeartVon,
   type Exercise,
 } from "@/lib/training";
+import { useUebungssprache } from "@/lib/uebungssprache";
 import { cn } from "@/lib/utils";
 
 /** Was `ExerciseThumb` und `ExerciseDetail` von einer Übung brauchen. */
@@ -106,6 +116,41 @@ export function ExerciseThumb({
 }
 
 /**
+ * Ein Muskel mit seinem Bild.
+ *
+ * Der Datensatz bringt 27 Illustrationen mit, eine je Muskel — und
+ * "gluteus_maximus" ist als Wort eine Vokabel, als Bild eine Auskunft. Fehlt
+ * eine Datei (der Lendenmuskel hat keine), bleibt der Name allein stehen:
+ * Wichtiger als das Bild ist, dass die Angabe nicht verschwindet.
+ */
+function MuskelKachel({ muskel, gross = false }: { muskel: string; gross?: boolean }) {
+  const [fehlt, setFehlt] = useState(false);
+  return (
+    <span
+      className={cn(
+        "flex items-center gap-1.5 rounded-pill py-1 pr-2.5 pl-1",
+        gross ? "bg-tint-mint text-tint-mint-ink" : "bg-elevated text-muted-foreground"
+      )}
+    >
+      {!fehlt && (
+        <span className="relative size-6 shrink-0 overflow-hidden rounded-pill bg-white">
+          <Image
+            src={muskelBildUrl(muskel)}
+            alt=""
+            fill
+            sizes="24px"
+            className="object-cover"
+            unoptimized
+            onError={() => setFehlt(true)}
+          />
+        </span>
+      )}
+      <span className={cn("text-xs", gross && "font-medium")}>{muskelName(muskel)}</span>
+    </span>
+  );
+}
+
+/**
  * Die Übung in groß, mit allem, was der Datensatz über sie weiß.
  *
  * Diesen Dialog gab es schon einmal — damals enthielt er ein Bild und sonst
@@ -117,29 +162,35 @@ export function ExerciseThumb({
 export function ExerciseDetail({
   exercise,
   onOpenChange,
+  koerpergewicht = null,
 }: {
   exercise: Exercise | null;
   onOpenChange: (open: boolean) => void;
+  /** Für die Kalorienschätzung. Ohne Messwert bleibt sie ungesagt. */
+  koerpergewicht?: number | null;
 }) {
   // Der Text liegt bei der Übungs-ID: sonst stünde nach dem Wechsel für einen
   // Moment die Anleitung der vorigen Übung unter dem neuen Bild.
   const [text, setText] = useState<{ id: string; inhalt: Uebungstext | null } | null>(null);
   const inhalt = text && text.id === exercise?.id ? text.inhalt : null;
+  const [sprache] = useUebungssprache();
+  const [geraetFehlt, setGeraetFehlt] = useState(false);
 
   useEffect(() => {
     if (!exercise) return;
     let aktuell = true;
     const id = exercise.id;
-    void ladeUebungstext(id).then((geladen) => {
+    void ladeUebungstext(id, sprache).then((geladen) => {
       if (aktuell) setText({ id, inhalt: geladen });
     });
     return () => {
       aktuell = false;
     };
-  }, [exercise]);
+  }, [exercise, sprache]);
 
   if (!exercise) return null;
   const art = ladeartVon(exercise);
+  const geraetBild = geraetBildUrl(exercise);
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
@@ -174,19 +225,44 @@ export function ExerciseDetail({
           })}
         </div>
 
+        {/* Die harten Fakten in einer Zeile. Was der Datensatz nicht weiß —
+            bei einer eigenen Übung ist das alles außer Muskel und Gerät —,
+            fällt einfach weg, statt als Lücke dazustehen. */}
         <p className="text-xs text-muted-foreground">
           {[
             MUSCLE_LABELS[exercise.muscle],
             EQUIPMENT_LABELS[exercise.equipment],
             art ? LADEART_LABELS[art] : null,
             exercise.mechanik ? MECHANIK_LABELS[exercise.mechanik] : null,
+            exercise.zugArt ? ZUGART_LABELS[exercise.zugArt] : null,
             exercise.schwierigkeit ? SCHWIERIGKEIT_LABELS[exercise.schwierigkeit] : null,
+            exercise.kategorie && exercise.kategorie !== "strength"
+              ? KATEGORIE_LABELS[exercise.kategorie]
+              : null,
+            exercise.einseitig ? "einseitig" : null,
           ]
             .filter(Boolean)
             .join(" · ")}
         </p>
 
         {inhalt?.beschreibung && <p className="text-sm">{inhalt.beschreibung}</p>}
+
+        {/* Welche Muskeln arbeiten — mit Bild, weil ein Muskelname ohne Bild
+            eine Vokabel ist. Der primäre größer als die Helfer: die Größe
+            sagt, worum es geht, bevor man liest. */}
+        {exercise.primaerMuskeln.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-medium">Was arbeitet</p>
+            <div className="flex flex-wrap gap-2">
+              {exercise.primaerMuskeln.map((m) => (
+                <MuskelKachel key={m} muskel={m} gross />
+              ))}
+              {exercise.sekundaerMuskeln.map((m) => (
+                <MuskelKachel key={m} muskel={m} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {inhalt && inhalt.anleitung.length > 0 && (
           <ol className="flex list-decimal flex-col gap-1.5 pl-4 text-sm text-muted-foreground marker:text-xs">
@@ -208,6 +284,63 @@ export function ExerciseDetail({
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {(exercise.ziele.length > 0 || exercise.tags.length > 0) && (
+          <div className="flex flex-wrap gap-1.5">
+            {/* Ziele zuerst und in der Akzentfarbe: sie beantworten „wofür
+                mache ich das", die Schlagworte nur „was sollte ich wissen". */}
+            {exercise.ziele.map((ziel) => (
+              <span
+                key={ziel}
+                className="rounded-pill bg-tint-violet px-2 py-0.5 text-[11px] font-medium text-tint-violet-ink"
+              >
+                {zielName(ziel)}
+              </span>
+            ))}
+            {exercise.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-pill bg-elevated px-2 py-0.5 text-[11px] text-muted-foreground"
+              >
+                {tagName(tag)}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {(geraetBild || exercise.met !== null) && (
+          <div className="flex items-center gap-3 rounded-panel bg-elevated p-3">
+            {geraetBild && !geraetFehlt && (
+              <span className="relative size-12 shrink-0 overflow-hidden rounded-md bg-white">
+                <Image
+                  src={geraetBild}
+                  alt=""
+                  fill
+                  sizes="48px"
+                  className="object-contain"
+                  unoptimized
+                  onError={() => setGeraetFehlt(true)}
+                />
+              </span>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {EQUIPMENT_LABELS[exercise.equipment]}
+              {exercise.met !== null && (
+                <>
+                  {" · "}
+                  {/* MET × Körpergewicht = Kilokalorien je Stunde. Ohne
+                      gemessenes Gewicht wäre jede Zahl erfunden, deshalb steht
+                      dann nur der Faktor selbst da. */}
+                  <span className="nums">
+                    {koerpergewicht
+                      ? `${Math.round((exercise.met * koerpergewicht) / 60)} kcal/min`
+                      : `MET ${exercise.met}`}
+                  </span>
+                </>
+              )}
+            </p>
           </div>
         )}
       </DialogContent>

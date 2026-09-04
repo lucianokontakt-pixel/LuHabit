@@ -113,7 +113,13 @@ export function SessionSummary({
             />
             <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
               <Gauge className="size-3 shrink-0" />
-              {formatNumber(summary.reps)} Wdh
+              {/* Die Kalorien stehen als Nebenzeile, nicht als eigene Kachel:
+                  sie sind geschätzt (MET × Gewicht × Dauer, siehe
+                  lib/session-stats.ts) und sollen nicht so aussehen wie das
+                  Volumen, das gemessen ist. */}
+              {summary.kalorien !== null
+                ? `${formatNumber(summary.reps)} Wdh · ca. ${formatNumber(summary.kalorien)} kcal`
+                : `${formatNumber(summary.reps)} Wdh`}
             </p>
           </div>
         </Card>

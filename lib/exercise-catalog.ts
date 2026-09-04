@@ -146,6 +146,7 @@ export function fromCatalog(entry: CatalogExercise): Exercise {
     warmup: null,
     media: entry.media,
     bilder: entry.bilder,
+    geraetKuerzel: entry.geraetKuerzel,
     secondary: entry.secondary,
     en: entry.nameEn,
     region: entry.region,
@@ -185,6 +186,7 @@ export function ohneKatalog(): Omit<
   return {
     media: null,
     bilder: [],
+    geraetKuerzel: null,
     secondary: [],
     en: null,
     region: null,

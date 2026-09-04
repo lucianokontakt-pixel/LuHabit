@@ -188,6 +188,15 @@ export const SCHWIERIGKEIT_LABELS: Record<Schwierigkeit, string> = {
 
 export const SCHWIERIGKEITEN: Schwierigkeit[] = ["beginner", "intermediate", "advanced"];
 
+/** Reihenfolge im Filter — Kraft zuerst, die App ist dafür gebaut. */
+export const KATEGORIEN: Kategorie[] = [
+  "strength",
+  "olympic",
+  "plyometrics",
+  "cardio",
+  "stretching",
+];
+
 export const LADEART_LABELS: Record<Ladeart, string> = {
   steck: "Steckgewicht",
   scheiben: "Scheiben",
@@ -264,6 +273,12 @@ export type Exercise = {
   media: string | null;
   /** Welche Bildpositionen es gibt — leer bei eigenen Übungen. */
   bilder: ("start" | "peak" | "main")[];
+  /**
+   * Das genaue Gerät aus dem Datensatz ("leg_press") — feiner als `equipment`
+   * und mit einem eigenen Bild. null bei eigenen Übungen und dort, wo es kein
+   * Gerät gibt.
+   */
+  geraetKuerzel: string | null;
   /** Muskeln, die mitarbeiten. Nur zur Anzeige, nicht in der Statistik. */
   secondary: Muscle[];
   /** Der englische Name — die Suche findet Übungen auch darüber. */

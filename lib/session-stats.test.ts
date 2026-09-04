@@ -174,4 +174,34 @@ describe("summarizeSession", () => {
     expect(summary.exercises[0].previous).toBeNull();
     expect(summary.records).toEqual([]);
   });
+
+  describe("Kalorien", () => {
+    // MET × kg × Stunden — die übliche Formel. Bankdrücken liegt im Katalog
+    // bei 5, hier im Prüfstück gesetzt.
+    const mitMet: Record<string, Exercise> = { bench: { ...bench, met: 6 } };
+
+    it("rechnet aus MET, Körpergewicht und Dauer", () => {
+      const s = session("a", "2026-01-01", [set({ weight: 80, reps: 8 })], {
+        durationSeconds: 3600,
+      });
+      const summary = summarizeSession(s, [s], mitMet, [{ date: "2026-01-01", value: 80 }]);
+      // 6 MET × 80 kg × 1 h = 480 kcal
+      expect(summary.kalorien).toBe(480);
+    });
+
+    it("schweigt ohne Körpergewicht oder ohne Dauer", () => {
+      const mitDauer = session("a", "2026-01-01", [set({ weight: 80, reps: 8 })], {
+        durationSeconds: 3600,
+      });
+      // Kein gemessenes Gewicht.
+      expect(summarizeSession(mitDauer, [mitDauer], mitMet).kalorien).toBeNull();
+
+      // Keine Dauer: eine nachgetragene Einheit.
+      const ohneDauer = session("b", "2026-01-01", [set({ weight: 80, reps: 8 })]);
+      const summary = summarizeSession(ohneDauer, [ohneDauer], mitMet, [
+        { date: "2026-01-01", value: 80 },
+      ]);
+      expect(summary.kalorien).toBeNull();
+    });
+  });
 });
