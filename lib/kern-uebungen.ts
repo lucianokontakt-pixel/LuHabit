@@ -1,64 +1,47 @@
 /**
  * Die Übungen, mit denen man nichts falsch macht — von Hand ausgesucht, nicht
- * aus der Beliebtheitsstufe abgeleitet: die steht bei rund zwei Dritteln des
- * Katalogs auf 4 oder 5 und taugt darum nicht als "das hier ist ein
- * Klassiker"-Signal.
+ * aus der Beliebtheitsstufe abgeleitet: die steht bei über 40 % des Katalogs
+ * auf der höchsten Stufe (aus Gerät und Name geschätzt, nicht kuratiert) und
+ * taugt darum nicht als "das hier ist ein Klassiker"-Signal.
  *
- * Zwei bis vier je Muskelgruppe, die bekannten Grundübungen — und je einmal
- * die Maschinen-Variante dort, wo sie im Studio häufiger steht als die
- * Langhantel.
- *
- * Die Liste tut zweierlei: sie trägt das „Bewährt"-Abzeichen in Bibliothek und
- * Übungswähler, und sie hebt bei gleich gutem Suchtreffer den Klassiker über
- * seine Varianten — wer "bankdrücken" tippt, meint das Bankdrücken und nicht
- * "Bankdrücken enger Griff".
+ * Zwei bis drei je Muskelgruppe, die bekannten Grundübungen. Eine ID-Liste
+ * statt eines Felds im Katalog: die Auswahl ändert sich mit Geschmack, nicht
+ * mit dem Datensatz, und soll darum an einer Stelle stehen, die man beim
+ * Lesen versteht, ohne den ganzen Katalog zu durchsuchen.
  */
 export const KERN_UEBUNGEN_IDS: readonly string[] = [
   // Brust
-  "bench-press", // Langhantel-Bankdrücken
-  "incline-bench-press", // Schrägbankdrücken mit Langhantel
-  "db-bench-press", // Kurzhantel-Bankdrücken
-  "chest-press-machine", // Maschinen-Brustdrücken
-  "push-up", // Push-Up
+  "og-0025", // Barbell Bench Press
+  "og-0047", // Barbell Incline Bench Press
+  "og-0662", // Push-Up
   // Rücken
-  "barbell-row", // Vorgebeugtes Langhantelrudern
-  "lat-pulldown", // Latzug
-  "seated-cable-row", // Sitzendes Rudern am Kabelzug
-  "pull-up", // Klimmzug
-  "deadlift", // Langhantel-Kreuzheben
+  "og-0027", // Barbell Bent Over Row
+  "og-2330", // Cable Lat Pulldown Full Range Of Motion
+  "og-1326", // Chin-Up
   // Schultern
-  "ohp", // Langhantel-Schulterdrücken
-  "seated-db-press", // Sitzende Kurzhantel-Schulterdrücken
-  "machine-shoulder-press", // Maschine Schulterdrücken
-  "lateral-raise", // Kurzhantel Seitheben
+  "og-0091", // Barbell Seated Overhead Press
+  "og-0334", // Dumbbell Lateral Raise
   // Bizeps
-  "barbell-curl", // Langhantel-Curl
-  "ez-bar-curl", // SZ-Stangen-Curl
-  "hammer-curl", // Kurzhantel Hammer Curl
+  "og-0031", // Barbell Curl
+  "og-0313", // Dumbbell Hammer Curl
   // Trizeps
-  "tricep-pushdown", // Kabel-Trizeps-Pushdown
-  "bench-dips", // Bank-Dips
+  "og-0241", // Cable Triceps Pushdown (V-Bar)
+  "og-0814", // Triceps Dip
   // Quadrizeps
-  "squat", // Langhantel-Kniebeuge
-  "leg-press", // Beinpresse
-  "leg-extension", // Beinstrecker
+  "og-0043", // Barbell Full Squat
+  "og-0585", // Lever Leg Extension
   // Beinbeuger
-  "romanian-deadlift", // Rumänisches Kreuzheben
-  "leg-curl", // Liegender Beinbeuger
-  "seated-leg-curl", // Sitzende Beinbeuge
+  "og-0085", // Barbell Romanian Deadlift
+  "og-0599", // Lever Seated Leg Curl
   // Gesäß
-  "hip-thrust", // Langhantel Hip Thrust
+  "og-0032", // Barbell Deadlift
+  "og-1409", // Barbell Glute Bridge
   // Waden
-  "standing-calf-raise", // Stehende Wadenhebeübung
-  "seated-calf-raise", // Sitzende Wadenübung
+  "og-1372", // Barbell Standing Calf Raise
+  "og-0594", // Lever Seated Calf Raise
   // Rumpf
-  "hanging-leg-raise", // Hängendes Beinheben
-  "plank", // Plank
+  "og-0472", // Hanging Leg Raise
+  "og-2135", // Weighted Front Plank
 ];
 
 export const KERN_UEBUNGEN = new Set(KERN_UEBUNGEN_IDS);
-
-/** Kern-Übungen zuerst — als Zahl, damit man sie in ein sort() hängen kann. */
-export function kernRang(id: string): number {
-  return KERN_UEBUNGEN.has(id) ? 1 : 0;
-}

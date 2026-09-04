@@ -53,14 +53,6 @@ export type SessionSummary = {
   durationSeconds: number | null;
   /** Volumen je Trainingsminute — wie dicht die Einheit war. */
   density: number | null;
-  /**
-   * Grob verbrannte Kilokalorien, oder null.
-   *
-   * null heißt hier zweierlei und in beiden Fällen dasselbe: es fehlt eine
-   * Angabe, ohne die jede Zahl erfunden wäre — die Dauer der Einheit oder ein
-   * gemessenes Körpergewicht.
-   */
-  kalorien: number | null;
   exercises: ExerciseResult[];
   setsByMuscle: Record<string, number>;
   records: { exercise: ExerciseResult; kind: RecordKind }[];
@@ -110,35 +102,6 @@ function groupByExercise(session: WorkoutSession): Map<string, WorkoutSet[]> {
  * gleichen Übung und neue Bestleistungen. `history` darf die Einheit selbst
  * enthalten — sie wird herausgefiltert.
  */
-/**
- * Kilokalorien einer Einheit, grob.
- *
- * Die Formel ist die übliche: MET × Körpergewicht in kg × Stunden. Das MET
- * ("metabolisches Äquivalent") steht für jede Übung im Katalog — Kniebeugen
- * liegen bei 5, eine Dehnung bei 2,3.
- *
- * Zwei Vereinfachungen, die man kennen sollte, bevor man die Zahl ernst nimmt:
- * gerechnet wird mit dem Durchschnitts-MET der Übungen dieser Einheit, nicht
- * je Satz — wie lange eine einzelne Übung gedauert hat, weiß die App nicht.
- * Und die Pausen zählen mit, weil sie in der Dauer stecken. Die Zahl ist
- * deshalb eine Hausnummer und keine Messung; sie steht in der Oberfläche mit
- * einem „ca." davor.
- */
-function schaetzeKalorien(
-  exercises: ExerciseResult[],
-  exerciseById: Record<string, Exercise>,
-  bodyweight: number | null,
-  minutes: number | null
-): number | null {
-  if (!bodyweight || !minutes || minutes <= 0) return null;
-  const mets = exercises
-    .map((e) => exerciseById[e.exerciseId]?.met)
-    .filter((m): m is number => typeof m === "number");
-  if (mets.length === 0) return null;
-  const schnitt = mets.reduce((sum, m) => sum + m, 0) / mets.length;
-  return Math.round((schnitt * bodyweight * minutes) / 60);
-}
-
 export function summarizeSession(
   session: WorkoutSession,
   history: WorkoutSession[],
@@ -201,7 +164,6 @@ export function summarizeSession(
   const sets = exercises.reduce((sum, e) => sum + e.sets, 0);
   const reps = exercises.reduce((sum, e) => sum + e.reps, 0);
   const minutes = session.durationSeconds ? session.durationSeconds / 60 : null;
-  const kalorien = schaetzeKalorien(exercises, exerciseById, bodyweight, minutes);
 
   const previousSession =
     before.find((s) => (session.dayId ? s.dayId === session.dayId : s.dayName === session.dayName)) ??
@@ -210,7 +172,6 @@ export function summarizeSession(
   return {
     session,
     volume,
-    kalorien,
     sets,
     reps,
     durationSeconds: session.durationSeconds,

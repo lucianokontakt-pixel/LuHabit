@@ -6,7 +6,6 @@ import {
   defaultIncrement,
   ladeartVon,
 } from "@/lib/training";
-import { ohneKatalog } from "@/lib/exercise-catalog";
 import type { Exercise, PlanExercise } from "@/lib/training";
 
 const planExercise: PlanExercise = {
@@ -33,9 +32,11 @@ const exercise: Exercise = {
   bodyweightFactor: null,
   loadFactor: null,
   warmup: null,
-  ...ohneKatalog(),
+  media: null,
+  secondary: [],
   en: null,
   region: null,
+  rank: 5,
   rating: null,
   ladeart: null,
 };

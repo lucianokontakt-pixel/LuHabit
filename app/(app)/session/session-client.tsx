@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Flame,
-  Info,
   Lightbulb,
   Minus,
   TrendingUp,
@@ -38,13 +37,12 @@ import {
 import { RestTimer } from "@/components/training/rest-timer";
 import { SetRow, type SessionSet } from "@/components/training/set-row";
 import { SessionSummary } from "@/components/training/session-summary";
-import { ExerciseDetail, ExerciseThumb } from "@/components/training/exercise-media";
+import { ExerciseThumb } from "@/components/training/exercise-media";
 import { ExercisePicker } from "@/components/training/exercise-picker";
 import { summarizeSession } from "@/lib/session-stats";
 import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
-import { saveSession, swapPlanExercise } from "@/lib/api-training";
-import { kernRang } from "@/lib/kern-uebungen";
+import { saveSession, swapPlanExercise, updateExercise } from "@/lib/api-training";
 import { addDaysISO, isoDateDaysAgo, todayISO } from "@/lib/datum";
 import { newId } from "@/lib/ids";
 import { formatClock, formatDayLabel, formatNumber } from "@/lib/format";
@@ -61,8 +59,10 @@ import {
   suggestAdjustment,
   ladeartVon,
   LADEART_LABELS,
+  LADEARTEN,
   RANK_SICHTBAR_AB,
   stufeVon,
+  type Ladeart,
   type PlanDay,
   type Exercise,
   type PlanExercise,
@@ -195,42 +195,27 @@ function buildRows({
 const ABSOLUT_ZU_LEICHT = 15;
 
 /**
- * Andere Übungen für dieselbe Bewegung — für den Moment, in dem das eigene
- * Gerät besetzt ist.
- *
- * Maßgeblich ist die Variationsgruppe aus dem Datensatz: alle Kniebeugen
- * tragen "squat", alle Ruderzüge "row". Das ist der Unterschied zu vorher, wo
- * dieselbe Frage aus Muskel, Region und Namensähnlichkeit geraten wurde — und
- * daran gescheitert ist, weil "Lever Incline Chest Press" und "Smith Incline
- * Bench Press" sich zwei Wörter teilen und trotzdem verschiedene Geräte sind.
- * 410 der 601 Übungen haben eine Gruppe.
- *
- * Ohne Gruppe bleibt der alte Weg: derselbe Muskel und dieselbe Region. Er ist
- * gröber, aber besser als ein leerer Knopf.
+ * Andere Übungen für denselben Muskel — für den Moment, in dem das eigene
+ * Gerät besetzt ist, egal ob Maschine, Langhantel oder sonst was. Dieselbe
+ * Region ist Pflicht, nicht nur wo bekannt: sonst stünde bei "Kurzhantel
+ * Seitheben" das Bankdrücken daneben, nur weil beide auf die Brust zielen —
+ * und bei einer Übung ohne eigene Region-Angabe (z. B. ein Teil der
+ * Schulterübungen) sonst gleich die ganze Muskelgruppe, vordere und hintere
+ * Schulter durcheinander.
  */
 function wechselUebungen(exercise: Exercise, alle: Exercise[]): Exercise[] {
-  const passt = exercise.variationsgruppe
-    ? (e: Exercise) => e.variationsgruppe === exercise.variationsgruppe
-    : (e: Exercise) => e.muscle === exercise.muscle && e.region === exercise.region;
-
   return alle
     .filter(
       (e) =>
         e.id !== exercise.id &&
         !e.hidden &&
-        passt(e) &&
+        e.muscle === exercise.muscle &&
+        e.region === exercise.region &&
         // Dieselbe Grenze wie in der Übungsliste: eine Ganzkörper-Wippe als
         // Wechsel-Vorschlag hilft nicht, wenn das eigentliche Gerät besetzt ist.
         stufeVon(e) >= RANK_SICHTBAR_AB
     )
-    // Das naheliegendste zuerst: dieselbe Ladeart heißt, dass das Gewicht
-    // ähnlich schnell verstellt ist, und der Klassiker vor der Variante.
-    .sort(
-      (a, b) =>
-        kernRang(b.id) - kernRang(a.id) ||
-        b.rank - a.rank ||
-        a.name.localeCompare(b.name, "de")
-    );
+    .sort((a, b) => b.rank - a.rank);
 }
 
 /**
@@ -290,6 +275,51 @@ function WechselUebungen({
   );
 }
 
+/**
+ * Für einen Rest der "Lever …"-Maschinen weiß der Datensatz die Ladeart noch
+ * nicht (siehe ladeartVon) — im Bild oder GIF sieht man sie aber sofort: ein
+ * Gewichtsblock mit Stift oder Hörner für Scheiben. Also fragen, statt zu
+ * raten, und die Antwort gleich für die Übung merken.
+ */
+function LadeartFrage({
+  exercise,
+  onGesetzt,
+}: {
+  exercise: Exercise;
+  onGesetzt: (exercise: Exercise) => void;
+}) {
+  const [saving, setSaving] = useState<Ladeart | null>(null);
+  if (exercise.equipment !== "machine" || ladeartVon(exercise) !== null) return null;
+
+  async function setzen(art: Ladeart) {
+    setSaving(art);
+    try {
+      onGesetzt(await updateExercise({ id: exercise.id, ladeart: art }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Konnte die Ladeart nicht speichern");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  return (
+    <div className="mx-(--card-spacing) flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <span>Ladeart im Bild?</span>
+      {LADEARTEN.filter((art) => art === "steck" || art === "scheiben").map((art) => (
+        <button
+          key={art}
+          type="button"
+          disabled={saving !== null}
+          onClick={() => void setzen(art)}
+          className="rounded-field bg-card px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
+        >
+          {saving === art ? "Speichert…" : LADEART_LABELS[art]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function clearDraft() {
   try {
     localStorage.removeItem(DRAFT_KEY);
@@ -335,6 +365,7 @@ export function SessionClient() {
     lastLoggedFor,
     addSession,
     loading,
+    upsertExercise,
   } = useTraining();
   const { entries: weightEntries, loading: weightLoading } = useMetricData("weight");
   const bodyweight = weightEntries[weightEntries.length - 1]?.value ?? null;
@@ -345,7 +376,6 @@ export function SessionClient() {
   /** Ausgelassen (null) oder getauscht — je Platz im Plan, nur für heute. */
   const [ersatz, setErsatz] = useState<Record<string, PlanExercise | null>>({});
   const [picking, setPicking] = useState(false);
-  const [detail, setDetail] = useState<Exercise | null>(null);
   /** Was zu dieser Einheit zu sagen war. Ging bisher erst hinterher. */
   const [note, setNote] = useState("");
   const [startedAt, setStartedAt] = useState<number>(() => Date.now());
@@ -1330,6 +1360,10 @@ export function SessionClient() {
                     </div>
                   )}
 
+                  {exercise && (
+                    <LadeartFrage exercise={exercise} onGesetzt={upsertExercise} />
+                  )}
+
                   {/* Nur solange nichts abgehakt ist — ein Tausch mittendrin
                       nähme Protokolliertes mit, siehe swapExercise oben. */}
                   {slotId && doneCount === 0 && exercise && (
@@ -1506,20 +1540,6 @@ export function SessionClient() {
                       </button>
                     </div>
 
-                    {/* Die Anleitung — hier gebraucht, nicht in der
-                        Bibliothek: wer vor dem Gerät steht und die Ausführung
-                        nachsehen will, ist mitten in der Einheit. */}
-                    {exercise && (
-                      <button
-                        type="button"
-                        onClick={() => setDetail(exercise)}
-                        aria-label={`${exercise.name} — Anleitung und Muskeln`}
-                        className="touch-target ml-auto flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
-                      >
-                        <Info className="size-4" />
-                      </button>
-                    )}
-
                     {/* Direkt statt hinter einem Menü — die beiden Fälle
                         schließen sich aus (eine dazugenommene Übung hat keine
                         slotId), es steht also nie mehr als eine Aktion hier.
@@ -1531,7 +1551,7 @@ export function SessionClient() {
                         type="button"
                         onClick={() => skipExercise(slotId)}
                         aria-label="Übung auslassen"
-                        className="touch-target flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+                        className="touch-target ml-auto flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
                       >
                         <SkipForward className="size-4" />
                       </button>
@@ -1541,7 +1561,7 @@ export function SessionClient() {
                         type="button"
                         onClick={() => removeExercise(pe.id)}
                         aria-label="Übung entfernen"
-                        className="touch-target flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        className="touch-target ml-auto flex size-8 shrink-0 items-center justify-center rounded-pill text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                       >
                         <Trash2 className="size-4" />
                       </button>
@@ -1637,12 +1657,6 @@ export function SessionClient() {
           </div>
         </div>
       </div>
-
-      <ExerciseDetail
-        exercise={detail}
-        onOpenChange={(open) => !open && setDetail(null)}
-        koerpergewicht={bodyweight}
-      />
 
       <ExercisePicker
         open={picking}

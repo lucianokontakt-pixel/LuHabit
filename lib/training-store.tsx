@@ -13,7 +13,6 @@ import * as api from "@/lib/api-training";
 import { subscribeLocalData } from "@/lib/local-events";
 import { subscribeQueue } from "@/lib/write-queue";
 import { workingSets } from "@/lib/training";
-import { useUebungssprache } from "@/lib/uebungssprache";
 import type { Exercise, WorkoutPlan, WorkoutSession, WorkoutSet } from "@/lib/training";
 
 /** Eine Einheit aus Sicht einer einzelnen Übung. */
@@ -115,34 +114,11 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  /**
-   * Die Übungen in der eingestellten Sprache.
-   *
-   * Die Umbenennung passiert hier und nicht an den drei Dutzend Stellen, die
-   * einen Übungsnamen anzeigen: der Store ist die eine Stelle, an der aus dem
-   * Katalog Anzeigedaten werden. `name` trägt danach den gewählten Namen,
-   * `en` den jeweils anderen — die Suche findet damit weiter beide.
-   *
-   * Wer eine Übung bearbeitet, bekommt trotzdem den Katalognamen ins
-   * Formular (siehe components/training/exercise-editor.tsx): sonst
-   * schriebe ein Speichern die Übersetzung als eigenen Namen fest.
-   */
-  const [uebungssprache] = useUebungssprache();
-  const uebersetzt = useMemo(
-    () =>
-      uebungssprache === "de"
-        ? exercises
-        : exercises.map((e) =>
-            e.en && e.en !== e.name ? { ...e, name: e.en, en: e.name } : e
-          ),
-    [exercises, uebungssprache]
-  );
-
   const exerciseById = useMemo(() => {
     const map: Record<string, Exercise> = {};
-    for (const e of uebersetzt) map[e.id] = e;
+    for (const e of exercises) map[e.id] = e;
     return map;
-  }, [uebersetzt]);
+  }, [exercises]);
 
   const activePlan = useMemo(
     () => plans.find((p) => p.isActive) ?? plans[0] ?? null,
@@ -241,7 +217,7 @@ export function TrainingProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value: TrainingContextValue = {
-    exercises: uebersetzt,
+    exercises,
     exerciseById,
     plans,
     activePlan,

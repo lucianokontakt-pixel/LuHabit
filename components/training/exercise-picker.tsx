@@ -19,7 +19,6 @@ import { createExercise, updateExercise } from "@/lib/api-training";
 import { ExerciseThumb } from "@/components/training/exercise-media";
 import { FilterSelect } from "@/components/training/filter-sheet";
 import { BewaehrtAbzeichen, RankBars } from "@/components/training/rank-bars";
-import { kernRang } from "@/lib/kern-uebungen";
 import {
   EQUIPMENT,
   EQUIPMENT_LABELS,
@@ -230,10 +229,6 @@ export function ExercisePicker({
       Number(verlauf[b.e.id] !== undefined) - Number(verlauf[a.e.id] !== undefined) ||
       Number(b.e.favorite) - Number(a.e.favorite) ||
       wann(b.e.id).localeCompare(wann(a.e.id)) ||
-      // Bei gleich gutem Treffer steht der Klassiker vor seinen Varianten:
-      // wer „bankdrücken" tippt, meint das Bankdrücken und nicht „Bankdrücken
-      // enger Griff", das zufällig alphabetisch vorn steht.
-      kernRang(b.e.id) - kernRang(a.e.id) ||
       stufeVon(b.e) - stufeVon(a.e) ||
       a.e.name.localeCompare(b.e.name, "de");
   }, [naeheZu, verlauf]);

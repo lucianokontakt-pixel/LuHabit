@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { updateExercise } from "@/lib/api-training";
-import { catalogEntry } from "@/lib/exercise-catalog";
 import { useTraining } from "@/lib/training-store";
 import {
   EQUIPMENT_LABELS,
@@ -78,11 +77,8 @@ export function ExerciseEditor({
   // Beim Öffnen die Werte der gewählten Übung übernehmen.
   useEffect(() => {
     if (!exercise) return;
-    // Der Katalogname, nicht der angezeigte: steht die Bibliothek gerade auf
-    // Englisch, würde ein Speichern sonst die Übersetzung als eigenen Namen
-    // festschreiben — und der bliebe dann auch auf Deutsch stehen.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- füllt das Formular einmalig beim Öffnen
-    setName(catalogEntry(exercise.id)?.name ?? exercise.name);
+    setName(exercise.name);
     setMuscle(exercise.muscle);
     setEquipment(exercise.equipment);
     setIncrement(toField(exercise.increment));

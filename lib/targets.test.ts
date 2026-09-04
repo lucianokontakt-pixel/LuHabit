@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { ohneKatalog } from "@/lib/exercise-catalog";
 import {
   computeTargets,
   expandTargets,
@@ -32,9 +31,11 @@ const bench: Exercise = {
   bodyweightFactor: 0.6,
   loadFactor: null,
   warmup: null,
-  ...ohneKatalog(),
+  media: null,
+  secondary: [],
   en: null,
   region: null,
+  rank: 5,
   rating: null,
   ladeart: null,
 };
@@ -51,9 +52,11 @@ const pullup: Exercise = {
   bodyweightFactor: null,
   loadFactor: null,
   warmup: null,
-  ...ohneKatalog(),
+  media: null,
+  secondary: [],
   en: null,
   region: null,
+  rank: 5,
   rating: null,
   ladeart: null,
 };
@@ -70,9 +73,11 @@ const squat: Exercise = {
   bodyweightFactor: 0.75,
   loadFactor: null,
   warmup: null,
-  ...ohneKatalog(),
+  media: null,
+  secondary: [],
   en: null,
   region: null,
+  rank: 5,
   rating: null,
   ladeart: null,
 };

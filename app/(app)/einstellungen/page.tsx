@@ -7,7 +7,6 @@ import {
   Download,
   ImageDown,
   KeyRound,
-  Languages,
   Laptop,
   LogOut,
   Moon,
@@ -37,7 +36,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useTraining } from "@/lib/training-store";
-import { useUebungssprache } from "@/lib/uebungssprache";
 import { raeumeAbmeldungAuf } from "@/lib/abmelden";
 import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
 import { registerPasskey } from "@/lib/passkey-client";
@@ -59,11 +57,6 @@ function copy(text: string) {
     .then(() => toast.success("In die Zwischenablage kopiert"))
     .catch(() => toast.error("Kopieren fehlgeschlagen"));
 }
-
-const SPRACH_OPTIONS = [
-  { value: "de", label: "Deutsch", icon: Languages },
-  { value: "en", label: "English", icon: Languages },
-] as const;
 
 const THEME_OPTIONS = [
   { value: "light", label: "Hell", icon: Sun },
@@ -117,7 +110,6 @@ export default function EinstellungenPage() {
   const [passkeySupported, setPasskeySupported] = useState(false);
   const [addingPasskey, setAddingPasskey] = useState(false);
   const { theme, setTheme } = useTheme();
-  const [uebungssprache, setUebungssprache] = useUebungssprache();
   const [mounted, setMounted] = useState(false);
   const [secret, setSecret] = useState<string | null>(null);
   const [secretLoading, setSecretLoading] = useState(true);
@@ -330,19 +322,6 @@ export default function EinstellungenPage() {
       </Section>
 
       <Section
-        title="Übungsnamen"
-        footer="Jede Übung der Bibliothek hat beide Namen. Anleitung, Beschreibung und Tipps wechseln mit."
-      >
-        <div className="px-(--card-spacing) py-3">
-          <Segmented
-            options={SPRACH_OPTIONS}
-            value={mounted ? uebungssprache : null}
-            onChange={(wert) => setUebungssprache(wert as "de" | "en")}
-          />
-        </div>
-      </Section>
-
-      <Section
         title="Beim Training"
         footer={
           planExercises.length > 0
@@ -474,24 +453,6 @@ export default function EinstellungenPage() {
           title="Auf den Home-Bildschirm legen"
           subtitle="In Safari über Teilen → Zum Home-Bildschirm. Dann startet die App ohne Adressleiste und funktioniert offline."
         />
-      </Section>
-
-      {/* Pflicht laut Lizenz des Datensatzes (data/repdb/LICENSE-DATA.md,
-          Punkt 2): ein sichtbarer Hinweis mit Link. Er steht hier, weil das
-          die Stelle ist, an der eine App über sich selbst Auskunft gibt. */}
-      <Section title="Übungsdaten">
-        <p className="px-(--card-spacing) py-3 text-sm text-muted-foreground">
-          601 Übungen mit Bildern, Anleitungen und Tipps von{" "}
-          <a
-            href="https://repdb.co"
-            target="_blank"
-            rel="noreferrer"
-            className="text-foreground underline underline-offset-2"
-          >
-            RepDB (repdb.co)
-          </a>
-          .
-        </p>
       </Section>
 
       <p className="px-1 text-xs text-muted-foreground">

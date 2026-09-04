@@ -27,7 +27,7 @@ import { useTraining } from "@/lib/training-store";
 import { useMetricData } from "@/lib/use-metric-data";
 import { updateSession } from "@/lib/api-training";
 import { summarizeSession } from "@/lib/session-stats";
-import { incrementFor, setLabels, type WorkoutSession } from "@/lib/training";
+import { incrementFor, setLabels, type Exercise, type WorkoutSession } from "@/lib/training";
 import { todayISO } from "@/lib/datum";
 import { formatDateLong } from "@/lib/format";
 import { TITLE_CLASS } from "@/components/ui/page-title";
